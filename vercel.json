@@ -24,6 +24,6 @@
     }
   ],
   "env": {
-    "JWT_SECRET": "your-secret-key-here"
+    "JWT_SECRET": "bioping-secret-key-2025-very-secure-jwt-token"
   }
 } 
