@@ -724,32 +724,35 @@ const SearchPage = () => {
     'Vaccine'
   ];
 
-  const partnerTypes = [
-    'Licensing Partner',
-    'Co-development Partner',
-    'Merger & Acquisition',
-    'Investment Partner',
-    'Manufacturing Partner',
-    'Distribution Partner'
-  ];
+  // Partner types available for future use
+  // const partnerTypes = [
+  //   'Licensing Partner',
+  //   'Co-development Partner',
+  //   'Merger & Acquisition',
+  //   'Investment Partner',
+  //   'Manufacturing Partner',
+  //   'Distribution Partner'
+  // ];
 
-  const regions = [
-    'North America',
-    'Europe',
-    'Asia-Pacific',
-    'Latin America',
-    'Middle East & Africa'
-  ];
+  // Regions available for future use
+  // const regions = [
+  //   'North America',
+  //   'Europe',
+  //   'Asia-Pacific',
+  //   'Latin America',
+  //   'Middle East & Africa'
+  // ];
 
-  const functions = [
-    'Business Development',
-    'R&D',
-    'Clinical Development',
-    'Regulatory Affairs',
-    'Manufacturing',
-    'Commercial',
-    'Executive'
-  ];
+  // Functions available for future use
+  // const functions = [
+  //   'Business Development',
+  //   'R&D',
+  //   'Clinical Development',
+  //   'Regulatory Affairs',
+  //   'Manufacturing',
+  //   'Commercial',
+  //   'Executive'
+  // ];
 
   return (
     <div className="space-y-6">
@@ -2650,9 +2653,10 @@ const AnalyticsPage = () => {
     return growth >= 0 ? 'text-green-600' : 'text-red-600';
   };
 
-  const getGrowthIcon = (growth) => {
-    return growth >= 0 ? TrendingUp : TrendingDown;
-  };
+  // Growth icon function available for future use
+  // const getGrowthIcon = (growth) => {
+  //   return growth >= 0 ? TrendingUp : TrendingDown;
+  // };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -2977,69 +2981,71 @@ const PricingAnalyticsPage = () => {
     }
   };
 
-  const addNewPurchase = async (purchaseData) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch('http://localhost:5000/api/pricing-analytics/purchases', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(purchaseData)
-      });
+  // Add new purchase function available for future use
+  // const addNewPurchase = async (purchaseData) => {
+  //   try {
+  //     const token = localStorage.getItem('token');
+  //     
+  //     const response = await fetch('http://localhost:5000/api/pricing-analytics/purchases', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Authorization': `Bearer ${token}`,
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify(purchaseData)
+  //     });
 
-      if (!response.ok) {
-        throw new Error('Failed to add purchase');
-      }
+  //     if (!response.ok) {
+  //       throw new Error('Failed to add purchase');
+  //     }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        // Refresh data after adding purchase
-        await fetchPricingAnalytics();
-        return result;
-      } else {
-        throw new Error(result.message || 'Failed to add purchase');
-      }
-    } catch (error) {
-      console.error('Error adding purchase:', error);
-      throw error;
-    }
-  };
+  //     const result = await response.json();
+  //     
+  //     if (result.success) {
+  //       // Refresh data after adding purchase
+  //       await fetchPricingAnalytics();
+  //       return result;
+  //     } else {
+  //       throw new Error(result.message || 'Failed to add purchase');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error adding purchase:', error);
+  //     throw error;
+  //   }
+  // };
 
-  const updatePlanStats = async (planId, updates) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`http://localhost:5000/api/pricing-analytics/plans/${planId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      });
+  // Update plan stats function available for future use
+  // const updatePlanStats = async (planId, updates) => {
+  //   try {
+  //     const token = localStorage.getItem('token');
+  //     
+  //     const response = await fetch(`http://localhost:5000/api/pricing-analytics/plans/${planId}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Authorization': `Bearer ${token}`,
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify(updates)
+  //     });
 
-      if (!response.ok) {
-        throw new Error('Failed to update plan');
-      }
+  //     if (!response.ok) {
+  //       throw new Error('Failed to update plan');
+  //     }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        // Refresh data after updating plan
-        await fetchPricingAnalytics();
-        return result;
-      } else {
-        throw new Error(result.message || 'Failed to update plan');
-      }
-    } catch (error) {
-      console.error('Error updating plan:', error);
-      throw error;
-    }
-  };
+  //     const result = await response.json();
+  //     
+  //     if (result.success) {
+  //       // Refresh data after updating plan
+  //       await fetchPricingAnalytics();
+  //       return result;
+  //     } else {
+  //       throw new Error(result.message || 'Failed to update plan');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error updating plan:', error);
+  //     throw error;
+  //   }
+  // };
 
   const exportAnalyticsData = async () => {
     try {

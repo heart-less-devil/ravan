@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Building2, HeartHandshake, Heart, ArrowRight, CheckCircle, Star, Users, Globe, Zap, Target, Award, Shield, Lightbulb, TrendingUp } from 'lucide-react';
+import { Building2, HeartHandshake, Heart, ArrowRight, CheckCircle, Globe, Target, Shield, TrendingUp } from 'lucide-react';
 
 const Home = () => {
   const stats = [
