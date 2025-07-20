@@ -79,7 +79,7 @@ const Dashboard = () => {
     }
 
     // Get user profile
-    fetch(`${API_BASE_URL}/api/auth/profile`, {
+    fetch(`/api/auth/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -580,7 +580,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
+      const response = await fetch(`/api/search-biotech`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -631,7 +631,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/api/get-contacts`, {
+      const response = await fetch(`/api/get-contacts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

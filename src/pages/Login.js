@@ -29,7 +29,7 @@ const Login = () => {
 
     try {
       // First test server connectivity
-      const healthCheck = await fetch(`${API_BASE_URL}/api/health`, {
+      const healthCheck = await fetch(`/api/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ const Login = () => {
         throw new Error('Server is not responding');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
