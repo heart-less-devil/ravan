@@ -22,5 +22,8 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "JWT_SECRET": "your-secret-key-here"
+  }
 } 
