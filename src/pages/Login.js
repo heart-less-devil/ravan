@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { API_BASE_URL } from '../config';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle } from 'lucide-react';
 
 const Login = () => {

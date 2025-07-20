@@ -55,17 +55,18 @@ const Resources = () => {
     }
   ];
 
-  const categories = [
-    "All",
-    "Planning",
-    "Information", 
-    "Process",
-    "Strategy",
-    "Data",
-    "Investors",
-    "Templates",
-    "Updates"
-  ];
+  // Categories available for filtering (unused for now)
+  // const categories = [
+  //   "All",
+  //   "Planning",
+  //   "Information", 
+  //   "Process",
+  //   "Strategy",
+  //   "Data",
+  //   "Investors",
+  //   "Templates",
+  //   "Updates"
+  // ];
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Target, TrendingUp, Users, CheckCircle, Building2, HeartHandshake, Zap } from 'lucide-react';
+import { ArrowRight, Target, TrendingUp, Users, CheckCircle, Building2 } from 'lucide-react';
 
 const OurValue = () => {
   const valuePropositions = [
