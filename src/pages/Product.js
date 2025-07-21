@@ -113,13 +113,13 @@ const Product = () => {
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
               <Link to="/contact-sales">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                   className="border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-blue-50 transition-all duration-300"
-                >
+              >
                   Schedule Demo
-                </motion.button>
+              </motion.button>
               </Link>
             </motion.div>
           </motion.div>
@@ -282,14 +282,14 @@ const Product = () => {
             <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
               Join the leading biotech companies who trust our platform for their business development needs.
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-10 py-5 rounded-xl font-semibold text-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-3 mx-auto"
             >
               <span>Start Your Free Trial</span>
               <ArrowRight className="w-6 h-6" />
-            </motion.button>
+              </motion.button>
           </motion.div>
         </div>
       </section>

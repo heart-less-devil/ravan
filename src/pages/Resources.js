@@ -295,13 +295,13 @@ const Resources = () => {
                 <ArrowRight className="w-5 h-5 ml-2" />
               </motion.button>
               <Link to="/contact-sales">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="btn btn-white"
-                >
-                  Contact Us
-                </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="btn btn-white"
+              >
+                Contact Us
+              </motion.button>
               </Link>
             </div>
           </motion.div>

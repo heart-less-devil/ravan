@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MantineProvider } from '@mantine/core';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Search from './pages/Search';
@@ -16,6 +17,11 @@ import Resources from './pages/Resources';
 import RequestDemo from './pages/RequestDemo';
 import ContactSales from './pages/ContactSales';
 import AdminPanel from './pages/AdminPanel';
+import AdminUsers from './pages/AdminUsers';
+import AdminLogin from './pages/AdminLogin';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import './App.css';
 
 function App() {
@@ -31,6 +37,7 @@ function App() {
               <main className="pt-20">
                 <Home />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/login" element={<Login />} />
@@ -41,6 +48,7 @@ function App() {
               <main className="pt-20">
                 <About />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/pricing" element={
@@ -49,6 +57,7 @@ function App() {
               <main className="pt-20">
                 <Pricing />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/contact-us" element={
@@ -57,6 +66,7 @@ function App() {
               <main className="pt-20">
                 <ContactUs />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/product" element={
@@ -65,6 +75,7 @@ function App() {
               <main className="pt-20">
                 <Product />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/our-value" element={
@@ -73,6 +84,7 @@ function App() {
               <main className="pt-20">
                 <OurValue />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/resources" element={
@@ -81,6 +93,7 @@ function App() {
               <main className="pt-20">
                 <Resources />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/request-demo" element={
@@ -89,6 +102,7 @@ function App() {
               <main className="pt-20">
                 <RequestDemo />
               </main>
+              <Footer />
             </>
           } />
           <Route path="/contact-sales" element={
@@ -97,8 +111,11 @@ function App() {
               <main className="pt-20">
                 <ContactSales />
               </main>
+              <Footer />
             </>
           } />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
 
           {/* Dashboard Routes - Protected */}
           <Route path="/dashboard" element={<Dashboard />} />
@@ -113,6 +130,15 @@ function App() {
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          
+          {/* Test route to check if React is working */}
+          <Route path="/test" element={
+            <div className="p-8">
+              <h1>React is working!</h1>
+              <p>If you can see this, React routing is working.</p>
+            </div>
+          } />
         </Routes>
       </div>
     </Router>

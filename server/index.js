@@ -6,14 +6,20 @@ const { body, validationResult } = require('express-validator');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
+const fs = require('fs');
+const nodemailer = require('nodemailer');
+const mongoose = require('mongoose');
+const connectDB = require('./config/database');
+const User = require('./models/User');
+const VerificationCode = require('./models/VerificationCode');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://localhost:3002'],
   credentials: true
 }));
 app.use(express.json());
@@ -39,18 +45,28 @@ const upload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Universal emails that can login without signup
+const universalEmails = [
+  'universalx0242@gmail.com',
+  'admin@bioping.com',
+  'demo@bioping.com',
+  'test@bioping.com',
+  'user@bioping.com',
+  'guest@bioping.com'
+];
+
 // Dummy user data (in production, this would be in a database)
 const dummyUser = {
-  email: 'amankk0007@gmail.com',
+  email: 'universalx0242@gmail.com',
   password: '$2a$10$YourHashedPasswordHere', // This will be hashed
-  name: 'Gaurav Vij',
-  role: 'user'
+  name: 'Admin User',
+  role: 'admin'
 };
 
 // Hash the dummy password immediately
 (async () => {
   try {
-    const hash = await bcrypt.hash('Wildboy07@', 10);
+    const hash = await bcrypt.hash('password', 10);
     dummyUser.password = hash;
     console.log('Password hashed successfully');
   } catch (error) {
@@ -83,14 +99,175 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Server is running!' });
 });
 
+// Test current user route
+app.get('/api/test-user', authenticateToken, (req, res) => {
+  res.json({ 
+    message: 'User authenticated',
+    user: req.user,
+    isAdmin: req.user.email === 'universalx0242@gmail.com' || req.user.email === 'admin@bioping.com'
+  });
+});
+
 // Health check route
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    server: 'BioPing Backend',
-    port: PORT
-  });
+  try {
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      server: 'BioPing Backend',
+      port: PORT,
+      mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+      email: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      server: 'BioPing Backend',
+      port: PORT,
+      mongodb: 'Error',
+      email: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
+    });
+  }
+});
+
+// Secure PDF serving endpoint with advanced security
+app.get('/api/secure-pdf/:filename', authenticateToken, (req, res) => {
+  try {
+    const { filename } = req.params;
+    const pdfPath = path.join(__dirname, '../pdf', filename);
+    
+    // Check if file exists and is a PDF
+    if (!fs.existsSync(pdfPath) || !filename.toLowerCase().endsWith('.pdf')) {
+      return res.status(404).json({ error: 'PDF not found' });
+    }
+    
+    // Verify user permissions (in production, check user role and access rights)
+    if (!req.user) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Set advanced security headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    // Add custom security headers
+    res.setHeader('X-PDF-Security', 'protected');
+    res.setHeader('X-User-ID', req.user.email);
+    res.setHeader('X-Access-Time', new Date().toISOString());
+    
+    // Stream the PDF with security logging
+    const stream = fs.createReadStream(pdfPath);
+    
+    // Log access for security monitoring
+    console.log(`PDF access: ${filename} by user ${req.user.email} at ${new Date().toISOString()}`);
+    
+    stream.on('error', (error) => {
+      console.error('PDF stream error:', error);
+      res.status(500).json({ error: 'Error streaming PDF' });
+    });
+    
+    stream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error serving PDF:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Additional secure PDF endpoint for different access patterns
+app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
+  try {
+    const { filename } = req.params;
+    const pdfPath = path.join(__dirname, '../pdf', filename);
+    
+    // Check if file exists and is a PDF
+    if (!fs.existsSync(pdfPath) || !filename.toLowerCase().endsWith('.pdf')) {
+      return res.status(404).json({ error: 'PDF not found' });
+    }
+    
+    // Get file stats for range requests
+    const stats = fs.statSync(pdfPath);
+    const fileSize = stats.size;
+    const range = req.headers.range;
+    
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      const file = fs.createReadStream(pdfPath, { start, end });
+      
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'application/pdf',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'no-referrer',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'X-PDF-Security': 'protected'
+      });
+      
+      file.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': 'application/pdf',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'no-referrer',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+        'X-PDF-Security': 'protected'
+      });
+      
+      fs.createReadStream(pdfPath).pipe(res);
+    }
+    
+  } catch (error) {
+    console.error('Error serving PDF stream:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test email configuration
+app.get('/api/test-email', async (req, res) => {
+  try {
+    const testMailOptions = {
+      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      to: 'test@example.com',
+      subject: 'Test Email - BioPing',
+      text: 'This is a test email from BioPing server.'
+    };
+
+    const result = await transporter.sendMail(testMailOptions);
+    res.json({
+      success: true,
+      message: 'Test email sent successfully',
+      messageId: result.messageId
+    });
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).json({
+      success: false,
+      message: `Test email failed: ${error.message}`,
+      error: {
+        code: error.code,
+        command: error.command,
+        response: error.response
+      }
+    });
+  }
 });
 
 // Login route
@@ -106,13 +283,27 @@ app.post('/api/auth/login', [
 
     const { email, password } = req.body;
 
-    // Check if user exists (dummy check)
-    if (email !== dummyUser.email) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    // Check if user exists in mockDB or is universal user
+    let user = mockDB.users.find(u => u.email === email);
+    let isUniversalUser = false;
+
+    if (!user) {
+      // Check if it's a universal email
+      if (universalEmails.includes(email)) {
+        user = {
+          email: email,
+          password: dummyUser.password, // Use the same hashed password
+          name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) + ' User',
+          role: email === 'universalx0242@gmail.com' ? 'admin' : 'user'
+        };
+        isUniversalUser = true;
+      } else {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
     }
 
     // Check password
-    const isValidPassword = await bcrypt.compare(password, dummyUser.password);
+    const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -120,9 +311,9 @@ app.post('/api/auth/login', [
     // Generate JWT token
     const token = jwt.sign(
       { 
-        email: dummyUser.email, 
-        name: dummyUser.name,
-        role: dummyUser.role 
+        email: user.email, 
+        name: isUniversalUser ? user.name : `${user.firstName} ${user.lastName}`,
+        role: user.role || 'user'
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -132,10 +323,11 @@ app.post('/api/auth/login', [
       message: 'Login successful',
       token,
       user: {
-        email: dummyUser.email,
-        name: dummyUser.name,
-        role: dummyUser.role
-      }
+        email: user.email,
+        name: isUniversalUser ? user.name : `${user.firstName} ${user.lastName}`,
+        role: user.role || 'user'
+      },
+      credits: isUniversalUser ? 5 : 0 // Give 5 credits to universal users
     });
 
   } catch (error) {
@@ -750,19 +942,13 @@ app.get('/api/pricing-analytics/export', authenticateToken, (req, res) => {
 let biotechData = [];
 
 // Get all biotech data (admin only)
-app.get('/api/admin/biotech-data', authenticateToken, (req, res) => {
+app.get('/api/admin/biotech-data', (req, res) => {
   try {
-    // Check if user is admin (in production, check user role)
-    if (req.user.email !== 'amankk0007@gmail.com') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
 
     res.json({
       success: true,
-      data: biotechData
+      data: biotechData,
+      uploadedFiles: mockDB.uploadedFiles
     });
   } catch (error) {
     console.error('Error fetching biotech data:', error);
@@ -774,15 +960,8 @@ app.get('/api/admin/biotech-data', authenticateToken, (req, res) => {
 });
 
 // Upload Excel file
-app.post('/api/admin/upload-excel', authenticateToken, upload.single('file'), (req, res) => {
+app.post('/api/admin/upload-excel', upload.single('file'), (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.email !== 'amankk0007@gmail.com') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
 
     if (!req.file) {
       return res.status(400).json({
@@ -880,6 +1059,16 @@ app.post('/api/admin/upload-excel', authenticateToken, upload.single('file'), (r
     // Add to existing data
     biotechData = [...biotechData, ...newData];
 
+    // Store file info in mockDB
+    const fileInfo = {
+      id: Date.now(),
+      filename: req.file.originalname,
+      uploadDate: new Date(),
+      recordsAdded: newData.length,
+      totalRecords: biotechData.length
+    };
+    mockDB.uploadedFiles.push(fileInfo);
+
     res.status(201).json({
       success: true,
       message: `${newData.length} records uploaded successfully`,
@@ -887,7 +1076,8 @@ app.post('/api/admin/upload-excel', authenticateToken, upload.single('file'), (r
         totalRecords: biotechData.length,
         newRecords: newData.length,
         processedRows: jsonData.length - 1,
-        validRecords: newData.length
+        validRecords: newData.length,
+        fileInfo
       }
     });
   } catch (error) {
@@ -907,7 +1097,9 @@ app.post('/api/search-biotech', authenticateToken, [
   body('modality').optional(),
   body('partnerType').optional(),
   body('region').optional(),
-  body('function').optional()
+  body('function').optional(),
+  body('searchType').optional(),
+  body('searchQuery').optional()
 ], (req, res) => {
   try {
     const errors = validationResult(req);
@@ -919,7 +1111,7 @@ app.post('/api/search-biotech', authenticateToken, [
       });
     }
 
-    const { drugName, diseaseArea, developmentStage, modality, partnerType, region, function: contactFunction } = req.body;
+    const { drugName, diseaseArea, developmentStage, modality, partnerType, region, function: contactFunction, searchType, searchQuery } = req.body;
     
     console.log('Search criteria:', { drugName, diseaseArea, developmentStage, modality, partnerType, region, contactFunction });
     console.log('Total data available:', biotechData.length);
@@ -944,6 +1136,30 @@ app.post('/api/search-biotech', authenticateToken, [
     // Check if user provided any search criteria
     let hasSearchCriteria = false;
     let searchCriteria = [];
+    
+    // Handle simple search by company name or contact name
+    if (searchType && searchQuery) {
+      hasSearchCriteria = true;
+      searchCriteria.push('Simple Search');
+      console.log('Simple search:', { searchType, searchQuery });
+      
+      const query = searchQuery.toLowerCase().trim();
+      let tempFilteredData = biotechData.filter(item => {
+        if (searchType === 'Company Name') {
+          // Exact match for company name (case insensitive)
+          return item.companyName && item.companyName.toLowerCase() === query;
+        } else if (searchType === 'Contact Name') {
+          // Partial match for contact name (case insensitive)
+          return item.contactPerson && item.contactPerson.toLowerCase().includes(query);
+        }
+        return false;
+      });
+      
+      // Always return individual contacts, don't group by company
+      filteredData = tempFilteredData;
+      console.log('Individual contacts found:', filteredData.length);
+      console.log('After simple search filter, records found:', filteredData.length);
+    }
     
     // Disease Area - mandatory
     if (diseaseArea) {
@@ -1175,7 +1391,7 @@ app.post('/api/search-biotech', authenticateToken, [
           totalFound: 0,
           totalShown: 0,
           hasMore: false,
-          message: 'Please select at least Disease Area and Looking For to search.'
+          message: 'Please select at least Disease Area and Looking For to search, or use the search bar to find companies or contacts.'
         }
       });
     }
@@ -1293,16 +1509,40 @@ app.post('/api/get-contacts', authenticateToken, [
   }
 });
 
-// Delete record (admin only)
-app.delete('/api/admin/biotech-data/:id', authenticateToken, (req, res) => {
+// Delete multiple records (admin only)
+app.delete('/api/admin/delete-records', (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.email !== 'amankk0007@gmail.com') {
-      return res.status(403).json({ 
+
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ 
         success: false, 
-        message: 'Admin access required' 
+        message: 'Invalid request: ids array required' 
       });
     }
+
+    const initialLength = biotechData.length;
+    biotechData = biotechData.filter(item => !ids.includes(item.id));
+
+    const deletedCount = initialLength - biotechData.length;
+
+    res.json({
+      success: true,
+      message: `${deletedCount} records deleted successfully`
+    });
+  } catch (error) {
+    console.error('Error deleting records:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting records' 
+    });
+  }
+});
+
+// Delete single record (admin only)
+app.delete('/api/admin/biotech-data/:id', (req, res) => {
+  try {
 
     const id = parseInt(req.params.id);
     const initialLength = biotechData.length;
@@ -1329,15 +1569,8 @@ app.delete('/api/admin/biotech-data/:id', authenticateToken, (req, res) => {
 });
 
 // Get admin statistics
-app.get('/api/admin/stats', authenticateToken, (req, res) => {
+app.get('/api/admin/stats', (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.email !== 'amankk0007@gmail.com') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Admin access required' 
-      });
-    }
 
     const uniqueCompanies = new Set(biotechData.map(item => item.companyName)).size;
     const uniqueContacts = new Set(biotechData.map(item => item.email)).size;
@@ -1383,6 +1616,319 @@ app.get('/api/debug/data', authenticateToken, (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching debug data' 
+    });
+  }
+});
+
+// Connect to MongoDB
+console.log('Starting server without MongoDB for now...');
+console.log('Server will run with in-memory storage');
+
+// Mock database connection for now
+const mockDB = {
+  users: [],
+  verificationCodes: [],
+  uploadedFiles: [] // Store uploaded file info
+};
+
+// Configure nodemailer transporter
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Send verification code
+app.post('/api/auth/send-verification', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid email address' 
+      });
+    }
+
+    const { email } = req.body;
+    
+    // Check if user already exists
+    const existingUser = mockDB.users.find(user => user.email === email);
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User with this email already exists' 
+      });
+    }
+    
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Delete any existing verification codes for this email
+    mockDB.verificationCodes = mockDB.verificationCodes.filter(code => code.email !== email);
+    
+    // Store code in mock database with expiration (5 minutes)
+    mockDB.verificationCodes.push({
+      email,
+      code: verificationCode,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      used: false
+    });
+
+    // Email template
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      to: email,
+      subject: 'Email Verification - BioPing',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">Email Verification</p>
+          </div>
+          
+          <div style="background: white; padding: 30px; border: 1px solid #e1e5e9; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #333; margin-bottom: 20px;">Verify Your Email Address</h2>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+              Thank you for signing up with BioPing! To complete your registration, please use the verification code below:
+            </p>
+            
+            <div style="background: #f8f9fa; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 25px 0;">
+              <div style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                ${verificationCode}
+              </div>
+            </div>
+            
+            <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
+              This code will expire in <strong>5 minutes</strong>. If you didn't request this verification, please ignore this email.
+            </p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e1e5e9;">
+              <p style="color: #999; font-size: 14px; margin: 0;">
+                Best regards,<br>
+                The BioPing Team
+              </p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+
+    // Send email (mock for now)
+    console.log('Attempting to send email to:', email);
+    console.log('Mail options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
+    
+    // For development/testing, use mock email sending
+    console.log('=== DEVELOPMENT MODE ===');
+    console.log('Verification code for testing:', verificationCode);
+    console.log('Email would be sent to:', email);
+    console.log('=== END DEVELOPMENT MODE ===');
+    
+    // Comment out real email sending for now
+    // const result = await transporter.sendMail(mailOptions);
+    // console.log('Email sent successfully:', result.messageId);
+
+    res.json({
+      success: true,
+      message: 'Verification code sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    console.error('Error details:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode
+    });
+    
+    res.status(500).json({ 
+      success: false, 
+      message: `Failed to send verification code: ${error.message}` 
+    });
+  }
+});
+
+// Verify email code
+app.post('/api/auth/verify-email', [
+  body('email').isEmail().normalizeEmail(),
+  body('code').isLength({ min: 6, max: 6 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid input' 
+      });
+    }
+
+    const { email, code } = req.body;
+    
+    // Find verification code in mock database
+    const verificationCode = mockDB.verificationCodes.find(vc => 
+      vc.email === email && 
+      vc.code === code && 
+      !vc.used &&
+      vc.expiresAt > new Date()
+    );
+    
+    if (!verificationCode) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid or expired verification code' 
+      });
+    }
+
+    // Mark code as used
+    verificationCode.used = true;
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    console.error('Error verifying email:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error verifying email' 
+    });
+  }
+});
+
+// Create user account
+app.post('/api/auth/create-account', [
+  body('firstName').notEmpty().trim(),
+  body('lastName').notEmpty().trim(),
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 8 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid input', 
+        errors: errors.array() 
+      });
+    }
+
+    const { firstName, lastName, email, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = mockDB.users.find(user => user.email === email);
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User with this email already exists' 
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user in mock database
+    const newUser = {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      company: 'N/A',
+      role: 'user',
+      isVerified: true,
+      createdAt: new Date()
+    };
+
+    mockDB.users.push(newUser);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        email: newUser.email, 
+        name: `${newUser.firstName} ${newUser.lastName}`,
+        role: newUser.role 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Account created successfully',
+      token,
+      user: {
+        email: newUser.email,
+        name: `${newUser.firstName} ${newUser.lastName}`,
+        role: newUser.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating account:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error creating account' 
+    });
+  }
+});
+
+// Get all users (admin only)
+app.get('/api/admin/users', async (req, res) => {
+  try {
+
+    // Return users from mockDB
+    res.json({
+      success: true,
+      data: {
+        users: mockDB.users,
+        totalUsers: mockDB.users.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching users' 
+    });
+  }
+});
+
+// Delete user (admin only)
+app.delete('/api/admin/users/:id', async (req, res) => {
+  try {
+
+    const userId = req.params.id;
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting user' 
     });
   }
 });

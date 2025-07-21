@@ -14,11 +14,14 @@ import {
   Search,
   Filter,
   BarChart3,
-  DollarSign
+  DollarSign,
+  RefreshCw
 } from 'lucide-react';
+import { API_BASE_URL, ADMIN_API_BASE_URL } from '../config';
 
 const AdminPanel = () => {
   const [uploadedData, setUploadedData] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
@@ -30,10 +33,12 @@ const AdminPanel = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState('upload');
+  const [selectedItems, setSelectedItems] = useState([]);
 
   useEffect(() => {
     // Load data from backend
     fetchBiotechData();
+    fetchUsers();
   }, []);
 
   const fetchBiotechData = async () => {
@@ -41,10 +46,9 @@ const AdminPanel = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5000/api/admin/biotech-data', {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/biotech-data`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -81,6 +85,34 @@ const AdminPanel = () => {
     });
   };
 
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setUsers(result.data.users);
+      } else {
+        throw new Error(result.message || 'Failed to fetch users');
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      // Don't set error for users, just log it
+    }
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -96,13 +128,10 @@ const AdminPanel = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:5000/api/admin/upload-excel', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
+              const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/upload-excel`, {
+          method: 'POST',
+          body: formData
+        });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -148,6 +177,68 @@ const AdminPanel = () => {
     const updatedData = uploadedData.filter(item => item.id !== id);
     setUploadedData(updatedData);
     calculateStats(updatedData);
+  };
+
+  const refreshData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await Promise.all([fetchBiotechData(), fetchUsers()]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      setError('Failed to refresh data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === uploadedData.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(uploadedData.map(item => item.id));
+    }
+  };
+
+  const handleSelectItem = (id) => {
+    setSelectedItems(prev => 
+      prev.includes(id) 
+        ? prev.filter(itemId => itemId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedItems.length === 0) return;
+    
+    if (window.confirm(`Are you sure you want to delete ${selectedItems.length} selected items?`)) {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/delete-records`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ids: selectedItems })
+        });
+
+        if (response.ok) {
+          // Remove deleted items from state
+          setUploadedData(prev => prev.filter(item => !selectedItems.includes(item.id)));
+          setSelectedItems([]);
+          calculateStats(uploadedData.filter(item => !selectedItems.includes(item.id)));
+        } else {
+          throw new Error('Failed to delete records');
+        }
+      } catch (error) {
+        console.error('Error deleting records:', error);
+        setError('Failed to delete selected records');
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const downloadTemplate = () => {
@@ -203,46 +294,66 @@ const AdminPanel = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
-                <Database className="w-6 h-6 text-white" />
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Enhanced Header */}
+      <div className="bg-white/10 backdrop-blur-xl border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-6">
+              <motion.div 
+                className="w-16 h-16 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center shadow-2xl"
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Database className="w-8 h-8 text-white" />
+              </motion.div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-                <p className="text-gray-600">Manage your biotech database</p>
+                <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+                <p className="text-gray-300 text-lg">Advanced Biotech Database Management</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                <Download className="w-4 h-4 mr-2 inline" />
+              <motion.button 
+                onClick={refreshData}
+                disabled={loading}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-lg"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <RefreshCw className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh Data
+              </motion.button>
+              <motion.button 
+                onClick={handleExportData}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center shadow-lg"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Download className="w-5 h-5 mr-2" />
                 Export Data
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Enhanced Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+            className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 shadow-2xl border border-blue-400/20 backdrop-blur-sm"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Records</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalRecords}</p>
+                <p className="text-blue-100 text-sm font-medium mb-2">Total Records</p>
+                <p className="text-4xl font-bold text-white">{stats.totalRecords.toLocaleString()}</p>
+                <p className="text-blue-200 text-xs mt-2">Database entries</p>
               </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                <Database className="w-6 h-6 text-white" />
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Database className="w-8 h-8 text-white" />
               </div>
             </div>
           </motion.div>
@@ -251,15 +362,16 @@ const AdminPanel = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+            className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-2xl border border-green-400/20 backdrop-blur-sm"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Companies</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalCompanies}</p>
+                <p className="text-green-100 text-sm font-medium mb-2">Total Companies</p>
+                <p className="text-4xl font-bold text-white">{stats.totalCompanies.toLocaleString()}</p>
+                <p className="text-green-200 text-xs mt-2">Unique organizations</p>
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-white" />
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <BarChart3 className="w-8 h-8 text-white" />
               </div>
             </div>
           </motion.div>
@@ -268,15 +380,16 @@ const AdminPanel = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+            className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 shadow-2xl border border-purple-400/20 backdrop-blur-sm"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Contacts</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalContacts}</p>
+                <p className="text-purple-100 text-sm font-medium mb-2">Total Contacts</p>
+                <p className="text-4xl font-bold text-white">{stats.totalContacts.toLocaleString()}</p>
+                <p className="text-purple-200 text-xs mt-2">BD professionals</p>
               </div>
-              <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Users className="w-8 h-8 text-white" />
               </div>
             </div>
           </motion.div>
@@ -285,15 +398,33 @@ const AdminPanel = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
+            className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl p-6 shadow-2xl border border-yellow-400/20 backdrop-blur-sm"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-yellow-100 text-sm font-medium mb-2">Total Revenue</p>
+                <p className="text-4xl font-bold text-white">${stats.totalRevenue.toLocaleString()}</p>
+                <p className="text-yellow-200 text-xs mt-2">Estimated value</p>
+              </div>
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <DollarSign className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
             className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
-                <p className="text-3xl font-bold text-green-600">${stats.totalRevenue.toLocaleString()}</p>
+                <p className="text-sm text-gray-600 mb-1">Registered Users</p>
+                <p className="text-3xl font-bold text-blue-600">{users.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
               </div>
             </div>
           </motion.div>
@@ -357,6 +488,7 @@ const AdminPanel = () => {
               {[
                 { id: 'upload', name: 'Upload Data', icon: Upload },
                 { id: 'manage', name: 'Manage Data', icon: FileText },
+                { id: 'users', name: 'Users', icon: Users },
                 { id: 'settings', name: 'Settings', icon: Settings }
               ].map((tab) => (
                 <button
@@ -457,13 +589,24 @@ const AdminPanel = () => {
               >
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Manage Data</h3>
-                  <button 
-                    onClick={handleExportData}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Export All Data</span>
-                  </button>
+                  <div className="flex items-center space-x-4">
+                    {selectedItems.length > 0 && (
+                      <button 
+                        onClick={handleDeleteSelected}
+                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete Selected ({selectedItems.length})</span>
+                      </button>
+                    )}
+                    <button 
+                      onClick={handleExportData}
+                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export All Data</span>
+                    </button>
+                  </div>
                 </div>
 
                 {uploadedData.length === 0 ? (
@@ -483,6 +626,14 @@ const AdminPanel = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.length === uploadedData.length && uploadedData.length > 0}
+                              onChange={handleSelectAll}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
@@ -494,6 +645,14 @@ const AdminPanel = () => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {uploadedData.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.includes(item.id)}
+                                onChange={() => handleSelectItem(item.id)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
                                 <div className="text-sm font-medium text-gray-900">{item.companyName}</div>
@@ -524,6 +683,66 @@ const AdminPanel = () => {
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'users' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Registered Users</h3>
+                  <div className="text-sm text-gray-500">
+                    Total Users: {users.length}
+                  </div>
+                </div>
+
+                {users.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Users Registered</h3>
+                    <p className="text-gray-600">Users will appear here once they sign up</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {users.map((user) => (
+                          <tr key={user.email} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.firstName} {user.lastName}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.company}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.role}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(user.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Active
+                              </span>
                             </td>
                           </tr>
                         ))}

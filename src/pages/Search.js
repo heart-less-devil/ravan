@@ -121,8 +121,8 @@ const Search = () => {
                   <label htmlFor="drugName" className="block text-sm font-semibold text-gray-900 mb-2">
                     Drug Name <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+              <input
+                type="text"
                     id="drugName"
                     name="drugName"
                     value={formData.drugName}
@@ -132,7 +132,7 @@ const Search = () => {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">About Your Pipeline Drug</p>
-                </div>
+            </div>
 
                 {/* Disease Area */}
                 <div>
@@ -146,14 +146,14 @@ const Search = () => {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-blue-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white"
                     required
-                  >
+            >
                     <option value="">Select Disease Area</option>
                     {diseaseAreas.map((area) => (
                       <option key={area} value={area}>{area}</option>
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">Max. 1 Selection Allowed.</p>
-                </div>
+          </div>
 
                 {/* Stage of Development */}
                 <div>
@@ -166,7 +166,7 @@ const Search = () => {
                     value={formData.stageOfDevelopment}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white"
-                  >
+            >
                     <option value="">Select Stage</option>
                     {developmentStages.map((stage) => (
                       <option key={stage} value={stage}>{stage}</option>
@@ -212,7 +212,7 @@ const Search = () => {
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white"
                     required
-                  >
+            >
                     <option value="">Select Partner Type</option>
                     {partnerTypes.map((type) => (
                       <option key={type} value={type}>{type}</option>
@@ -240,7 +240,7 @@ const Search = () => {
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">HQ Country of Partner</p>
-                </div>
+                      </div>
 
                 {/* Function */}
                 <div>
@@ -262,7 +262,7 @@ const Search = () => {
                   </select>
                   <p className="text-xs text-gray-500 mt-1">Contact Person Function</p>
                 </div>
-              </div>
+        </div>
 
               {/* Search Button */}
               <div className="flex justify-end pt-4">
@@ -278,7 +278,7 @@ const Search = () => {
               </div>
             </form>
           </div>
-        </motion.div>
+          </motion.div>
       </div>
     </div>
   );

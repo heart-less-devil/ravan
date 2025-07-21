@@ -2,28 +2,28 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "src": "server/index.js",
+      "use": "@vercel/node"
     },
     {
-      "src": "api/index.js",
-      "use": "@vercel/node"
+      "src": "build/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "dest": "server/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "build/$1"
     }
   ],
   "env": {
-    "JWT_SECRET": "bioping-secret-key-2025-very-secure-jwt-token"
+    "MONGODB_URI": "@mongodb_uri",
+    "JWT_SECRET": "@jwt_secret",
+    "EMAIL_USER": "@email_user",
+    "EMAIL_PASS": "@email_pass"
   }
 } 

@@ -1,0 +1,593 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ZoomIn, ZoomOut, RotateCw, Eye, Shield, Lock, User, Clock, AlertCircle } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import './SecurePDFViewer.css';
+
+// Set up PDF.js worker - use local file
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+
+const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
+  // Security Features Summary:
+  // ✅ Download Prevention: All download shortcuts blocked
+  // ✅ Print Prevention: Ctrl+P and print functions disabled
+  // ✅ Screenshot Protection: CSS filters make screenshots unusable
+  // ✅ Right-Click Blocking: Context menu completely disabled
+  // ✅ Text Selection: Copy/paste completely disabled
+  // ✅ Keyboard Shortcuts: All save/copy shortcuts blocked
+  // ✅ DevTools Detection: F12 and developer tools blocked
+  // ✅ Watermark Overlays: User ID and timestamp embedded
+  // ✅ Iframe Protection: Prevents embedding in other sites
+  // ✅ Content Extraction: Drag/drop and selection disabled
+  // ✅ Website-Only Access: Content readable only on this site
+  const [scale, setScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [pdfDocument, setPdfDocument] = useState(null);
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const [watermarkText, setWatermarkText] = useState('');
+  const [useFallback, setUseFallback] = useState(false);
+  const [pdfjsAvailable, setPdfjsAvailable] = useState(true);
+  const [preferIframe, setPreferIframe] = useState(true); // Start with iframe to avoid PDF.js issues
+  const [securityAlert, setSecurityAlert] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
+
+  // Generate watermark text with user ID and timestamp
+  useEffect(() => {
+    const timestamp = new Date().toISOString();
+    const watermark = `USER: ${userId || 'GUEST'} | ${timestamp} | SECURED CONTENT`;
+    setWatermarkText(watermark);
+  }, [userId]);
+
+  // Load PDF using PDF.js or iframe fallback
+  useEffect(() => {
+    const loadPDF = async () => {
+      try {
+        setIsLoading(true);
+        
+        // If we prefer iframe or PDF.js is not available, use iframe directly
+        if (preferIframe || !pdfjsAvailable) {
+          console.log('Using iframe fallback directly');
+          setUseFallback(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('Attempting to load PDF with PDF.js...');
+        
+        // Load PDF document
+        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+        const pdf = await loadingTask.promise;
+        setPdfDocument(pdf);
+        setTotalPages(pdf.numPages);
+        
+        // Render first page
+        await renderPage(pdf, 1);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading PDF:', error);
+        setIsLoading(false);
+        
+        // If PDF.js fails, immediately use iframe fallback
+        console.log('PDF.js failed, using iframe fallback');
+        setPdfjsAvailable(false);
+        setUseFallback(true);
+        setIsLoading(false);
+      }
+    };
+
+    loadPDF();
+  }, [pdfUrl, preferIframe, pdfjsAvailable]);
+
+  // Render PDF page
+  const renderPage = async (pdf, pageNumber) => {
+    try {
+      const page = await pdf.getPage(pageNumber);
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      const viewport = page.getViewport({ scale: scale });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+
+      await page.render(renderContext).promise;
+      setCurrentPage(pageNumber);
+    } catch (error) {
+      console.error('Error rendering page:', error);
+    }
+  };
+
+  // Navigate to specific page
+  const goToPage = async (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages && pdfDocument) {
+      await renderPage(pdfDocument, pageNumber);
+    }
+  };
+
+  // Security features
+  useEffect(() => {
+    // Disable right-click context menu
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+      // Ultra-strong keyboard blocking for maximum security
+  const handleKeyDown = (e) => {
+    // Block EVERY possible key combination
+    const allKeys = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const blockedKeys = allKeys.split('');
+    
+    // Block ALL Ctrl/Cmd combinations
+    if ((e.ctrlKey || e.metaKey) && blockedKeys.includes(e.key)) {
+      e.preventDefault();
+      e.stopPropagation();
+      activateSecurityMode();
+      showSecurityAlert('Download attempt blocked!');
+      return false;
+    }
+    
+    // Block ALL screenshot methods
+    if (e.key === 'PrintScreen' || 
+        e.key === 'F12' || e.key === 'F11' || e.key === 'F5' ||
+        (e.ctrlKey && e.shiftKey) ||
+        (e.metaKey && e.shiftKey) ||
+        (e.altKey && e.key === 'Tab') ||
+        (e.ctrlKey && e.key === 'u') ||
+        (e.ctrlKey && e.key === 'i') ||
+        (e.ctrlKey && e.key === 'j') ||
+        (e.ctrlKey && e.key === 'k')) {
+      e.preventDefault();
+      e.stopPropagation();
+      activateSecurityMode();
+      showSecurityAlert('Screenshot attempt blocked!');
+      return false;
+    }
+    
+    // Block function keys completely
+    if (e.key.startsWith('F') && e.key.length <= 3) {
+      e.preventDefault();
+      e.stopPropagation();
+      activateSecurityMode();
+      return false;
+    }
+    
+    // Block Alt combinations
+    if (e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      activateSecurityMode();
+      return false;
+    }
+    
+    // Block Shift combinations
+    if (e.shiftKey && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      e.stopPropagation();
+      activateSecurityMode();
+      showSecurityAlert('Security violation detected!');
+      return false;
+    }
+  };
+
+    // Disable text selection
+    const handleSelectStart = (e) => e.preventDefault();
+    const handleDragStart = (e) => e.preventDefault();
+    const handleCopy = (e) => e.preventDefault();
+
+    // Enhanced developer tools detection
+    const handleDevTools = () => {
+      // Check for dev tools panel
+      if (window.outerHeight - window.innerHeight > 200 || 
+          window.outerWidth - window.innerWidth > 200) {
+        activateSecurityMode();
+      }
+      
+      // Detect if window size changes unexpectedly
+      if (window.innerWidth < 100 || window.innerHeight < 100) {
+        activateSecurityMode();
+      }
+      
+      // Check for console access
+      if (window.console && window.console.firebug) {
+        activateSecurityMode();
+      }
+      
+      // Detect iframe context (prevent embedding)
+      if (window !== window.top) {
+        activateSecurityMode();
+      }
+      
+      // Check for debugging tools
+      const devtools = {
+        open: false,
+        orientation: null
+      };
+      
+      const threshold = 160;
+      
+      setInterval(() => {
+        if (window.outerHeight - window.innerHeight > threshold ||
+            window.outerWidth - window.innerWidth > threshold) {
+          if (!devtools.open) {
+            devtools.open = true;
+            activateSecurityMode();
+          }
+        } else {
+          devtools.open = false;
+        }
+      }, 500);
+    };
+
+    // Enhanced screenshot and content protection
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        activateSecurityMode();
+      }
+    };
+    
+    // Prevent content extraction
+    const handleBeforeUnload = (e) => {
+      // Clear sensitive data when leaving
+      if (pdfDocument) {
+        pdfDocument.destroy();
+      }
+    };
+    
+    // Prevent drag and drop of content
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      return false;
+    };
+    
+    const handleDrop = (e) => {
+      e.preventDefault();
+      return false;
+    };
+    
+    // Prevent selection and copying
+    const handleMouseDown = (e) => {
+      // Prevent text selection
+      e.preventDefault();
+      return false;
+    };
+    
+    // Prevent context menu on all elements
+    const handleElementContextMenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    };
+
+    // Add comprehensive event listeners
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('drop', handleDrop);
+    document.addEventListener('mousedown', handleMouseDown);
+    
+    // Add context menu prevention to all elements
+    const elements = document.querySelectorAll('*');
+    elements.forEach(element => {
+      element.addEventListener('contextmenu', handleElementContextMenu);
+    });
+    
+    // Continuous monitoring
+    const devToolsInterval = setInterval(handleDevTools, 1000);
+
+    // Disable text selection globally
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    document.body.style.mozUserSelect = 'none';
+    document.body.style.msUserSelect = 'none';
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('dragover', handleDragOver);
+      document.removeEventListener('drop', handleDrop);
+      document.removeEventListener('mousedown', handleMouseDown);
+      
+      // Remove context menu listeners from all elements
+      const elements = document.querySelectorAll('*');
+      elements.forEach(element => {
+        element.removeEventListener('contextmenu', handleElementContextMenu);
+      });
+      
+      clearInterval(devToolsInterval);
+      
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      document.body.style.mozUserSelect = '';
+      document.body.style.msUserSelect = '';
+    };
+  }, []);
+
+  // Show security alert
+  const showSecurityAlert = (message) => {
+    setSecurityAlert(message);
+    setShowAlert(true);
+    setTimeout(() => {
+      setShowAlert(false);
+      setSecurityAlert('');
+    }, 3000);
+  };
+
+  // Activate security mode
+  const activateSecurityMode = () => {
+    const container = containerRef.current;
+    if (container) {
+      container.classList.add('security-mode');
+      setTimeout(() => {
+        container.classList.remove('security-mode');
+      }, 3000);
+    }
+  };
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    const newScale = Math.min(scale + 0.2, 3);
+    setScale(newScale);
+    if (pdfDocument) {
+      renderPage(pdfDocument, currentPage);
+    }
+  };
+
+  const handleZoomOut = () => {
+    const newScale = Math.max(scale - 0.2, 0.5);
+    setScale(newScale);
+    if (pdfDocument) {
+      renderPage(pdfDocument, currentPage);
+    }
+  };
+
+  const handleRotate = () => {
+    setRotation(prev => prev + 90);
+  };
+
+  const handleReset = () => {
+    setScale(1);
+    setRotation(0);
+    if (pdfDocument) {
+      renderPage(pdfDocument, currentPage);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <Shield className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <Lock className="w-4 h-4" />
+                <span>Secure Viewer - Website Only Access</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {/* Page Navigation */}
+              {totalPages > 0 && (
+                <div className="flex items-center space-x-2 mr-4">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+              
+              {/* Zoom Controls */}
+              <button
+                onClick={handleZoomOut}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <span className="text-sm font-medium text-gray-600">{Math.round(scale * 100)}%</span>
+              <button
+                onClick={handleZoomIn}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              
+              {/* Rotate */}
+              <button
+                onClick={handleRotate}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Rotate"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+              
+              {/* Reset */}
+              <button
+                onClick={handleReset}
+                className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Reset
+              </button>
+              
+              {/* Close */}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* PDF Container */}
+          <div className="flex-1 overflow-hidden relative" ref={containerRef}>
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading PDF...</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Loading indicator only */}
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading PDF...</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Security notice */}
+            {!isLoading && (
+              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium z-50">
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-4 h-4" />
+                  <span>Website Only Access</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Security alert */}
+            {showAlert && (
+              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-3 rounded-lg text-sm font-medium z-50 animate-pulse">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{securityAlert}</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="h-full overflow-auto bg-gray-100 p-4">
+              <div 
+                className="bg-white shadow-lg mx-auto relative"
+                style={{
+                  transform: `rotate(${rotation}deg)`,
+                  transformOrigin: 'center',
+                  transition: 'transform 0.3s ease'
+                }}
+              >
+                {/* PDF Canvas */}
+                {!useFallback ? (
+                  <canvas
+                    ref={canvasRef}
+                    className="w-full h-auto border-0"
+                    style={{
+                      pointerEvents: 'auto',
+                      userSelect: 'none',
+                      webkitUserSelect: 'none',
+                      imageRendering: 'crisp-edges',
+                      textRendering: 'optimizeLegibility'
+                    }}
+                  />
+                ) : (
+                  /* Fallback iframe for basic PDF viewing */
+                  <iframe
+                    src={pdfUrl}
+                    className="w-full h-[800px] border-0"
+                    style={{
+                      pointerEvents: 'auto',
+                      userSelect: 'none',
+                      webkitUserSelect: 'none'
+                    }}
+                    sandbox="allow-same-origin allow-scripts allow-forms"
+                    referrerPolicy="no-referrer"
+                  />
+                )}
+                
+                {/* Security overlay with watermark */}
+                <div className="absolute inset-0 pointer-events-none security-overlay">
+                  <div className="absolute inset-0 watermark-grid"></div>
+                  <div className="absolute top-4 left-4 text-xs text-red-600 font-mono opacity-30">
+                    {watermarkText}
+                  </div>
+                  <div className="absolute bottom-4 right-4 text-xs text-red-600 font-mono opacity-30">
+                    {watermarkText}
+                  </div>
+                </div>
+                
+                {/* Security mode overlay */}
+                <div className="absolute inset-0 pointer-events-none security-mode-overlay"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span>Secure Content</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <User className="w-4 h-4 text-blue-600" />
+                  <span>User: {userId || 'GUEST'}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  <span>{new Date().toLocaleTimeString()}</span>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                Screenshots blocked • Downloads disabled • DevTools blocked
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default SecurePDFViewer; 

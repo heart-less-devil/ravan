@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
+import SecurePDFViewer from '../components/SecurePDFViewer';
 import { 
   Grid, 
   Search, 
@@ -45,7 +46,9 @@ import {
   Circle,
   Download,
   Check,
-  TrendingDown
+  TrendingDown,
+  Gift,
+  Lock
 } from 'lucide-react';
 import { 
   Card, 
@@ -67,6 +70,13 @@ const Dashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [searchType, setSearchType] = useState('Company Name');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [userCredits, setUserCredits] = useState(5);
+  const [showCreditPopup, setShowCreditPopup] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -79,7 +89,7 @@ const Dashboard = () => {
     }
 
     // Get user profile
-    fetch(`/api/auth/profile`, {
+    fetch(`${API_BASE_URL}/api/auth/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -88,6 +98,19 @@ const Dashboard = () => {
     .then(data => {
       if (data.user) {
         setUser(data.user);
+        
+        // Check if user is new (first time visiting dashboard)
+        const isNewUser = localStorage.getItem('isNewUser');
+        if (isNewUser === 'true') {
+          setShowWelcomePopup(true);
+          localStorage.removeItem('isNewUser');
+        }
+        
+        // Load user credits
+        const savedCredits = localStorage.getItem('userCredits');
+        if (savedCredits) {
+          setUserCredits(parseInt(savedCredits));
+        }
       } else {
         localStorage.removeItem('token');
         navigate('/login');
@@ -105,11 +128,83 @@ const Dashboard = () => {
     navigate('/login');
   };
 
+  const consumeCredit = () => {
+    if (userCredits > 0) {
+      const newCredits = userCredits - 1;
+      setUserCredits(newCredits);
+      localStorage.setItem('userCredits', newCredits.toString());
+      return true;
+    } else {
+      setShowCreditPopup(true);
+      return false;
+    }
+  };
+
+  const closeWelcomePopup = () => {
+    setShowWelcomePopup(false);
+  };
+
+  const closeCreditPopup = () => {
+    setShowCreditPopup(false);
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setSearchLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      console.log('Searching with:', { searchType, searchQuery });
+      
+      const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          searchType: searchType,
+          searchQuery: searchQuery.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to search data');
+      }
+
+      const result = await response.json();
+      console.log('Search result:', result);
+      
+      if (result.success) {
+        // Navigate to search page with results
+        navigate('/dashboard/search');
+        // Store results in localStorage to pass to search page
+        localStorage.setItem('searchResults', JSON.stringify(result.data.results));
+        localStorage.setItem('searchType', searchType);
+        localStorage.setItem('searchQuery', searchQuery);
+        console.log('Stored search results:', result.data.results);
+      } else {
+        throw new Error(result.message || 'Search failed');
+      }
+    } catch (error) {
+      console.error('Error searching data:', error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Grid, section: 'MAIN' },
     { name: 'Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
-    { name: 'Analytics', path: '/dashboard/analytics', icon: BarChart3, section: 'DATA' },
-    { name: 'Pricing Analytics', path: '/dashboard/pricing-analytics', icon: DollarSign, section: 'DATA' },
+    
     { name: 'Saved Searches', path: '/dashboard/saved-searches', icon: FileText, section: 'MY DEALS' },
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Self Coaching Tips', path: '/dashboard/resources/coaching-tips', icon: User, section: 'RESOURCES' },
@@ -130,7 +225,7 @@ const Dashboard = () => {
       case '/dashboard':
         return <DashboardHome user={user} />;
       case '/dashboard/search':
-        return <SearchPage />;
+        return <SearchPage showSearchForm={true} searchType={searchType} useCredit={consumeCredit} userCredits={userCredits} />;
       case '/dashboard/saved-searches':
         return <SavedSearches />;
       case '/dashboard/resources/definitions':
@@ -138,17 +233,14 @@ const Dashboard = () => {
       case '/dashboard/resources/coaching-tips':
         return <CoachingTips />;
       case '/dashboard/resources/free-content':
-        return <FreeContent />;
+        return <FreeContent user={user} />;
       case '/dashboard/legal':
         return <LegalDisclaimer />;
       case '/dashboard/contact':
         return <Contact />;
       case '/dashboard/pricing':
         return <PricingPage />;
-      case '/dashboard/analytics':
-        return <AnalyticsPage />;
-      case '/dashboard/pricing-analytics':
-        return <PricingAnalyticsPage />;
+          
       default:
         return <DashboardHome user={user} />;
     }
@@ -169,8 +261,8 @@ const Dashboard = () => {
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Enhanced Sidebar */}
       <motion.div 
-        className={`bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-500 ${
-          sidebarCollapsed ? 'w-20' : 'w-72'
+        className={`bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-500 overflow-y-auto ${
+          sidebarCollapsed ? 'w-20' : 'w-96'
         }`}
         initial={{ x: -100 }}
         animate={{ x: 0 }}
@@ -239,28 +331,45 @@ const Dashboard = () => {
       </motion.div>
 
       {/* Enhanced Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Enhanced Top Bar */}
         <motion.div 
-          className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-8 py-6 shadow-sm"
+          className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-8 py-6 shadow-sm flex-shrink-0"
           initial={{ y: -50 }}
           animate={{ y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-4">
-                <select className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-48">
-                  <option>Company Name</option>
-                  <option>Contact Name</option>
+            <div className="flex items-center space-x-4">
+                <select 
+                  value={searchType}
+                  onChange={(e) => setSearchType(e.target.value)}
+                  className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-48"
+                >
+                  <option value="Company Name">Company Name</option>
+                  <option value="Contact Name">Contact Name</option>
                 </select>
                 <div className="relative">
                   <input
                     type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleSearchKeyPress}
                     placeholder="Search anything..."
                     className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl pl-12 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-80"
                   />
-                  <Search className="w-5 h-5 absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <button
+                    onClick={handleSearch}
+                    disabled={searchLoading}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-blue-500 transition-colors duration-200"
+                  >
+                    {searchLoading ? (
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Search className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
@@ -284,7 +393,7 @@ const Dashboard = () => {
 
               {/* Enhanced User Profile */}
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3">
                   <motion.div 
                     className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg"
                     whileHover={{ scale: 1.05 }}
@@ -295,24 +404,26 @@ const Dashboard = () => {
                   <div className="hidden sm:block">
                     <div className="text-sm font-semibold text-gray-900">{user.name || 'User'}</div>
                     <div className="text-xs text-gray-500">{user.email}</div>
-                  </div>
                 </div>
+              </div>
                 <motion.button
-                  onClick={handleLogout}
+                onClick={handleLogout}
                   className="p-3 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 group"
                   title="Logout"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                >
+              >
                   <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
                 </motion.button>
-              </div>
             </div>
           </div>
+        </div>
         </motion.div>
 
+
+
         {/* Enhanced Content Area */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-8 overflow-y-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -321,12 +432,130 @@ const Dashboard = () => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              {renderContent()}
+          {renderContent()}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Welcome Popup */}
+      <AnimatePresence>
+        {showWelcomePopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle className="w-8 h-8 text-white" />
     </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Your Dashboard!</h2>
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <Gift className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">🎁 Free Trial Credits</h3>
+                  <p className="text-gray-600 mb-3">You have <span className="font-bold text-blue-600">5 free credits</span> to explore our platform!</p>
+                  <div className="bg-white rounded-lg p-3 border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Credits Remaining:</span>
+                      <span className="text-lg font-bold text-blue-600">5</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-sm text-gray-600">Expires in:</span>
+                      <span className="text-sm font-medium text-orange-600">3 days</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Use these credits to view contact details and explore our biotech database. 
+                  Each "Get Contact Info" action uses 1 credit.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={closeWelcomePopup}
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+                  >
+                    Get Started
+                  </button>
+                  <Link
+                    to="/dashboard/pricing"
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200 text-center"
+                  >
+                    View Plans
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Credit Exhausted Popup */}
+      <AnimatePresence>
+        {showCreditPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="w-8 h-8 text-white" />
+          </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Free Credits Exhausted!</h2>
+          <p className="text-gray-600 mb-6">
+                  You've used all your free credits. Upgrade to a paid plan to continue accessing contact details and unlock unlimited searches.
+                </p>
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-center mb-2">
+                    <Lock className="w-5 h-5 text-orange-600 mr-2" />
+                    <span className="text-sm font-medium text-orange-700">Premium Features Locked</span>
+                  </div>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Unlimited contact details</li>
+                    <li>• Advanced search filters</li>
+                    <li>• Export functionality</li>
+                    <li>• Priority support</li>
+          </ul>
+        </div>
+                <div className="flex space-x-3">
+                  <Link
+                    to="/dashboard/pricing"
+                    className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 px-6 rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition-all duration-200"
+                  >
+                    Upgrade Now
+                  </Link>
+                  <button
+                    onClick={closeCreditPopup}
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200"
+                  >
+                    Maybe Later
+                  </button>
+          </div>
+                </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+              </div>
   );
 };
 
@@ -423,10 +652,10 @@ const DashboardHome = ({ user }) => {
         className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-8 text-white shadow-2xl"
       >
         <div className="flex items-center justify-between">
-          <div>
+                <div>
             <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || 'User'}! 👋</h1>
             <p className="text-blue-100 text-lg">Here's what's happening with your BD activities today.</p>
-          </div>
+                </div>
           <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
             <Calendar className="w-5 h-5" />
             <span className="font-medium">{new Date().toLocaleDateString('en-US', { 
@@ -435,7 +664,7 @@ const DashboardHome = ({ user }) => {
               month: 'long', 
               day: 'numeric' 
             })}</span>
-          </div>
+              </div>
         </div>
       </motion.div>
 
@@ -450,21 +679,21 @@ const DashboardHome = ({ user }) => {
             className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
           >
             <div className="flex items-center justify-between">
-              <div>
+                <div>
                 <p className="text-sm font-medium text-gray-600 mb-1">{stat.label}</p>
                 <p className="text-3xl font-bold text-gray-900 mb-2">{stat.value}</p>
                 <p className="text-sm text-green-600 flex items-center font-medium">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   {stat.change}
                 </p>
-              </div>
+                </div>
               <div className={`w-14 h-14 bg-gradient-to-br ${stat.bgGradient} rounded-2xl flex items-center justify-center`}>
                 <stat.icon className={`w-7 h-7 text-${stat.color}-600`} />
               </div>
             </div>
           </motion.div>
         ))}
-      </div>
+          </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Enhanced Quick Actions */}
@@ -477,7 +706,7 @@ const DashboardHome = ({ user }) => {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Quick Actions</h3>
             <Plus className="w-5 h-5 text-gray-400" />
-          </div>
+        </div>
           <div className="grid grid-cols-2 gap-4">
             {quickActions.map((action, index) => (
               <Link key={index} to={action.path}>
@@ -488,7 +717,7 @@ const DashboardHome = ({ user }) => {
                 >
                   <div className={`w-12 h-12 bg-gradient-to-br ${action.gradient} rounded-2xl flex items-center justify-center mx-auto mb-3`}>
                     <action.icon className="w-6 h-6 text-white" />
-                  </div>
+      </div>
                   <p className="font-semibold text-gray-900">{action.name}</p>
                 </motion.div>
               </Link>
@@ -519,7 +748,7 @@ const DashboardHome = ({ user }) => {
               >
                 <div className={`w-10 h-10 bg-gradient-to-br from-${activity.color}-100 to-${activity.color}-200 rounded-xl flex items-center justify-center flex-shrink-0`}>
                   <activity.icon className={`w-5 h-5 text-${activity.color}-600`} />
-                </div>
+        </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-1">
                     <p className="text-sm font-medium text-gray-900">{activity.text}</p>
@@ -529,12 +758,12 @@ const DashboardHome = ({ user }) => {
                     {activity.status === 'pending' && (
                       <AlertCircle className="w-4 h-4 text-orange-500" />
                     )}
-                  </div>
+          </div>
                   <p className="text-xs text-gray-500 flex items-center">
                     <Clock className="w-3 h-3 mr-1" />
                     {activity.time}
                   </p>
-                </div>
+        </div>
               </motion.div>
             ))}
           </div>
@@ -545,12 +774,12 @@ const DashboardHome = ({ user }) => {
 };
 
 // Enhanced Search Page Component
-const SearchPage = () => {
+const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCredit: consumeCredit, userCredits }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',
     stageOfDevelopment: '',
-    modality: '',
+      modality: '',
     lookingFor: '',
     region: '',
     function: ''
@@ -563,6 +792,37 @@ const SearchPage = () => {
   const [contactDetails, setContactDetails] = useState([]);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [revealedEmails, setRevealedEmails] = useState(new Set());
+  const [expandedContactDetails, setExpandedContactDetails] = useState(new Set());
+  const [currentSearchType, setCurrentSearchType] = useState(searchType);
+  const [currentSearchQuery, setCurrentSearchQuery] = useState('');
+
+  // Load search results from localStorage on component mount and when location changes
+  useEffect(() => {
+    const checkForStoredResults = () => {
+      const storedResults = localStorage.getItem('searchResults');
+      const storedSearchType = localStorage.getItem('searchType');
+      const storedSearchQuery = localStorage.getItem('searchQuery');
+      
+      if (storedResults) {
+        console.log('Loading search results from localStorage:', JSON.parse(storedResults));
+        setSearchResults(JSON.parse(storedResults));
+        setCurrentSearchType(storedSearchType || 'Company Name');
+        setCurrentSearchQuery(storedSearchQuery || '');
+        // Clear localStorage after loading
+        localStorage.removeItem('searchResults');
+        localStorage.removeItem('searchType');
+        localStorage.removeItem('searchQuery');
+      }
+    };
+
+    // Check immediately
+    checkForStoredResults();
+    
+    // Also check after a short delay to handle navigation timing
+    const timer = setTimeout(checkForStoredResults, 100);
+    
+    return () => clearTimeout(timer);
+  }, []); // Only run on mount
 
   const handleChange = (e) => {
     setFormData({
@@ -580,7 +840,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`/api/search-biotech`, {
+      const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -631,7 +891,7 @@ const SearchPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`/api/get-contacts`, {
+      const response = await fetch(`${API_BASE_URL}/api/get-contacts`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -683,12 +943,26 @@ const SearchPage = () => {
   };
 
   const handleRevealEmail = (companyId) => {
-    setRevealedEmails(prev => {
+    if (consumeCredit && consumeCredit()) {
+      setRevealedEmails(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(companyId)) {
+          newSet.delete(companyId);
+        } else {
+          newSet.add(companyId);
+        }
+        return newSet;
+      });
+    }
+  };
+
+  const handleViewMoreDetails = (contactId) => {
+    setExpandedContactDetails(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(companyId)) {
-        newSet.delete(companyId);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
       } else {
-        newSet.add(companyId);
+        newSet.add(contactId);
       }
       return newSet;
     });
@@ -756,10 +1030,11 @@ const SearchPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Search Criteria</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-8">
+      {showSearchForm && (
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Search Criteria</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-8">
           {/* Top Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             
@@ -775,7 +1050,7 @@ const SearchPage = () => {
                 value={formData.drugName}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                placeholder="Drug Name"
+            placeholder="Drug Name"
                 required
               />
               <p className="text-xs text-gray-500 mt-1">About Your Pipeline Drug</p>
@@ -1000,6 +1275,26 @@ const SearchPage = () => {
           </div>
         </form>
       </div>
+      )}
+
+      {/* Show Search Form Button when hidden */}
+      {!showSearchForm && (
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Advanced Search</h3>
+              <p className="text-gray-600">Use detailed criteria to find specific companies</p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+            >
+              <Search className="w-4 h-4" />
+              <span>Show Search Form</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Search Results */}
       {error && (
@@ -1011,31 +1306,25 @@ const SearchPage = () => {
       {searchResults.length > 0 && (
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           <div className="flex items-center justify-between mb-6">
-                          <div>
-                <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
-                <p className="text-gray-600">
-                  Found {searchResults.length} companies matching your criteria
-                  {formData.drugName && (
-                    <span className="ml-2 text-blue-600 font-medium">
-                      for "{formData.drugName}"
-                    </span>
-                  )}
-                </p>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
+              <p className="text-gray-600">
+                Showing 1 - {searchResults.length} of {searchResults.length} results
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3 border border-blue-200">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <Gift className="w-3 h-3 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">Credits Left</div>
+                    <div className="text-lg font-bold text-blue-600">{userCredits}</div>
+                  </div>
+                </div>
               </div>
-            {selectedCompanies.length > 0 && (
-              <button
-                onClick={handleGetContacts}
-                disabled={loading}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 disabled:opacity-50"
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <Users className="w-4 h-4" />
-                )}
-                <span>Get Contacts ({selectedCompanies.length})</span>
-              </button>
-            )}
+            </div>
           </div>
 
           <div className="w-full">
@@ -1045,125 +1334,178 @@ const SearchPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPANY</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT INFORMATION</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    COMPANY
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CONTACT
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CONTACT INFORMATION
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ACTIONS
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {searchResults.map((company) => [
-                  <tr key={company.id} className="hover:bg-gray-50">
+                {searchResults.map((result) => (
+                  <tr key={result.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        checked={selectedCompanies.includes(company.id)}
-                        onChange={() => handleCompanySelect(company.id)}
+                        checked={selectedCompanies.includes(result.id)}
+                        onChange={() => handleCompanySelect(result.id)}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                     </td>
+                    
+                    {/* Company Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                           </svg>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{company.companyName}</div>
-                          <div className="text-sm text-gray-500">{company.region}</div>
+                          <div className="text-sm font-medium text-gray-900">{result.companyName}</div>
                           <div className="flex items-center space-x-2 mt-1">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              PUBLIC
-                            </span>
+                            <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="text-xs text-gray-500">{result.region || 'United States'}</span>
                           </div>
-
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
+                            PUBLIC
+                          </div>
+                          
+                          {/* Expanded Details Section */}
+                          {expandedContactDetails.has(result.id) && (
+                            <div className="mt-3 space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-500">TIER:</span>
+                                <span className="text-sm text-gray-900">{result.tier || 'Large Pharma'}</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-500">MODALITY:</span>
+                                <span className="text-sm text-gray-900">{result.modality || 'SM, LM, CT, GT, Bx, RNA'}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
+                        
+
                       </div>
                     </td>
+                    
+                    {/* Contact Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
-                            {company.contactPerson ? company.contactPerson.charAt(0).toUpperCase() : 'C'}
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-semibold text-blue-600">
+                            {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
                           </span>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{company.contactPerson}</div>
-                          <div className="text-sm text-gray-500">{company.contactTitle || 'Sr. Director'}</div>
-                          <div className="text-sm text-gray-500">{company.contactFunction}</div>
-                          {/* Show BD Person TA Focus if available */}
-                          {company.bdPersonTAFocus && (
-                            <div className="text-xs text-blue-600 mt-1">
-                              BD Focus: {company.bdPersonTAFocus}
+                          <div className="text-sm font-medium text-gray-900">{result.contactPerson}</div>
+                          <div className="text-sm text-gray-500">{result.contactTitle || 'Exec. Director'}</div>
+                          <div className="text-sm text-gray-500">{result.contactFunction || 'Business Development'}</div>
+                          
+                          {/* BD FOCUS AREA in Contact Column */}
+                          {expandedContactDetails.has(result.id) && (
+                            <div className="mt-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-500">BD FOCUS AREA:</span>
+                                <span className="text-sm text-gray-900">{result.bdPersonTAFocus || 'NULL'}</span>
+                              </div>
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
+                    
+                    {/* Contact Information Column */}
+                    <td className="px-6 py-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-sm text-gray-900">
+                            {revealedEmails.has(result.id) 
+                              ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
+                              : `@${result.companyName?.toLowerCase()}.com`
+                            }
+                          </span>
+                        </div>
+                        
+                        {/* VIEW MORE/LESS Section */}
+                        <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
+                          {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
+                          <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                        
+
+                      </div>
+                    </td>
+                    
+
+                    
+                    {/* Actions Column */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-sm text-gray-900">
-                          {revealedEmails.has(company.id) 
-                            ? (company.email || `${company.contactPerson?.toLowerCase().replace(' ', '.')}@${company.companyName?.toLowerCase()}.com`)
-                            : `@${company.companyName?.toLowerCase()}.com`
-                          }
-                        </span>
-                        <button 
-                          onClick={() => handleViewMore(company)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1 border-b border-dotted border-blue-600"
-                        >
-                          <span>{expandedRows.has(company.id) ? 'VIEW LESS' : 'VIEW MORE'}</span>
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={expandedRows.has(company.id) ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} />
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
+                        </div>
+                        <button
+                          onClick={() => handleRevealEmail(result.id)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                        >
+                          Get Contact Info
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium">
-                      <button 
-                        onClick={() => handleRevealEmail(company.id)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105"
-                      >
-                        Get Contact Info
-                      </button>
-                    </td>
-                  </tr>,
-                  expandedRows.has(company.id) && (
-                    <tr key={`expanded-${company.id}`} className="bg-gray-50">
-                      <td colSpan="5" className="px-6 py-4">
-                        <div className="space-y-4">
-                                                    {/* Simple Data Section */}
-                          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                              <div>
-                                <span className="text-gray-500">TIER:</span>
-                                <div className="text-gray-900 font-medium">{company.tier || 'Large Pharma'}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">MODALITY:</span>
-                                <div className="text-gray-900 font-medium">{company.modality || 'SM, LM, CT, GT, Bx, RNA'}</div>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">BD Focus Area:</span>
-                                <div className="text-gray-900 font-medium">{company.bdPersonTAFocus || 'NULL'}</div>
-                              </div>
-                            </div>
-                          </div>
-                          
+                  </tr>
+                ))}
+                
 
-                          
-                          
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                ].filter(Boolean))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-6">
+            <div className="flex items-center space-x-2">
+              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7m-8 0l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            <div className="text-sm text-gray-500">
+              Page 1 of 1
+            </div>
           </div>
         </div>
       )}
@@ -1376,7 +1718,7 @@ const SavedSearches = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Saved Searches</h2>
             <p className="text-gray-600">Manage your saved search criteria and results</p>
-          </div>
+      </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -1534,17 +1876,17 @@ const Definitions = () => {
   );
 
   return (
-    <div className="space-y-6">
+      <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Definitions</h2>
             <p className="text-gray-600">Browse our comprehensive glossary of business development terms</p>
-          </div>
+                </div>
           <div className="flex items-center space-x-2">
             <BookOpen className="w-6 h-6 text-blue-600" />
             <span className="text-sm font-medium text-gray-600">{searchFiltered.length} terms</span>
-          </div>
+                </div>
         </div>
 
         {/* Search and Filter */}
@@ -1768,13 +2110,13 @@ const CoachingTips = () => {
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg mb-2">{tip.title}</h3>
                   <p className="text-gray-600 mb-3">{tip.description}</p>
-                  <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3">
                     <span className="text-sm text-gray-500">{tip.duration}</span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(tip.difficulty)}`}>
                       {tip.difficulty}
                     </span>
-                  </div>
                 </div>
+              </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1791,9 +2133,9 @@ const CoachingTips = () => {
                     <Circle className="w-5 h-5" />
                   )}
                 </motion.button>
-              </div>
+          </div>
             </motion.div>
-          ))}
+        ))}
         </div>
       </div>
     </div>
@@ -1801,65 +2143,47 @@ const CoachingTips = () => {
 };
 
 // Enhanced Free Content Component
-const FreeContent = () => {
+const FreeContent = ({ user }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [downloadedContent, setDownloadedContent] = useState([]);
+  const [viewedContent, setViewedContent] = useState([]);
+  const [selectedPDF, setSelectedPDF] = useState(null);
 
   const freeContent = {
-    'Templates': [
+    'Networking': [
       {
         id: 1,
-        title: 'BD Playbook Template',
-        description: 'Comprehensive guide for business development strategies and best practices.',
+        title: 'Networking Fundamentals',
+        description: 'Comprehensive guide for networking strategies and best practices in business development.',
         type: 'PDF',
-        size: '2.3 MB',
-        downloads: 1247,
+        size: '37 MB',
+        views: 1247,
         rating: 4.8,
-        featured: true
-      },
+        featured: true,
+        pdfUrl: '/pdf/Networking Fundamentals.pdf'
+      }
+    ],
+    'Security': [
       {
         id: 2,
-        title: 'Partnership Agreement Template',
-        description: 'Standard template for partnership agreements with customizable clauses.',
-        type: 'DOCX',
-        size: '1.8 MB',
-        downloads: 892,
-        rating: 4.6,
-        featured: false
-      }
-    ],
-    'Guides': [
-      {
-        id: 3,
-        title: 'Deal Comparables by Therapeutic Area',
-        description: 'Curated deal comps segmented by therapeutic area for benchmarking.',
-        type: 'XLSX',
-        size: '3.1 MB',
-        downloads: 2156,
+        title: 'AWS Security Incident Response Guide',
+        description: 'Complete guide for AWS security incident response and best practices.',
+        type: 'PDF',
+        size: '804 KB',
+        views: 2156,
         rating: 4.9,
-        featured: true
+        featured: true,
+        pdfUrl: '/pdf/AWS Security Incident Response Guide.pdf'
       },
       {
-        id: 4,
-        title: 'Conference Strategy Guide',
-        description: 'Ranked and reviewed BD conferences with attendance recommendations.',
+        id: 3,
+        title: 'Extreme Privacy - Mobile Devices',
+        description: 'Comprehensive guide for mobile device privacy and security measures.',
         type: 'PDF',
-        size: '1.5 MB',
-        downloads: 678,
-        rating: 4.4,
-        featured: false
-      }
-    ],
-    'Consulting': [
-      {
-        id: 5,
-        title: '1:1 Business Development Consulting',
-        description: 'Book personalized sessions with Vik for strategy and partnership discussions.',
-        type: 'Session',
-        size: '60 min',
-        downloads: 45,
-        rating: 5.0,
-        featured: true
+        size: '2.1 MB',
+        views: 892,
+        rating: 4.6,
+        featured: false,
+        pdfUrl: '/pdf/Extreme Privacy - Mobile Devices .pdf'
       }
     ]
   };
@@ -1869,18 +2193,20 @@ const FreeContent = () => {
     ? Object.values(freeContent).flat()
     : freeContent[selectedCategory] || [];
 
-  const handleDownload = (contentId) => {
-    if (!downloadedContent.includes(contentId)) {
-      setDownloadedContent(prev => [...prev, contentId]);
+  const handleViewPDF = (content) => {
+    if (!viewedContent.includes(content.id)) {
+      setViewedContent(prev => [...prev, content.id]);
     }
-    console.log('Downloading content:', contentId);
+    
+    setSelectedPDF(content);
+    console.log('Viewing PDF:', content.title);
   };
 
-  const formatDownloads = (downloads) => {
-    if (downloads >= 1000) {
-      return `${(downloads / 1000).toFixed(1)}k`;
+  const formatViews = (views) => {
+    if (views >= 1000) {
+      return `${(views / 1000).toFixed(1)}k`;
     }
-    return downloads.toString();
+    return views.toString();
   };
 
   return (
@@ -1890,7 +2216,7 @@ const FreeContent = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Free Content</h2>
             <p className="text-gray-600">Access our library of free business development resources</p>
-          </div>
+      </div>
           <div className="flex items-center space-x-2">
             <Heart className="w-6 h-6 text-red-600" />
             <span className="text-sm font-medium text-gray-600">{filteredContent.length} resources</span>
@@ -1911,19 +2237,19 @@ const FreeContent = () => {
           <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-600">Total Downloads</p>
+                <p className="text-sm font-medium text-green-600">Total Views</p>
                 <p className="text-2xl font-bold text-green-900">
-                  {formatDownloads(Object.values(freeContent).flat().reduce((sum, c) => sum + c.downloads, 0))}
+                  {formatViews(Object.values(freeContent).flat().reduce((sum, c) => sum + c.views, 0))}
                 </p>
               </div>
-              <Download className="w-8 h-8 text-green-600" />
+              <Eye className="w-8 h-8 text-green-600" />
             </div>
           </div>
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Your Downloads</p>
-                <p className="text-2xl font-bold text-blue-900">{downloadedContent.length}</p>
+                <p className="text-sm font-medium text-blue-600">Your Views</p>
+                <p className="text-2xl font-bold text-blue-900">{viewedContent.length}</p>
               </div>
               <CheckCircle className="w-8 h-8 text-blue-600" />
             </div>
@@ -1969,7 +2295,7 @@ const FreeContent = () => {
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                     <span>{content.type}</span>
                     <span>{content.size}</span>
-                    <span>{formatDownloads(content.downloads)} downloads</span>
+                    <span>{formatViews(content.views)} views</span>
                     <div className="flex items-center space-x-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-current" />
                       <span>{content.rating}</span>
@@ -1979,17 +2305,17 @@ const FreeContent = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => handleDownload(content.id)}
+                  onClick={() => handleViewPDF(content)}
                   className={`ml-4 p-3 rounded-lg transition-colors duration-200 ${
-                    downloadedContent.includes(content.id)
+                    viewedContent.includes(content.id)
                       ? 'bg-green-100 text-green-600 hover:bg-green-200'
                       : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
                   }`}
                 >
-                  {downloadedContent.includes(content.id) ? (
+                  {viewedContent.includes(content.id) ? (
                     <CheckCircle className="w-5 h-5" />
                   ) : (
-                    <Download className="w-5 h-5" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </motion.button>
               </div>
@@ -1997,6 +2323,16 @@ const FreeContent = () => {
           ))}
         </div>
       </div>
+      
+      {/* Secure PDF Viewer Modal */}
+      {selectedPDF && (
+        <SecurePDFViewer
+          pdfUrl={selectedPDF.url}
+          title={selectedPDF.title}
+          onClose={() => setSelectedPDF(null)}
+          userId={user?.email || 'GUEST'}
+        />
+      )}
     </div>
   );
 };
@@ -2057,7 +2393,7 @@ const LegalDisclaimer = () => {
   };
 
   return (
-    <div className="space-y-6">
+      <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -2182,7 +2518,7 @@ const Contact = () => {
   ];
 
   return (
-    <div className="space-y-6">
+      <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -2313,77 +2649,63 @@ const Contact = () => {
   );
 };
 
-// Enhanced Pricing Page Component
+// Enhanced Pricing Page Component - BioPing Style
 const PricingPage = () => {
-  const [isAnnual, setIsAnnual] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isAnnual, setIsAnnual] = useState(true);
 
   const plans = [
     {
-      id: 'starter',
-      name: "Starter",
-      description: "Perfect for small businesses getting started with BD",
-      monthlyPrice: 99,
-      annualPrice: 79,
+      id: 'free',
+      name: "Free",
+      description: "Perfect for getting started",
+      credits: "5 credits per month",
+      price: 0,
+      period: "yearly",
       features: [
-        "Up to 100 company searches per month",
-        "Basic contact information",
-        "Email support",
-        "Standard search filters",
-        "Export to CSV",
-        "Basic analytics dashboard",
-        "5 saved searches",
-        "Standard API access"
+        "1 Seat included",
+        "Get 5 free contacts",
+        "Active for three days",
+        "No Credit Card Needed",
+        "No Free Resources Access"
       ],
-      icon: Building2,
+      icon: Gift,
+      popular: false,
+      color: 'gray'
+    },
+    {
+      id: 'basic',
+      name: "Basic Plan",
+      description: "Ideal for growing businesses",
+      credits: "50 credits per month",
+      price: 4800,
+      period: "yearly",
+      features: [
+        "1 Seat included",
+        "Get 50 free contacts / month",
+        "Pay by credit/debit card",
+        "Unlimited Access to Free Resources"
+      ],
+      icon: Users,
       popular: false,
       color: 'blue'
     },
     {
-      id: 'professional',
-      name: "Professional",
-      description: "Ideal for growing businesses and BD teams",
-      monthlyPrice: 199,
-      annualPrice: 159,
+      id: 'premium',
+      name: "Premium Plan",
+      description: "For advanced business development",
+      credits: "100 credits per month",
+      price: 7200,
+      period: "yearly",
       features: [
-        "Up to 500 company searches per month",
-        "Advanced contact information",
-        "Priority email support",
-        "Advanced search filters",
-        "Export to multiple formats",
-        "Advanced analytics & reporting",
-        "Team collaboration tools",
-        "Unlimited saved searches",
-        "Custom integrations",
-        "Dedicated account manager"
-      ],
-      icon: Users,
-      popular: true,
-      color: 'purple'
-    },
-    {
-      id: 'enterprise',
-      name: "Enterprise",
-      description: "For large organizations with advanced BD needs",
-      monthlyPrice: 399,
-      annualPrice: 319,
-      features: [
-        "Unlimited company searches",
-        "Complete contact information",
-        "Dedicated account manager",
-        "Custom search filters",
-        "Full API access",
-        "Advanced analytics & reporting",
-        "White-label options",
-        "Custom integrations",
-        "Training & onboarding",
-        "SLA guarantees",
-        "Custom data feeds",
-        "24/7 phone support"
+        "1 Seat included",
+        "Get 100 free contacts / month",
+        "Pay by credit/debit card",
+        "Unlimited Access to Free Resources"
       ],
       icon: Target,
-      popular: false,
-      color: 'green'
+      popular: true,
+      color: 'orange'
     }
   ];
 
@@ -2437,36 +2759,7 @@ const PricingPage = () => {
             our core features with different usage limits and additional capabilities.
           </p>
 
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center space-x-4 mt-8">
-            <span className={`text-lg ${!isAnnual ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-              Monthly
-            </span>
-            <button
-              onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                isAnnual ? 'bg-blue-600' : 'bg-gray-200'
-              }`}
-            >
-              <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                  isAnnual ? 'translate-x-9' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className={`text-lg ${isAnnual ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-              Annual
-            </span>
-            {isAnnual && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full"
-              >
-                Save 20%
-              </motion.span>
-            )}
-          </div>
+
         </div>
       </div>
 
@@ -2503,16 +2796,11 @@ const PricingPage = () => {
                   {plan.description}
                 </p>
                 <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">
-                    ${isAnnual ? plan.annualPrice : plan.monthlyPrice}
-                  </span>
-                  <span className="text-gray-500">/month</span>
+                  <div className="text-sm text-gray-600 mb-1">{plan.credits}</div>
+                  <div className="text-3xl font-bold text-gray-900">
+                    ${plan.price === 0 ? '0' : plan.price.toLocaleString()} USD / {plan.period}
+                  </div>
                 </div>
-                {isAnnual && (
-                  <p className="text-sm text-green-600 font-medium mb-6">
-                    Billed annually (${plan.annualPrice * 12})
-                  </p>
-                )}
               </div>
 
               <div className="space-y-4 mb-8">
@@ -2705,230 +2993,160 @@ const AnalyticsPage = () => {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Members</p>
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(membershipData.totalMembers)}</p>
-              <p className={`text-sm font-medium flex items-center ${getGrowthColor(12.5)}`}>
-                <TrendingUp className="w-4 h-4 mr-1" />
-                +12.5% from last month
-              </p>
+              <p className="text-blue-100 text-sm mb-1">Total Members</p>
+              <p className="text-3xl font-bold">{formatNumber(membershipData.totalMembers)}</p>
+              <p className="text-blue-200 text-sm mt-1">+{membershipData.newMembersThisMonth} this month</p>
             </div>
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
+            <Users className="w-12 h-12 text-blue-200" />
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-              <p className="text-3xl font-bold text-gray-900">{formatCurrency(membershipData.revenue.monthly)}</p>
-              <p className={`text-sm font-medium flex items-center ${getGrowthColor(membershipData.revenue.growth)}`}>
-                <TrendingUp className="w-4 h-4 mr-1" />
-                +{membershipData.revenue.growth}% from last month
+              <p className="text-green-100 text-sm mb-1">Monthly Revenue</p>
+              <p className="text-3xl font-bold">{formatCurrency(membershipData.revenue.monthly)}</p>
+              <p className={`text-green-200 text-sm mt-1 ${getGrowthColor(membershipData.revenue.growth)}`}>
+                +{membershipData.revenue.growth}% vs last month
               </p>
             </div>
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-white" />
-            </div>
+            <DollarSign className="w-12 h-12 text-green-200" />
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">New Members</p>
-              <p className="text-3xl font-bold text-gray-900">{formatNumber(membershipData.newMembersThisMonth)}</p>
-              <p className={`text-sm font-medium flex items-center ${getGrowthColor(8.2)}`}>
-                <TrendingUp className="w-4 h-4 mr-1" />
-                +8.2% from last month
-              </p>
+              <p className="text-purple-100 text-sm mb-1">Active Members</p>
+              <p className="text-3xl font-bold">{formatNumber(membershipData.activeMembers)}</p>
+              <p className="text-purple-200 text-sm mt-1">{((membershipData.activeMembers / membershipData.totalMembers) * 100).toFixed(1)}% active rate</p>
             </div>
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
+            <Activity className="w-12 h-12 text-purple-200" />
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Churn Rate</p>
-              <p className="text-3xl font-bold text-gray-900">{membershipData.churnRate}%</p>
-              <p className={`text-sm font-medium flex items-center ${getGrowthColor(-0.5)}`}>
-                <TrendingDown className="w-4 h-4 mr-1" />
-                -0.5% from last month
-              </p>
+              <p className="text-orange-100 text-sm mb-1">Churn Rate</p>
+              <p className="text-3xl font-bold">{membershipData.churnRate}%</p>
+              <p className="text-orange-200 text-sm mt-1">Monthly average</p>
             </div>
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center">
-              <TrendingDown className="w-6 h-6 text-white" />
-            </div>
+            <TrendingDown className="w-12 h-12 text-orange-200" />
           </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Charts and Data */}
+      {/* Revenue Chart */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-8">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Revenue Trend</h3>
+        <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+          <p className="text-gray-500">Chart visualization would go here</p>
+        </div>
+      </div>
+
+      {/* Plan Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Revenue Chart */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
-        >
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Revenue Trend</h3>
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Plan Distribution</h3>
           <div className="space-y-4">
-            {membershipData.monthlyRevenue.map((data, index) => (
-              <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{data.month}</p>
-                    <p className="text-sm text-gray-600">{formatNumber(data.members)} members</p>
-                  </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-blue-500 rounded-full mr-3"></div>
+                <span className="text-gray-700">Starter</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-900 font-semibold">{membershipData.plans.starter}</span>
+                <span className="text-gray-500">({((membershipData.plans.starter / membershipData.totalMembers) * 100).toFixed(1)}%)</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-green-500 rounded-full mr-3"></div>
+                <span className="text-gray-700">Professional</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-900 font-semibold">{membershipData.plans.professional}</span>
+                <span className="text-gray-500">({((membershipData.plans.professional / membershipData.totalMembers) * 100).toFixed(1)}%)</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-4 h-4 bg-purple-500 rounded-full mr-3"></div>
+                <span className="text-gray-700">Enterprise</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-900 font-semibold">{membershipData.plans.enterprise}</span>
+                <span className="text-gray-500">({((membershipData.plans.enterprise / membershipData.totalMembers) * 100).toFixed(1)}%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Top Regions</h3>
+          <div className="space-y-4">
+            {membershipData.topRegions.map((region, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className={`w-4 h-4 rounded-full mr-3 ${
+                    index === 0 ? 'bg-blue-500' :
+                    index === 1 ? 'bg-green-500' :
+                    index === 2 ? 'bg-purple-500' :
+                    index === 3 ? 'bg-orange-500' : 'bg-gray-500'
+                  }`}></div>
+                  <span className="text-gray-700">{region.region}</span>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">{formatCurrency(data.revenue)}</p>
-                  <p className="text-sm text-green-600">+{Math.round((data.revenue / 42000 - 1) * 100)}%</p>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-900 font-semibold">{region.members}</span>
+                  <span className="text-gray-500">({formatCurrency(region.revenue)})</span>
                 </div>
               </div>
             ))}
           </div>
-        </motion.div>
-
-        {/* Plan Distribution */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
-        >
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Plan Distribution</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                <span className="font-medium">Starter</span>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900">{formatNumber(membershipData.plans.starter)}</p>
-                <p className="text-sm text-gray-600">{Math.round((membershipData.plans.starter / membershipData.totalMembers) * 100)}%</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
-                <span className="font-medium">Professional</span>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900">{formatNumber(membershipData.plans.professional)}</p>
-                <p className="text-sm text-gray-600">{Math.round((membershipData.plans.professional / membershipData.totalMembers) * 100)}%</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                <span className="font-medium">Enterprise</span>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900">{formatNumber(membershipData.plans.enterprise)}</p>
-                <p className="text-sm text-gray-600">{Math.round((membershipData.plans.enterprise / membershipData.totalMembers) * 100)}%</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Regional Data */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.6 }}
-        className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
-      >
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Regional Performance</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {membershipData.topRegions.map((region, index) => (
-            <div key={index} className="p-6 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">{region.region}</h4>
-                  <p className="text-sm text-gray-600">{formatNumber(region.members)} members</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Revenue</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(region.revenue)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Avg. per member</span>
-                  <span className="font-medium text-gray-900">{formatCurrency(region.revenue / region.members)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
       {/* Recent Signups */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.7 }}
-        className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
-      >
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Recent Signups</h3>
-        <div className="space-y-4">
-          {membershipData.recentSignups.map((signup, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">{signup.name.charAt(0)}</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">{signup.name}</p>
-                  <p className="text-sm text-gray-600">{signup.company}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-gray-900">{signup.plan}</p>
-                <p className="text-sm text-gray-600">{formatCurrency(signup.amount)}</p>
-                <p className="text-xs text-gray-500">{new Date(signup.date).toLocaleDateString()}</p>
-              </div>
-            </div>
-          ))}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Recent Signups</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 text-gray-600 font-medium">Name</th>
+                <th className="text-left py-3 px-4 text-gray-600 font-medium">Company</th>
+                <th className="text-left py-3 px-4 text-gray-600 font-medium">Plan</th>
+                <th className="text-left py-3 px-4 text-gray-600 font-medium">Date</th>
+                <th className="text-left py-3 px-4 text-gray-600 font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {membershipData.recentSignups.map((signup, index) => (
+                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 text-gray-900">{signup.name}</td>
+                  <td className="py-3 px-4 text-gray-600">{signup.company}</td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      signup.plan === 'Starter' ? 'bg-blue-100 text-blue-800' :
+                      signup.plan === 'Professional' ? 'bg-green-100 text-green-800' :
+                      'bg-purple-100 text-purple-800'
+                    }`}>
+                      {signup.plan}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-gray-600">{new Date(signup.date).toLocaleDateString()}</td>
+                  <td className="py-3 px-4 text-gray-900 font-semibold">{formatCurrency(signup.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
@@ -2954,7 +3172,7 @@ const PricingAnalyticsPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5000/api/pricing-analytics', {
+      const response = await fetch(`${API_BASE_URL}/api/pricing-analytics`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -3051,7 +3269,7 @@ const PricingAnalyticsPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://localhost:5000/api/pricing-analytics/export', {
+      const response = await fetch(`${API_BASE_URL}/api/pricing-analytics/export`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
