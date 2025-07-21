@@ -18,6 +18,10 @@
     {
       "src": "/(.*)",
       "dest": "build/$1"
+    },
+    {
+      "src": "/((?!api/).*)",
+      "dest": "build/index.html"
     }
   ],
   "env": {
