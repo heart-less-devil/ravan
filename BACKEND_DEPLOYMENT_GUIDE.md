@@ -10,7 +10,7 @@ Netlify only serves static files. Your backend server needs to be deployed separ
 1. **Go to:** https://render.com
 2. **Sign up/Login** with GitHub
 3. **Click:** "New" → "Web Service"
-4. **Connect GitHub** and select: `amankk0007/ravan`
+4. **Connect GitHub** and select: `heart-less-devil/ravan`
 5. **Configure:**
    - **Name:** `bioping-backend`
    - **Environment:** `Node`

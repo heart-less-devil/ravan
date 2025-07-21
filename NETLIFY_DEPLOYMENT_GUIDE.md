@@ -1,7 +1,7 @@
 # 🚀 Netlify Deployment Guide
 
 ## **Step 1: Prepare Your Repository**
-✅ Your code is already on GitHub at: `https://github.com/amankk0007/ravan`
+✅ Your code is already on GitHub at: `https://github.com/heart-less-devil/ravan`
 
 ## **Step 2: Deploy to Netlify**
 
@@ -10,7 +10,7 @@
 1. **Go to:** https://netlify.com
 2. **Click:** "Sign up" or "Log in"
 3. **Click:** "Add new site" → "Import an existing project"
-4. **Connect GitHub** and select your repository: `amankk0007/ravan`
+4. **Connect GitHub** and select your repository: `heart-less-devil/ravan`
 5. **Configure build settings:**
    - **Build command:** `npm run build`
    - **Publish directory:** `build`
