@@ -7,11 +7,6 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
-const nodemailer = require('nodemailer');
-const mongoose = require('mongoose');
-const connectDB = require('./config/database');
-const User = require('./models/User');
-const VerificationCode = require('./models/VerificationCode');
 require('dotenv').config();
 
 const app = express();
@@ -55,24 +50,16 @@ const universalEmails = [
   'guest@bioping.com'
 ];
 
-// Dummy user data (in production, this would be in a database)
-const dummyUser = {
-  email: 'universalx0242@gmail.com',
-  password: '$2a$10$YourHashedPasswordHere', // This will be hashed
-  name: 'Admin User',
-  role: 'admin'
-};
+// Pre-hashed password for all universal emails
+const hashedPassword = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'; // 'password'
 
-// Hash the dummy password immediately
-(async () => {
-  try {
-    const hash = await bcrypt.hash('password', 10);
-    dummyUser.password = hash;
-    console.log('Password hashed successfully');
-  } catch (error) {
-    console.error('Error hashing password:', error);
-  }
-})();
+// Simple user data for universal emails
+const universalUsers = universalEmails.map(email => ({
+  email: email,
+  password: hashedPassword,
+  name: email.split('@')[0],
+  role: email === 'universalx0242@gmail.com' ? 'admin' : 'user'
+}));
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -283,23 +270,11 @@ app.post('/api/auth/login', [
 
     const { email, password } = req.body;
 
-    // Check if user exists in mockDB or is universal user
-    let user = mockDB.users.find(u => u.email === email);
-    let isUniversalUser = false;
-
+    // Check if it's a universal email
+    const user = universalUsers.find(u => u.email === email);
+    
     if (!user) {
-      // Check if it's a universal email
-      if (universalEmails.includes(email)) {
-        user = {
-          email: email,
-          password: dummyUser.password, // Use the same hashed password
-          name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) + ' User',
-          role: email === 'universalx0242@gmail.com' ? 'admin' : 'user'
-        };
-        isUniversalUser = true;
-      } else {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // Check password
@@ -312,8 +287,8 @@ app.post('/api/auth/login', [
     const token = jwt.sign(
       { 
         email: user.email, 
-        name: isUniversalUser ? user.name : `${user.firstName} ${user.lastName}`,
-        role: user.role || 'user'
+        name: user.name,
+        role: user.role
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -324,10 +299,10 @@ app.post('/api/auth/login', [
       token,
       user: {
         email: user.email,
-        name: isUniversalUser ? user.name : `${user.firstName} ${user.lastName}`,
-        role: user.role || 'user'
+        name: user.name,
+        role: user.role
       },
-      credits: isUniversalUser ? 5 : 0 // Give 5 credits to universal users
+      credits: 5 // Give 5 credits to all users
     });
 
   } catch (error) {
@@ -1645,245 +1620,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Send verification code
-app.post('/api/auth/send-verification', [
-  body('email').isEmail().normalizeEmail()
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid email address' 
-      });
-    }
 
-    const { email } = req.body;
-    
-    // Check if user already exists
-    const existingUser = mockDB.users.find(user => user.email === email);
-    if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User with this email already exists' 
-      });
-    }
-    
-    // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Delete any existing verification codes for this email
-    mockDB.verificationCodes = mockDB.verificationCodes.filter(code => code.email !== email);
-    
-    // Store code in mock database with expiration (5 minutes)
-    mockDB.verificationCodes.push({
-      email,
-      code: verificationCode,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      used: false
-    });
 
-    // Email template
-    const mailOptions = {
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
-      to: email,
-      subject: 'Email Verification - BioPing',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">Email Verification</p>
-          </div>
-          
-          <div style="background: white; padding: 30px; border: 1px solid #e1e5e9; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #333; margin-bottom: 20px;">Verify Your Email Address</h2>
-            
-            <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-              Thank you for signing up with BioPing! To complete your registration, please use the verification code below:
-            </p>
-            
-            <div style="background: #f8f9fa; border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; margin: 25px 0;">
-              <div style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">
-                ${verificationCode}
-              </div>
-            </div>
-            
-            <p style="color: #666; line-height: 1.6; margin-bottom: 15px;">
-              This code will expire in <strong>5 minutes</strong>. If you didn't request this verification, please ignore this email.
-            </p>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e1e5e9;">
-              <p style="color: #999; font-size: 14px; margin: 0;">
-                Best regards,<br>
-                The BioPing Team
-              </p>
-            </div>
-          </div>
-        </div>
-      `
-    };
-
-    // Send email (mock for now)
-    console.log('Attempting to send email to:', email);
-    console.log('Mail options:', {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject
-    });
-    
-    // For development/testing, use mock email sending
-    console.log('=== DEVELOPMENT MODE ===');
-    console.log('Verification code for testing:', verificationCode);
-    console.log('Email would be sent to:', email);
-    console.log('=== END DEVELOPMENT MODE ===');
-    
-    // Comment out real email sending for now
-    // const result = await transporter.sendMail(mailOptions);
-    // console.log('Email sent successfully:', result.messageId);
-
-    res.json({
-      success: true,
-      message: 'Verification code sent successfully'
-    });
-
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    console.error('Error details:', {
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode
-    });
-    
-    res.status(500).json({ 
-      success: false, 
-      message: `Failed to send verification code: ${error.message}` 
-    });
-  }
-});
-
-// Verify email code
-app.post('/api/auth/verify-email', [
-  body('email').isEmail().normalizeEmail(),
-  body('code').isLength({ min: 6, max: 6 })
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid input' 
-      });
-    }
-
-    const { email, code } = req.body;
-    
-    // Find verification code in mock database
-    const verificationCode = mockDB.verificationCodes.find(vc => 
-      vc.email === email && 
-      vc.code === code && 
-      !vc.used &&
-      vc.expiresAt > new Date()
-    );
-    
-    if (!verificationCode) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid or expired verification code' 
-      });
-    }
-
-    // Mark code as used
-    verificationCode.used = true;
-
-    res.json({
-      success: true,
-      message: 'Email verified successfully'
-    });
-  } catch (error) {
-    console.error('Error verifying email:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error verifying email' 
-    });
-  }
-});
-
-// Create user account
-app.post('/api/auth/create-account', [
-  body('firstName').notEmpty().trim(),
-  body('lastName').notEmpty().trim(),
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8 })
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid input', 
-        errors: errors.array() 
-      });
-    }
-
-    const { firstName, lastName, email, password } = req.body;
-
-    // Check if user already exists
-    const existingUser = mockDB.users.find(user => user.email === email);
-    if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User with this email already exists' 
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user in mock database
-    const newUser = {
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      company: 'N/A',
-      role: 'user',
-      isVerified: true,
-      createdAt: new Date()
-    };
-
-    mockDB.users.push(newUser);
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        email: newUser.email, 
-        name: `${newUser.firstName} ${newUser.lastName}`,
-        role: newUser.role 
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    res.json({
-      success: true,
-      message: 'Account created successfully',
-      token,
-      user: {
-        email: newUser.email,
-        name: `${newUser.firstName} ${newUser.lastName}`,
-        role: newUser.role
-      }
-    });
-
-  } catch (error) {
-    console.error('Error creating account:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error creating account' 
-    });
-  }
-});
 
 // Get all users (admin only)
 app.get('/api/admin/users', async (req, res) => {
