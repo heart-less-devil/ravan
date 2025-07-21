@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: bioping-backend
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node index.js
+    envVars:
+      - key: JWT_SECRET
+        value: bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string
+      - key: NODE_ENV
+        value: production 
