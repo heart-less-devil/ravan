@@ -1606,19 +1606,7 @@ const mockDB = {
   uploadedFiles: [] // Store uploaded file info
 };
 
-// Configure nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+// Email functionality removed - using universal login emails
 
 
 
