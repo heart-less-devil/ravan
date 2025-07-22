@@ -20,6 +20,7 @@ app.use(cors({
     'http://localhost:3002',
     'https://687dc02000e0ca0008eb4b09--deft-paprenjak-1f5e98.netlify.app',
     'https://deft-paprenjak-1f5e98.netlify.app',
+    'https://biopingweb.netlify.app',
     'https://*.netlify.app'
   ],
   credentials: true
