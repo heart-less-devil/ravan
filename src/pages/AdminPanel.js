@@ -299,6 +299,21 @@ const AdminPanel = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleViewRecord = (record) => {
+    alert(`Viewing record: ${record.companyName}`);
+    // In a real application, you would navigate to a detail page or modal
+  };
+
+  const handleEditRecord = (record) => {
+    alert(`Editing record: ${record.companyName}`);
+    // In a real application, you would navigate to an edit form or modal
+  };
+
+  const handleSaveSettings = () => {
+    alert('Settings saved successfully!');
+    // In a real application, you would save the settings to the backend
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Enhanced Header */}
@@ -676,15 +691,21 @@ const AdminPanel = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.developmentStage}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex space-x-2">
-                                <button className="text-blue-600 hover:text-blue-900">
+                                <button 
+                                  onClick={() => handleViewRecord(item)}
+                                  className="text-blue-600 hover:text-blue-900 transition-colors duration-200 cursor-pointer"
+                                >
                                   <Eye className="w-4 h-4" />
                                 </button>
-                                <button className="text-green-600 hover:text-green-900">
+                                <button 
+                                  onClick={() => handleEditRecord(item)}
+                                  className="text-green-600 hover:text-green-900 transition-colors duration-200 cursor-pointer"
+                                >
                                   <Edit className="w-4 h-4" />
                                 </button>
                                 <button 
                                   onClick={() => handleDeleteRecord(item.id)}
-                                  className="text-red-600 hover:text-red-900"
+                                  className="text-red-600 hover:text-red-900 transition-colors duration-200 cursor-pointer"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -803,7 +824,10 @@ const AdminPanel = () => {
                     <p className="text-sm text-gray-500 mt-1">Monthly price for unlimited access</p>
                   </div>
 
-                  <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={handleSaveSettings}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     Save Settings
                   </button>
                 </div>

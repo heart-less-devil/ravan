@@ -191,37 +191,26 @@ const Home = () => {
             {/* Badge */}
             <motion.div
               variants={itemVariants}
-              className="mb-8"
+              className="mb-0"
             >
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-50 to-secondary-50 border border-primary-100 rounded-full text-primary-700 font-medium">
+              <div className="flex justify-center mb-4">
+                <img 
+                  src="/image.png" 
+                  alt="BioPing Logo" 
+                  className="w-96 h-96 object-contain"
+                  onError={(e) => {
+                    console.log('Logo failed to load');
+                    e.target.style.display = 'none';
+                  }}
+                />
               </div>
+              <h1 className="text-5xl md:text-6xl font-bold text-blue-900 mb-6">
+                Your <span className="text-orange-400">Trusted</span> BD Partner
+              </h1>
+              <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed">
+                Our Mission - To empower the life sciences industry achieve <span className="font-bold">smarter outreach, better partners, and faster deals</span> - through validated BD and investor contacts that drive real results.
+              </p>
             </motion.div>
-            
-            {/* Main Headline */}
-            <motion.h1 
-              variants={itemVariants}
-              className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight"
-            >
-              The <span className="bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">Biotech Insider</span> Platform
-            </motion.h1>
-            
-            {/* Subtitle */}
-            <motion.h2 
-              variants={itemVariants}
-              className="text-2xl md:text-3xl font-semibold text-gray-700 mb-8"
-            >
-              Designed to Give Back to the Community
-            </motion.h2>
-            
-            {/* Mission Statement */}
-            <motion.p 
-              variants={itemVariants}
-              className="text-xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed"
-            >
-              With <strong>15+ years in pharma and biotech</strong>, we know the challenges of breaking through. 
-              The BioPing platform offers more than just BD contacts — it's a mix of paid tools and free resources, 
-              built to support, guide, and empower emerging biotechs.
-            </motion.p>
             
             {/* CTA Buttons */}
             <motion.div
@@ -310,98 +299,20 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Why Choose BioPing?
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Built by industry insiders who understand the challenges of biotech business development
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white p-8 rounded-2xl shadow-soft border border-gray-100 hover:shadow-medium hover:-translate-y-1 transition-all duration-300 group"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-6 h-6 text-primary-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Video Section */}
-      <section className="section bg-white py-20">
-        <div className="container-custom">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h2 className="text-4xl font-bold text-gray-900 mb-6">
-                See BioPing in Action
+            <div className="max-w-4xl mx-auto">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+                <Sparkles className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-5xl font-bold text-gray-900 mb-8 leading-tight">
+                Built by a <span className="text-orange-400 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Biotech Insider</span>. 
+                <br />
+                Designed to Give Back.
               </h2>
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Watch how biotech companies are using our platform to accelerate their business development and connect with the right partners.
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                With 15+ years in pharma and biotech, we know the challenges of breaking through. The BioPing platform offers more than just BD contacts — it's a mix of paid tools and free resources, built to support, guide, and empower emerging biotech's.
               </p>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-accent-500 to-primary-500 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-700 font-medium">2-minute overview</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-accent-500 to-primary-500 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-700 font-medium">Real customer stories</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-accent-500 to-primary-500 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-700 font-medium">Platform walkthrough</span>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="relative"
-            >
-              <div className="bg-gradient-to-br from-primary-600 to-secondary-600 rounded-3xl p-1 shadow-large">
-                <div className="bg-gray-900 rounded-3xl p-8 text-center">
-                  <div className="w-24 h-24 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-full mx-auto mb-6 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-300"
-                       onClick={() => setIsVideoPlaying(!isVideoPlaying)}>
-                    <Play className="w-12 h-12 text-white ml-1" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">
-                    Platform Demo
-                  </h3>
-                  <p className="text-gray-300 mb-6">
-                    See how BioPing works in just 2 minutes
-                  </p>
-                  <div className="flex justify-center space-x-4 text-sm text-gray-400">
-                    <span>2:15 min</span>
-                    <span>•</span>
-                    <span>HD Quality</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -691,6 +602,7 @@ const Home = () => {
               </Link>
             </div>
           </motion.div>
+
         </div>
       </section>
 

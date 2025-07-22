@@ -9,7 +9,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
-  CI = "false"
+  CI = "false" 
   NPM_FLAGS = "--legacy-peer-deps"
 
 # Handle API routes for backend

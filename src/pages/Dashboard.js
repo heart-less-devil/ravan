@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
@@ -13,6 +13,7 @@ import {
   Heart, 
   Scale, 
   ChevronLeft,
+  ChevronRight,
   LogOut,
   Building2,
   Lightbulb,
@@ -183,21 +184,11 @@ const Dashboard = () => {
         setGlobalSearchResults({
           results: result.data.results,
           searchType: searchType,
-          searchQuery: searchQuery
+          searchQuery: searchQuery,
+          isGlobalSearch: searchType === 'Company Name' // Only group for company searches, Contact Name shows detailed results
         });
-        // Store results in localStorage as backup
-        localStorage.setItem('searchResults', JSON.stringify(result.data.results));
-        localStorage.setItem('searchType', searchType);
-        localStorage.setItem('searchQuery', searchQuery);
-        console.log('Stored search results:', result.data.results);
-        // Navigate to search page with results
-        navigate('/dashboard/search', { 
-          state: { 
-            searchResults: result.data.results,
-            searchType: searchType,
-            searchQuery: searchQuery
-          }
-        });
+        // Navigate to search page (global search results will be handled by globalSearchResults prop)
+        navigate('/dashboard/search');
       } else {
         throw new Error(result.message || 'Search failed');
       }
@@ -300,22 +291,29 @@ const Dashboard = () => {
             >
               <span className="text-white font-bold text-xl">B</span>
             </motion.div>
-            {!sidebarCollapsed && (
+            {!sidebarCollapsed ? (
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 className="text-white/70 hover:text-white transition-all duration-200 p-2 rounded-xl hover:bg-white/10"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
+            ) : (
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="text-white/70 hover:text-white transition-all duration-200 p-2 rounded-xl hover:bg-white/10"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             )}
           </div>
 
           {/* Enhanced Navigation */}
-          <nav className="flex-1 space-y-8">
+          <nav className="flex-1 space-y-6">
             {['MAIN', 'DATA', 'MY DEALS', 'RESOURCES'].map(section => (
               <div key={section}>
                 {!sidebarCollapsed && (
-                  <div className="text-xs font-bold text-white/40 uppercase tracking-wider mb-4 px-3">
+                  <div className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 px-3">
                     {section}
                   </div>
                 )}
@@ -323,15 +321,15 @@ const Dashboard = () => {
                   <Link
                     key={item.name}
                     to={item.path}
-                    className={`group flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 mb-2 ${
+                    className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${
                       location.pathname === item.path 
                         ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <item.icon className={`w-5 h-5 ${location.pathname === item.path ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
+                    <item.icon className={`w-10 h-10 ${location.pathname === item.path ? 'text-white' : 'text-white/60 group-hover:text-white'}`} strokeWidth={1.5} />
                     {!sidebarCollapsed && (
-                      <span className="font-medium">{item.name}</span>
+                      <span className="font-medium text-sm">{item.name}</span>
                     )}
                   </Link>
                 ))}
@@ -817,68 +815,53 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [expandedContactDetails, setExpandedContactDetails] = useState(new Set());
   const [currentSearchType, setCurrentSearchType] = useState(searchType);
   const [currentSearchQuery, setCurrentSearchQuery] = useState('');
-  const [showSearchForm, setShowSearchForm] = useState(true);
+  const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const [groupedResults, setGroupedResults] = useState({});
 
   // Load search results from global state, localStorage and location state on component mount
   useEffect(() => {
     const checkForStoredResults = () => {
-      // First check global search results (immediate)
       if (globalSearchResults) {
-        console.log('Loading search results from global state:', globalSearchResults.results);
+        // GLOBAL SEARCH: hide form after results
         setSearchResults(globalSearchResults.results);
         setCurrentSearchType(globalSearchResults.searchType || 'Company Name');
         setCurrentSearchQuery(globalSearchResults.searchQuery || '');
-        setShowSearchForm(false);
-        // Clear global results after loading
+        setIsGlobalSearch(globalSearchResults.isGlobalSearch);
         setGlobalSearchResults(null);
         return;
       }
-      
-      // Then check location state
+      // DRUG SEARCH: always show form
       const location = window.location;
-      const urlParams = new URLSearchParams(location.search);
       const state = window.history.state;
-      
       if (state && state.searchResults) {
-        console.log('Loading search results from location state:', state.searchResults);
         setSearchResults(state.searchResults);
         setCurrentSearchType(state.searchType || 'Company Name');
         setCurrentSearchQuery(state.searchQuery || '');
-        setShowSearchForm(false);
+        setIsGlobalSearch(false);
         return;
       }
-      
-      // Finally check localStorage (fallback)
       const storedResults = localStorage.getItem('searchResults');
       const storedSearchType = localStorage.getItem('searchType');
       const storedSearchQuery = localStorage.getItem('searchQuery');
-      
       if (storedResults) {
-        console.log('Loading search results from localStorage:', JSON.parse(storedResults));
         setSearchResults(JSON.parse(storedResults));
         setCurrentSearchType(storedSearchType || 'Company Name');
         setCurrentSearchQuery(storedSearchQuery || '');
-        setShowSearchForm(false);
-        // Clear localStorage after loading
+        setIsGlobalSearch(false);
         localStorage.removeItem('searchResults');
         localStorage.removeItem('searchType');
         localStorage.removeItem('searchQuery');
       }
     };
-
-    // Check immediately
     checkForStoredResults();
-    
-    // Also check after a short delay to handle navigation timing
     const timer = setTimeout(checkForStoredResults, 50);
-    
     return () => clearTimeout(timer);
-  }, [globalSearchResults, setGlobalSearchResults]); // Run when globalSearchResults changes
+  }, [globalSearchResults, setGlobalSearchResults]);
 
   // Process search results to group by company
   useEffect(() => {
-    if (searchResults.length > 0 && currentSearchType === 'Company Name') {
+    // Group ONLY for global search
+    if (searchResults.length > 0 && isGlobalSearch) {
       const grouped = searchResults.reduce((acc, item) => {
         if (!acc[item.companyName]) {
           acc[item.companyName] = {
@@ -898,13 +881,14 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     } else {
       setGroupedResults({});
     }
-  }, [searchResults, currentSearchType]);
+  }, [searchResults, currentSearchType, isGlobalSearch]);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Don't reset isGlobalSearch here - let it persist
   };
 
   const handleSubmit = async (e) => {
@@ -912,6 +896,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     setLoading(true);
     setError(null);
     setSelectedCompanies([]);
+    // DRUG SEARCH: explicitly set isGlobalSearch to false
+    setIsGlobalSearch(false);
 
     try {
       const token = localStorage.getItem('token');
@@ -941,10 +927,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
       
       if (result.success) {
         setSearchResults(result.data.results);
-        // Only hide form if it's from global search, not from search criteria form
-        if (!globalSearchResults) {
-          setShowSearchForm(false);
-        }
+        // Don't change form visibility here - let useEffect handle it
+        console.log('Search results set, form visibility will be handled by useEffect');
         if (result.data.message) {
           setError(result.data.message);
         } else {
@@ -1110,7 +1094,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
   return (
     <div className="space-y-6">
-      {showSearchForm && (
+      {(() => {
+        console.log('Render condition:', { isGlobalSearch, currentSearchType, searchResultsLength: searchResults.length });
+        return !((isGlobalSearch || currentSearchType === 'Contact Name') && searchResults.length > 0);
+      })() && (
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Search Criteria</h2>
           
@@ -1357,25 +1344,6 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
       </div>
       )}
 
-      {/* Show Search Form Button when hidden and no results */}
-      {!showSearchForm && searchResults.length === 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Advanced Search</h3>
-              <p className="text-gray-600">Use detailed criteria to find specific companies</p>
-            </div>
-            <button
-              onClick={() => setShowSearchForm(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
-            >
-              <Search className="w-4 h-4" />
-              <span>Show Search Form</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Search Results */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -1407,87 +1375,78 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </div>
           </div>
 
-          <div className="w-full">
-            {false ? (
-              // Company search results - simple table with company summary
+                    <div className="w-full">
+            {isGlobalSearch ? (
+                // GLOBAL SEARCH: Simple grouped table
+                <table className="w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPANY</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COUNTRY</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIER</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MODALITY</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACTS</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.entries(groupedResults).map(([companyName, companyData]) => (
+                    <tr key={companyName} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedCompanies.includes(companyName)}
+                          onChange={() => handleCompanySelect(companyName)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                            <Building2 className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{companyName}</div>
+                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">PUBLIC</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">{companyData.companyInfo.region || 'United States'}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-blue-600 font-medium">{companyData.companyInfo.tier || 'Large Pharma'}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-blue-600 font-medium">{companyData.companyInfo.modality || 'SM, LM, CT, GT'}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-bold text-blue-600">{companyData.contacts.length}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              // DRUG SEARCH: Detailed contact table
               <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      COMPANY
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      COUNTRY
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      TIER
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      CONTACTS
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPANY</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT INFORMATION</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {Object.keys(groupedResults).length > 0 ? (
-                    // Show grouped results (one row per company)
-                    Object.entries(groupedResults).map(([companyName, companyData]) => (
-                      <tr key={companyName} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedCompanies.includes(companyName)}
-                            onChange={() => handleCompanySelect(companyName)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                              <Building2 className="w-4 h-4 text-white" />
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{companyName}</div>
-                              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
-                                PUBLIC
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm text-gray-900">{companyData.companyInfo.region || 'United States'}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <Info className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm text-blue-600 font-medium">TIER: {companyData.companyInfo.tier || 'Large Pharma'}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Database className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm text-blue-600 font-medium">MODALITY: {companyData.companyInfo.modality || 'SM, LM, CT, GT'}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <Users className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-bold text-blue-600">
-                              {companyData.contacts.length}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    // Fallback to original results if no grouping
-                    searchResults.map((result) => (
-                      <tr key={result.id} className="hover:bg-gray-50">
+                  {searchResults.map((result) => (
+                    <Fragment key={result.id}>
+                      <tr className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="checkbox"
@@ -1503,192 +1462,108 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-900">{result.companyName}</div>
-                              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
-                                PUBLIC
-                              </div>
+                              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">PUBLIC</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-sm font-semibold text-blue-600">
+                                {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{result.contactPerson}</div>
+                              <div className="text-sm text-gray-500">{result.contactTitle || 'Exec. Director'}</div>
+                              <div className="text-sm text-gray-500">{result.contactFunction || 'Business Development'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              <span className="text-sm text-gray-900">
+                                {revealedEmails.has(result.id) 
+                                  ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
+                                  : `@${result.companyName?.toLowerCase()}.com`
+                                }
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
+                              {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
+                              <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <Info className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm text-blue-600 font-medium">TIER: {result.tier || 'Large Pharma'}</span>
+                            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Database className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm text-blue-600 font-medium">MODALITY: {result.modality || 'SM, LM, CT, GT'}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <Users className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-bold text-blue-600">1</span>
+                            <button
+                              onClick={() => handleRevealEmail(result.id)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                            >
+                              Get Contact Info
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
+                      {/* Expanded Details Section */}
+                      {expandedContactDetails.has(result.id) && (
+                        <tr className="bg-gray-50">
+                          <td colSpan="5" className="px-6 py-4">
+                            <div className="bg-white rounded-lg p-4 space-y-4">
+                              <h4 className="font-semibold text-gray-900 mb-3">Contact Details</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-500">TIER:</span>
+                                    <span className="text-sm text-gray-900">{result.tier || 'Large Pharma'}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-500">MODALITY:</span>
+                                    <span className="text-sm text-gray-900">{result.modality || 'SM, LM, CT, GT, Bx, RNA'}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-500">BD FOCUS AREA:</span>
+                                    <span className="text-sm text-gray-900">{result.bdPersonTAFocus || 'NULL'}</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-500">REGION:</span>
+                                    <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-500">EMAIL:</span>
+                                    <span className="text-sm text-gray-900">
+                                      {revealedEmails.has(result.id) 
+                                        ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
+                                        : 'Click "Get Contact Info" to reveal'
+                                      }
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                                             )}
+                     </Fragment>
+                  ))}
                 </tbody>
-              </table>
-            ) : (
-              // Contact search results - detailed table
-              <table className="w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      COMPANY
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      CONTACT
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      CONTACT INFORMATION
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ACTIONS
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {searchResults.map((result) => (
-                  <tr key={result.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedCompanies.includes(result.id)}
-                        onChange={() => handleCompanySelect(result.id)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                    </td>
-                    
-                    {/* Company Column */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{result.companyName}</div>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span className="text-xs text-gray-500">{result.region || 'United States'}</span>
-                          </div>
-                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">
-                            PUBLIC
-                          </div>
-                          
-                          {/* Expanded Details Section */}
-                          {expandedContactDetails.has(result.id) && (
-                            <div className="mt-3 space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-500">TIER:</span>
-                                <span className="text-sm text-gray-900">{result.tier || 'Large Pharma'}</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-500">MODALITY:</span>
-                                <span className="text-sm text-gray-900">{result.modality || 'SM, LM, CT, GT, Bx, RNA'}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-
-                      </div>
-                    </td>
-                    
-                    {/* Contact Column */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-semibold text-blue-600">
-                            {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{result.contactPerson}</div>
-                          <div className="text-sm text-gray-500">{result.contactTitle || 'Exec. Director'}</div>
-                          <div className="text-sm text-gray-500">{result.contactFunction || 'Business Development'}</div>
-                          
-                          {/* BD FOCUS AREA in Contact Column */}
-                          {expandedContactDetails.has(result.id) && (
-                            <div className="mt-2">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-500">BD FOCUS AREA:</span>
-                                <span className="text-sm text-gray-900">{result.bdPersonTAFocus || 'NULL'}</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    
-                    {/* Contact Information Column */}
-                    <td className="px-6 py-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          <span className="text-sm text-gray-900">
-                            {revealedEmails.has(result.id) 
-                              ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
-                              : `@${result.companyName?.toLowerCase()}.com`
-                            }
-                          </span>
-                        </div>
-                        
-                        {/* VIEW MORE/LESS Section */}
-                        <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
-                          {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
-                          <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                        
-
-                      </div>
-                    </td>
-                    
-
-                    
-                    {/* Actions Column */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        <button
-                          onClick={() => handleRevealEmail(result.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                          Get Contact Info
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            )}
-          </div>
+                              </table>
+              )}
+            </div>
           
 
         </div>

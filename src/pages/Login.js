@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 const Login = () => {
@@ -15,6 +15,20 @@ const Login = () => {
   const [isAdminAccess, setIsAdminAccess] = useState(false);
   const navigate = useNavigate();
 
+  // Forgot Password States
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
   // Check if admin access is required
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -23,6 +37,14 @@ const Login = () => {
       setError('Admin access required. Please login with admin credentials.');
     }
   }, []);
+
+  // Countdown timer for resend
+  React.useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const handleChange = (e) => {
     setFormData({
@@ -85,6 +107,110 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Forgot Password Functions
+  const sendForgotPasswordCode = async () => {
+    if (!forgotEmail) {
+      setForgotError('Please enter your email address');
+      return;
+    }
+
+    setIsForgotLoading(true);
+    setForgotError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsVerificationSent(true);
+        setCountdown(60); // 60 seconds countdown
+      } else {
+        setForgotError(data.message || 'Failed to send verification code');
+      }
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      setForgotError('Network error. Please try again.');
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  const verifyForgotPasswordCode = async () => {
+    if (verificationCode.length !== 6) {
+      setForgotError('Please enter a 6-digit verification code');
+      return;
+    }
+
+    if (!newPassword) {
+      setForgotError('Please enter a new password');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setForgotError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setForgotError('Passwords do not match');
+      return;
+    }
+
+    setIsVerifying(true);
+    setForgotError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: forgotEmail,
+          code: verificationCode,
+          newPassword: newPassword
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Password reset successfully! Please login with your new password.');
+        setShowForgotPassword(false);
+        resetForgotPasswordForm();
+      } else {
+        setForgotError(data.message || 'Failed to reset password');
+      }
+    } catch (err) {
+      console.error('Reset password error:', err);
+      setForgotError('Network error. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const resetForgotPasswordForm = () => {
+    setForgotEmail('');
+    setVerificationCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setIsVerificationSent(false);
+    setForgotError('');
+    setCountdown(0);
+  };
+
+  const handleCodeChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setVerificationCode(value);
   };
 
   const benefits = [
@@ -278,6 +404,15 @@ const Login = () => {
                           )}
                         </button>
                       </div>
+                      <div className="flex justify-end mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-sm text-purple-300 hover:text-purple-200 transition-colors duration-200 cursor-pointer"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
                     </div>
 
                     {/* Enhanced Submit Button */}
@@ -387,6 +522,221 @@ const Login = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowForgotPassword(false)}
+          />
+          
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.3 }}
+            className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-white/20 backdrop-blur-xl"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowForgotPassword(false);
+                resetForgotPasswordForm();
+              }}
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-300" />
+            </button>
+
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-600 to-red-700 rounded-3xl flex items-center justify-center shadow-2xl mx-auto mb-6">
+                <Lock className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-3">
+                Reset Password
+              </h2>
+              <p className="text-gray-300 text-lg">
+                {!isVerificationSent 
+                  ? "Enter your email to receive a verification code"
+                  : `We've sent a verification code to ${forgotEmail}`
+                }
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {forgotError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center p-3 text-sm text-red-400 bg-red-500/20 border border-red-500/30 rounded-lg mb-6"
+              >
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {forgotError}
+              </motion.div>
+            )}
+
+            {/* Step 1: Email Input */}
+            {!isVerificationSent && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-6"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    Email Address <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={sendForgotPasswordCode}
+                  disabled={isForgotLoading}
+                  className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-4 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200"
+                >
+                  {isForgotLoading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>Send Verification Code</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
+
+            {/* Step 2: Verification Code and New Password */}
+            {isVerificationSent && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-6"
+              >
+                {/* Verification Code */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    Verification Code <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={handleCodeChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 text-center text-2xl tracking-widest"
+                    placeholder="000000"
+                    maxLength="6"
+                  />
+                </div>
+
+                {/* New Password */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    New Password <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+                      placeholder="Enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-white transition-colors duration-200"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-300" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-300" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm New Password */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-3">
+                    Confirm New Password <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type={showConfirmNewPassword ? 'text' : 'password'}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+                      placeholder="Confirm new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-white transition-colors duration-200"
+                    >
+                      {showConfirmNewPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-300" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-300" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Resend Code */}
+                <div className="text-center">
+                  <button
+                    onClick={sendForgotPasswordCode}
+                    disabled={countdown > 0}
+                    className="text-sm text-purple-300 hover:text-purple-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
+                  </button>
+                </div>
+
+                {/* Reset Password Button */}
+                <button
+                  onClick={verifyForgotPasswordCode}
+                  disabled={isVerifying || verificationCode.length !== 6 || !newPassword || !confirmNewPassword}
+                  className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-4 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200"
+                >
+                  {isVerifying ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>Reset Password</span>
+                      <CheckCircle className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

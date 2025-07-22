@@ -2247,4 +2247,178 @@ app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Forgot password endpoint
+app.post('/api/auth/forgot-password', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+
+    const { email } = req.body;
+    
+    // Check if user exists
+    const user = mockDB.users.find(u => u.email === email);
+    if (!user) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'No account found with this email address' 
+      });
+    }
+    
+    // Generate a 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store the verification code for password reset
+    mockDB.verificationCodes.push({
+      email,
+      code: verificationCode,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      type: 'password-reset' // Distinguish from email verification
+    });
+
+    // Save data to files
+    saveDataToFiles();
+
+    // Send email with verification code
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        to: email,
+        subject: 'BioPing - Password Reset Code',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+              <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset</p>
+            </div>
+            <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+              <h2 style="color: #333; margin-bottom: 20px;">Your Password Reset Code</h2>
+              <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+                You requested a password reset for your BioPing account. Please use the verification code below to reset your password:
+              </p>
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${verificationCode}</span>
+              </div>
+              <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                This code will expire in 10 minutes. If you didn't request this password reset, please ignore this email.
+              </p>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p style="color: #999; font-size: 12px;">
+                  Best regards,<br>
+                  The BioPing Team
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Password reset email sent to ${email} with code: ${verificationCode}`);
+
+      res.json({
+        success: true,
+        message: 'Password reset code sent successfully to your email'
+      });
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      console.log(`🔑 PASSWORD RESET CODE FOR ${email}: ${verificationCode}`);
+      console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+      
+      // Return success with the code in response for development
+      res.json({
+        success: true,
+        message: 'Password reset code generated (email failed to send)',
+        verificationCode: verificationCode, // Include code in response
+        emailError: 'Email service temporarily unavailable'
+      });
+    }
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Reset password endpoint
+app.post('/api/auth/reset-password', [
+  body('email').isEmail().normalizeEmail(),
+  body('code').isLength({ min: 6, max: 6 }),
+  body('newPassword').isLength({ min: 8 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+
+    const { email, code, newPassword } = req.body;
+    
+    // Find the verification code for password reset
+    const verificationRecord = mockDB.verificationCodes.find(
+      record => record.email === email && 
+                record.code === code && 
+                record.type === 'password-reset' &&
+                new Date() < record.expiresAt
+    );
+
+    if (!verificationRecord) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid or expired verification code' 
+      });
+    }
+
+    // Find the user
+    const user = mockDB.users.find(u => u.email === email);
+    if (!user) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    
+    // Update user's password
+    user.password = hashedPassword;
+
+    // Remove the used verification code
+    mockDB.verificationCodes = mockDB.verificationCodes.filter(
+      record => !(record.email === email && record.code === code && record.type === 'password-reset')
+    );
+
+    // Save data to files
+    saveDataToFiles();
+
+    console.log(`✅ Password reset successful for ${email}`);
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Protected route to get user profile
+app.get('/api/auth/profile', authenticateToken, (req, res) => {
+  res.json({
+    user: {
+      email: req.user.email,
+      name: req.user.name,
+      role: req.user.role
+    }
+  });
 }); 

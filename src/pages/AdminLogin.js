@@ -24,6 +24,7 @@ const AdminLogin = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted!'); // Debug log
     setLoading(true);
     setError('');
 
@@ -61,18 +62,22 @@ const AdminLogin = () => {
     }
   };
 
+  const handleButtonClick = () => {
+    console.log('Button clicked!'); // Debug log
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      <div className="absolute top-20 left-10 w-32 h-32 bg-red-200 rounded-full opacity-20 animate-float"></div>
-      <div className="absolute bottom-20 right-10 w-24 h-24 bg-red-300 rounded-full opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
+      <div className="absolute top-20 left-10 w-32 h-32 bg-red-200 rounded-full opacity-20 animate-float pointer-events-none"></div>
+      <div className="absolute bottom-20 right-10 w-24 h-24 bg-red-300 rounded-full opacity-20 animate-float pointer-events-none" style={{ animationDelay: '2s' }}></div>
       
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8"
+        className="max-w-md w-full space-y-8 relative z-10"
       >
         {/* Header */}
         <div className="text-center">
@@ -110,7 +115,7 @@ const AdminLogin = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
           onSubmit={handleSubmit}
-          className="space-y-6"
+          className="space-y-6 relative z-20"
         >
           {/* Email Field */}
           <div>
@@ -128,7 +133,7 @@ const AdminLogin = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="input-field pl-10"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 pl-10"
                 placeholder="admin@example.com"
               />
             </div>
@@ -150,7 +155,7 @@ const AdminLogin = () => {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="input-field pl-10 pr-12"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 pl-10 pr-12"
                 placeholder="Enter your password"
               />
               <button
@@ -180,12 +185,11 @@ const AdminLogin = () => {
           )}
 
           {/* Submit Button */}
-          <motion.button
+          <button
             type="submit"
             disabled={loading}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-4 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200"
+            onClick={handleButtonClick}
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-4 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200 cursor-pointer relative z-30"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -195,20 +199,8 @@ const AdminLogin = () => {
                 <ArrowRight className="w-5 h-5" />
               </>
             )}
-          </motion.button>
+          </button>
         </motion.form>
-
-        {/* Admin Info */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="text-center"
-        >
-          <p className="text-xs text-gray-500">
-            Admin Email: <span className="font-mono">universalx0242@gmail.com</span>
-          </p>
-        </motion.div>
       </motion.div>
     </div>
   );

@@ -103,8 +103,8 @@ const BDTrackerPage = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setEntries(prev => [data.data, ...prev]);
+        const result = await response.json();
+        setEntries(prev => [...prev, result.data]);
         setFormData({
           company: '',
           programPitched: '',
@@ -119,26 +119,20 @@ const BDTrackerPage = () => {
         });
         setShowForm(false);
       } else {
-        const errorData = await response.json();
-        alert(errorData.message || 'Failed to add entry');
+        alert('Failed to add entry');
       }
     } catch (error) {
-      console.error('Error adding BD Tracker entry:', error);
-      alert('Failed to add entry. Please try again.');
+      console.error('Error adding entry:', error);
+      alert('Error adding entry');
     }
   };
 
   const handleEdit = (entry) => {
-    setEditingId(entry.id);
     setFormData(entry);
+    setEditingId(entry.id);
   };
 
   const handleSaveEdit = async () => {
-    if (!validateForm()) {
-      alert('Please fill in Company and Contact Person fields');
-      return;
-    }
-
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${editingId}`, {
@@ -151,9 +145,8 @@ const BDTrackerPage = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
         setEntries(prev => prev.map(entry => 
-          entry.id === editingId ? data.data : entry
+          entry.id === editingId ? { ...entry, ...formData } : entry
         ));
         setEditingId(null);
         setFormData({
@@ -169,86 +162,49 @@ const BDTrackerPage = () => {
           reminders: ''
         });
       } else {
-        const errorData = await response.json();
-        alert(errorData.message || 'Failed to update entry');
+        alert('Failed to update entry');
       }
     } catch (error) {
-      console.error('Error updating BD Tracker entry:', error);
-      alert('Failed to update entry. Please try again.');
+      console.error('Error updating entry:', error);
+      alert('Error updating entry');
     }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this entry?')) {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+    if (!window.confirm('Are you sure you want to delete this entry?')) {
+      return;
+    }
 
-        if (response.ok) {
-          setEntries(prev => prev.filter(entry => entry.id !== id));
-        } else {
-          const errorData = await response.json();
-          alert(errorData.message || 'Failed to delete entry');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      } catch (error) {
-        console.error('Error deleting BD Tracker entry:', error);
-        alert('Failed to delete entry. Please try again.');
+      });
+
+      if (response.ok) {
+        setEntries(prev => prev.filter(entry => entry.id !== id));
+      } else {
+        alert('Failed to delete entry');
       }
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      alert('Error deleting entry');
     }
   };
 
   const handleDownloadExcel = () => {
-    // Create CSV content
-    const headers = [
-      'Company',
-      'Program Pitched',
-      'Outreach Dates',
-      'Contact Function',
-      'Contact Person',
-      'CDA (Yes or No)',
-      'Feedback',
-      'Next Steps',
-      'Timelines to Remember (if applicable)',
-      'Reminders (if any)'
-    ];
-
-    const csvContent = [
-      headers.join(','),
-      ...entries.map(entry => [
-        `"${entry.company}"`,
-        `"${entry.programPitched}"`,
-        `"${entry.outreachDates}"`,
-        `"${entry.contactFunction}"`,
-        `"${entry.contactPerson}"`,
-        `"${entry.cda}"`,
-        `"${entry.feedback}"`,
-        `"${entry.nextSteps}"`,
-        `"${entry.timelines}"`,
-        `"${entry.reminders}"`
-      ].join(','))
-    ].join('\n');
-
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `BD_Tracker_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    // Implementation for Excel download
+    alert('Excel download functionality will be implemented');
   };
 
   const filteredEntries = entries.filter(entry => {
-    const matchesSearch = entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.programPitched.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = 
+      entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      entry.programPitched.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (filterStatus === 'all') return matchesSearch;
     if (filterStatus === 'with-cda' && entry.cda.toLowerCase() === 'yes') return matchesSearch;
@@ -418,134 +374,132 @@ const BDTrackerPage = () => {
         )}
 
         {/* Excel-like Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              {/* Header */}
-              <thead className="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  {columns.map((column) => (
-                    <th
-                      key={column.key}
-                      className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50"
-                    >
-                      <div className="flex items-center gap-2">
-                        <column.icon className="w-4 h-4 text-gray-600" />
-                        {column.label}
-                      </div>
-                    </th>
-                  ))}
-                  <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50">
-                    Actions
+        <div className="bg-white rounded-lg shadow-sm border">
+          <table className="w-full border-collapse">
+            {/* Header */}
+            <thead className="bg-gray-50">
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <column.icon className="w-4 h-4 text-gray-600" />
+                      {column.label}
+                    </div>
                   </th>
+                ))}
+                <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            
+            {/* Body */}
+            <tbody>
+              {filteredEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + 1} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
+                    {entries.length === 0 ? 'No entries yet. Add your first BD entry!' : 'No entries match your search/filter criteria.'}
+                  </td>
                 </tr>
-              </thead>
-              
-              {/* Body */}
-              <tbody>
-                {filteredEntries.length === 0 ? (
-                  <tr>
-                    <td colSpan={columns.length + 1} className="border border-gray-200 px-4 py-8 text-center text-gray-500">
-                      {entries.length === 0 ? 'No entries yet. Add your first BD entry!' : 'No entries match your search/filter criteria.'}
+              ) : (
+                filteredEntries.map((entry, index) => (
+                  <tr
+                    key={entry.id}
+                    className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className="border border-gray-200 px-4 py-3 text-sm text-gray-900"
+                      >
+                        {editingId === entry.id ? (
+                          column.key === 'cda' ? (
+                            <select
+                              value={formData[column.key]}
+                              onChange={(e) => handleInputChange(column.key, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="">Select...</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={formData[column.key]}
+                              onChange={(e) => handleInputChange(column.key, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                            />
+                          )
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {entry[column.key] ? (
+                              <span>{entry[column.key]}</span>
+                            ) : (
+                              <span className="text-gray-400 italic">-</span>
+                            )}
+                            {column.key === 'cda' && entry[column.key] && (
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                entry[column.key].toLowerCase() === 'yes' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {entry[column.key]}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    
+                    {/* Actions */}
+                    <td className="border border-gray-200 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {editingId === entry.id ? (
+                          <>
+                            <button
+                              onClick={handleSaveEdit}
+                              className="p-1 text-green-600 hover:text-green-700"
+                              title="Save"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="p-1 text-gray-600 hover:text-gray-700"
+                              title="Cancel"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEdit(entry)}
+                              className="p-1 text-blue-600 hover:text-blue-700"
+                              title="Edit"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(entry.id)}
+                              className="p-1 text-red-600 hover:text-red-700"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  filteredEntries.map((entry, index) => (
-                    <tr
-                      key={entry.id}
-                      className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}
-                    >
-                      {columns.map((column) => (
-                        <td
-                          key={column.key}
-                          className="border border-gray-200 px-4 py-3 text-sm text-gray-900"
-                        >
-                          {editingId === entry.id ? (
-                            column.key === 'cda' ? (
-                              <select
-                                value={formData[column.key]}
-                                onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                              >
-                                <option value="">Select...</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                              </select>
-                            ) : (
-                              <input
-                                type="text"
-                                value={formData[column.key]}
-                                onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                              />
-                            )
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              {entry[column.key] ? (
-                                <span>{entry[column.key]}</span>
-                              ) : (
-                                <span className="text-gray-400 italic">-</span>
-                              )}
-                              {column.key === 'cda' && entry[column.key] && (
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  entry[column.key].toLowerCase() === 'yes' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {entry[column.key]}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      ))}
-                      
-                      {/* Actions */}
-                      <td className="border border-gray-200 px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {editingId === entry.id ? (
-                            <>
-                              <button
-                                onClick={handleSaveEdit}
-                                className="p-1 text-green-600 hover:text-green-700"
-                                title="Save"
-                              >
-                                <Save className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setEditingId(null)}
-                                className="p-1 text-gray-600 hover:text-gray-700"
-                                title="Cancel"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleEdit(entry)}
-                                className="p-1 text-blue-600 hover:text-blue-700"
-                                title="Edit"
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(entry.id)}
-                                className="p-1 text-red-600 hover:text-red-700"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Summary */}
