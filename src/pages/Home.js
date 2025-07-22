@@ -32,7 +32,7 @@ const Home = () => {
     {
       icon: Target,
       title: "Industry Insider Access",
-      description: "Built by biotech insiders with 15+ years of pharma and biotech experience"
+      description: "Built with 15+ years of pharma and biotech experience"
     },
     {
       icon: Shield,
@@ -194,8 +194,6 @@ const Home = () => {
               className="mb-8"
             >
               <div className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-primary-50 to-secondary-50 border border-primary-100 rounded-full text-primary-700 font-medium">
-                <Sparkles className="w-4 h-4" />
-                <span>Built by Biotech Insiders</span>
               </div>
             </motion.div>
             
@@ -638,7 +636,7 @@ const Home = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Industry Expertise</h3>
-                      <p className="text-gray-600">Built by biotech insiders</p>
+                      <p className="text-gray-600"></p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -696,16 +694,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container-custom">
-          <div className="text-center">
-            <p className="text-gray-400">
-              © {currentYear} BioPing. All rights reserved. Built with ❤️ for the biotech community.
-            </p>
-          </div>
-        </div>
-      </footer>
+
     </div>
   );
 };

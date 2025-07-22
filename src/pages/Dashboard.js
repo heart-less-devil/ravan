@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
-import SecurePDFViewer from '../components/SecurePDFViewer';
+import PDFViewer from '../components/PDFViewer';
+import BDTrackerPage from './BDTrackerPage';
 import { 
   Grid, 
   Search, 
@@ -75,6 +76,7 @@ const Dashboard = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [globalSearchResults, setGlobalSearchResults] = useState(null);
   const [userCredits, setUserCredits] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const location = useLocation();
@@ -177,13 +179,25 @@ const Dashboard = () => {
       console.log('Search result:', result);
       
       if (result.success) {
-        // Navigate to search page with results
-        navigate('/dashboard/search');
-        // Store results in localStorage to pass to search page
+        // Set global search results for immediate access
+        setGlobalSearchResults({
+          results: result.data.results,
+          searchType: searchType,
+          searchQuery: searchQuery
+        });
+        // Store results in localStorage as backup
         localStorage.setItem('searchResults', JSON.stringify(result.data.results));
         localStorage.setItem('searchType', searchType);
         localStorage.setItem('searchQuery', searchQuery);
         console.log('Stored search results:', result.data.results);
+        // Navigate to search page with results
+        navigate('/dashboard/search', { 
+          state: { 
+            searchResults: result.data.results,
+            searchType: searchType,
+            searchQuery: searchQuery
+          }
+        });
       } else {
         throw new Error(result.message || 'Search failed');
       }
@@ -204,7 +218,7 @@ const Dashboard = () => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Grid, section: 'MAIN' },
     { name: 'Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
-    
+    { name: 'BD Tracker', path: '/dashboard/bd-tracker', icon: TrendingUp, section: 'MY DEALS' },
     { name: 'Saved Searches', path: '/dashboard/saved-searches', icon: FileText, section: 'MY DEALS' },
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Self Coaching Tips', path: '/dashboard/resources/coaching-tips', icon: User, section: 'RESOURCES' },
@@ -225,7 +239,15 @@ const Dashboard = () => {
       case '/dashboard':
         return <DashboardHome user={user} />;
       case '/dashboard/search':
-        return <SearchPage showSearchForm={true} searchType={searchType} useCredit={consumeCredit} userCredits={userCredits} />;
+        return <SearchPage 
+          searchType={searchType} 
+          useCredit={consumeCredit} 
+          userCredits={userCredits}
+          globalSearchResults={globalSearchResults}
+          setGlobalSearchResults={setGlobalSearchResults}
+        />;
+      case '/dashboard/bd-tracker':
+        return <BDTrackerPage />;
       case '/dashboard/saved-searches':
         return <SavedSearches />;
       case '/dashboard/resources/definitions':
@@ -774,7 +796,7 @@ const DashboardHome = ({ user }) => {
 };
 
 // Enhanced Search Page Component
-const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCredit: consumeCredit, userCredits }) => {
+const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',
@@ -795,10 +817,39 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
   const [expandedContactDetails, setExpandedContactDetails] = useState(new Set());
   const [currentSearchType, setCurrentSearchType] = useState(searchType);
   const [currentSearchQuery, setCurrentSearchQuery] = useState('');
+  const [showSearchForm, setShowSearchForm] = useState(true);
+  const [groupedResults, setGroupedResults] = useState({});
 
-  // Load search results from localStorage on component mount and when location changes
+  // Load search results from global state, localStorage and location state on component mount
   useEffect(() => {
     const checkForStoredResults = () => {
+      // First check global search results (immediate)
+      if (globalSearchResults) {
+        console.log('Loading search results from global state:', globalSearchResults.results);
+        setSearchResults(globalSearchResults.results);
+        setCurrentSearchType(globalSearchResults.searchType || 'Company Name');
+        setCurrentSearchQuery(globalSearchResults.searchQuery || '');
+        setShowSearchForm(false);
+        // Clear global results after loading
+        setGlobalSearchResults(null);
+        return;
+      }
+      
+      // Then check location state
+      const location = window.location;
+      const urlParams = new URLSearchParams(location.search);
+      const state = window.history.state;
+      
+      if (state && state.searchResults) {
+        console.log('Loading search results from location state:', state.searchResults);
+        setSearchResults(state.searchResults);
+        setCurrentSearchType(state.searchType || 'Company Name');
+        setCurrentSearchQuery(state.searchQuery || '');
+        setShowSearchForm(false);
+        return;
+      }
+      
+      // Finally check localStorage (fallback)
       const storedResults = localStorage.getItem('searchResults');
       const storedSearchType = localStorage.getItem('searchType');
       const storedSearchQuery = localStorage.getItem('searchQuery');
@@ -808,6 +859,7 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
         setSearchResults(JSON.parse(storedResults));
         setCurrentSearchType(storedSearchType || 'Company Name');
         setCurrentSearchQuery(storedSearchQuery || '');
+        setShowSearchForm(false);
         // Clear localStorage after loading
         localStorage.removeItem('searchResults');
         localStorage.removeItem('searchType');
@@ -819,10 +871,34 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
     checkForStoredResults();
     
     // Also check after a short delay to handle navigation timing
-    const timer = setTimeout(checkForStoredResults, 100);
+    const timer = setTimeout(checkForStoredResults, 50);
     
     return () => clearTimeout(timer);
-  }, []); // Only run on mount
+  }, [globalSearchResults, setGlobalSearchResults]); // Run when globalSearchResults changes
+
+  // Process search results to group by company
+  useEffect(() => {
+    if (searchResults.length > 0 && currentSearchType === 'Company Name') {
+      const grouped = searchResults.reduce((acc, item) => {
+        if (!acc[item.companyName]) {
+          acc[item.companyName] = {
+            companyInfo: {
+              name: item.companyName,
+              region: item.region,
+              tier: item.tier,
+              modality: item.modality
+            },
+            contacts: []
+          };
+        }
+        acc[item.companyName].contacts.push(item);
+        return acc;
+      }, {});
+      setGroupedResults(grouped);
+    } else {
+      setGroupedResults({});
+    }
+  }, [searchResults, currentSearchType]);
 
   const handleChange = (e) => {
     setFormData({
@@ -865,6 +941,8 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
       
       if (result.success) {
         setSearchResults(result.data.results);
+        // Hide search form when results are shown
+        setShowSearchForm(false);
         if (result.data.message) {
           setError(result.data.message);
         } else {
@@ -1277,8 +1355,8 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
       </div>
       )}
 
-      {/* Show Search Form Button when hidden */}
-      {!showSearchForm && (
+      {/* Show Search Form Button when hidden and no results */}
+      {!showSearchForm && searchResults.length === 0 && (
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -1286,7 +1364,7 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
               <p className="text-gray-600">Use detailed criteria to find specific companies</p>
             </div>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => setShowSearchForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
             >
               <Search className="w-4 h-4" />
@@ -1309,7 +1387,7 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
             <div>
               <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
               <p className="text-gray-600">
-                Showing 1 - {searchResults.length} of {searchResults.length} results
+                Showing 1 - {Object.keys(groupedResults).length > 0 ? Object.keys(groupedResults).length : searchResults.length} of {Object.keys(groupedResults).length > 0 ? Object.keys(groupedResults).length : searchResults.length} results
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -1328,28 +1406,160 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
           </div>
 
           <div className="w-full">
-            <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    COMPANY
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    CONTACT
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    CONTACT INFORMATION
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ACTIONS
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {searchResults.map((result) => (
+            {currentSearchType === 'Company Name' ? (
+              // Company search results - simple table with company summary
+              <table className="w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      COMPANY
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      COUNTRY
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      TIER
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      CONTACTS
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.keys(groupedResults).length > 0 ? (
+                    // Show grouped results (one row per company)
+                    Object.entries(groupedResults).map(([companyName, companyData]) => (
+                      <tr key={companyName} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedCompanies.includes(companyName)}
+                            onChange={() => handleCompanySelect(companyName)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                              <Building2 className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{companyName}</div>
+                              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
+                                PUBLIC
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-900">{companyData.companyInfo.region || 'United States'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <Info className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-blue-600 font-medium">TIER: {companyData.companyInfo.tier || 'Large Pharma'}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Database className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-blue-600 font-medium">MODALITY: {companyData.companyInfo.modality || 'SM, LM, CT, GT'}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-bold text-blue-600">
+                              {companyData.contacts.length}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    // Fallback to original results if no grouping
+                    searchResults.map((result) => (
+                      <tr key={result.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedCompanies.includes(result.id)}
+                            onChange={() => handleCompanySelect(result.id)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+                              <Building2 className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{result.companyName}</div>
+                              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">
+                                PUBLIC
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <Info className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-blue-600 font-medium">TIER: {result.tier || 'Large Pharma'}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Database className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-blue-600 font-medium">MODALITY: {result.modality || 'SM, LM, CT, GT'}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-bold text-blue-600">1</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            ) : (
+              // Contact search results - detailed table
+              <table className="w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      COMPANY
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      CONTACT
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      CONTACT INFORMATION
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ACTIONS
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {searchResults.map((result) => (
                   <tr key={result.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
@@ -1473,10 +1683,9 @@ const SearchPage = ({ showSearchForm = true, searchType = 'Company Name', useCre
                     </td>
                   </tr>
                 ))}
-                
-
               </tbody>
             </table>
+            )}
           </div>
           
           {/* Pagination Controls */}
@@ -2324,13 +2533,12 @@ const FreeContent = ({ user }) => {
         </div>
       </div>
       
-      {/* Secure PDF Viewer Modal */}
+      {/* PDF Viewer Modal */}
       {selectedPDF && (
-        <SecurePDFViewer
+        <PDFViewer
           pdfUrl={selectedPDF.url}
           title={selectedPDF.title}
           onClose={() => setSelectedPDF(null)}
-          userId={user?.email || 'GUEST'}
         />
       )}
     </div>

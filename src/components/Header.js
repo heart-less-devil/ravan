@@ -52,7 +52,7 @@ const Header = () => {
                 <img 
                   src={require('../img/image.webp')} 
                   alt="BioPing Logo" 
-                  className="h-10 w-auto object-contain"
+                  className="h-16 w-auto object-contain"
                 />
               </div>
 
@@ -113,12 +113,6 @@ const Header = () => {
             >
               <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
               <span>Login</span>
-            </Link>
-            <Link 
-              to="/signup" 
-              className="flex items-center space-x-2 px-4 py-2 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-xl transition-all duration-200 font-medium group border border-primary-200 hover:border-primary-300"
-            >
-              <span>Sign up</span>
             </Link>
             <Link 
               to="/request-demo" 
@@ -196,13 +190,6 @@ const Header = () => {
                       <User className="w-4 h-4" />
                       <span>Login</span>
                     </div>
-                  </Link>
-                  <Link
-                    to="/signup"
-                    className="block py-3 px-4 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-xl transition-all duration-200 font-medium border border-primary-200 hover:border-primary-300"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <span>Sign up</span>
                   </Link>
                   <Link
                     to="/request-demo"

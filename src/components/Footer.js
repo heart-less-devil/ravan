@@ -76,17 +76,14 @@ const Footer = () => {
                 <img 
                   src={require('../img/image.webp')} 
                   alt="BioPing Logo" 
-                  className="h-10 w-auto object-contain"
+                  className="h-12 w-auto object-contain"
                 />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full animate-pulse"></div>
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">
-                BioPing
-              </span>
             </div>
             
             <p className="text-gray-300 mb-8 leading-relaxed">
-              Built by biotech insiders to empower emerging biotechs with smarter BD solutions. 
+              Built to empower emerging biotechs with smarter BD solutions. 
               Connect with the right partners and accelerate your growth.
             </p>
 
@@ -224,16 +221,7 @@ const Footer = () => {
       <div className="border-t border-gray-700 bg-gray-900/50 backdrop-blur-sm">
         <div className="container-custom py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            {/* Copyright */}
-            <div className="flex items-center space-x-2 text-gray-400 text-sm">
-              <span>© {currentYear} BioPing. All rights reserved.</span>
-              <span>•</span>
-              <span className="flex items-center space-x-1">
-                <span>Built with</span>
-                <Heart className="w-4 h-4 text-red-500 animate-pulse" />
-                <span>for the biotech community</span>
-              </span>
-            </div>
+
 
             {/* Legal Links */}
             <div className="flex items-center space-x-6 text-sm">

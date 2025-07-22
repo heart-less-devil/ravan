@@ -1,6 +1,6 @@
 // API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://ravan-backend.onrender.com';
-export const ADMIN_API_BASE_URL = process.env.REACT_APP_ADMIN_API_URL || 'https://ravan-backend.onrender.com';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+export const ADMIN_API_BASE_URL = process.env.REACT_APP_ADMIN_API_URL || 'http://localhost:3001';
 
 // Environment check
 export const isDevelopment = process.env.NODE_ENV === 'development';

@@ -49,7 +49,8 @@ const AdminPanel = () => {
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/biotech-data`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -92,7 +93,8 @@ const AdminPanel = () => {
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -130,6 +132,9 @@ const AdminPanel = () => {
 
               const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/upload-excel`, {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
           body: formData
         });
 
@@ -219,7 +224,8 @@ const AdminPanel = () => {
         const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/delete-records`, {
           method: 'DELETE',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ ids: selectedItems })
         });

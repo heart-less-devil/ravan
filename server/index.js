@@ -7,6 +7,7 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
@@ -46,6 +47,58 @@ const upload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Email configuration with better Gmail setup
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+    pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'
+  }
+});
+
+// Verify transporter configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log('❌ Email configuration error:', error);
+    console.log('🔧 Please check your Gmail app password');
+  } else {
+    console.log('✅ Email server is ready to send messages');
+  }
+});
+
+// Email templates
+const emailTemplates = {
+  verification: (code) => ({
+    subject: 'BioPing - Email Verification Code',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Email Verification</p>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #333; margin-bottom: 20px;">Your Verification Code</h2>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+            Thank you for signing up with BioPing! Please use the verification code below to complete your registration:
+          </p>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${code}</span>
+          </div>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">
+            This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
+          </p>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 12px;">
+              Best regards,<br>
+              The BioPing Team
+            </p>
+          </div>
+        </div>
+      </div>
+    `
+  })
+};
+
 // Universal emails that can login without signup
 const universalEmails = [
   'universalx0242@gmail.com',
@@ -60,7 +113,8 @@ const universalEmails = [
 const hashedPassword = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'; // 'password'
 
 // Simple user data for universal emails
-const universalUsers = universalEmails.map(email => ({
+const universalUsers = universalEmails.map((email, index) => ({
+  id: `universal_${index + 1}`,
   email: email,
   password: hashedPassword,
   name: email.split('@')[0],
@@ -80,6 +134,39 @@ const authenticateToken = (req, res, next) => {
     if (err) {
       return res.status(403).json({ message: 'Invalid token' });
     }
+    req.user = user;
+    next();
+  });
+};
+
+// Admin authentication middleware
+const authenticateAdmin = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  console.log('Admin auth - Auth header:', authHeader);
+  console.log('Admin auth - Token:', token ? 'Present' : 'Missing');
+
+  if (!token) {
+    console.log('Admin auth - No token provided');
+    return res.status(401).json({ message: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      console.log('Admin auth - Invalid token:', err.message);
+      return res.status(403).json({ message: 'Invalid token' });
+    }
+    
+    console.log('Admin auth - User email:', user.email);
+    
+    // Check if user is admin (only universalx0242@gmail.com can be admin)
+    if (user.email !== 'universalx0242@gmail.com') {
+      console.log('Admin auth - Access denied for:', user.email);
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    console.log('Admin auth - Access granted for:', user.email);
     req.user = user;
     next();
   });
@@ -238,16 +325,17 @@ app.get('/api/test-email', async (req, res) => {
   try {
     const testMailOptions = {
       from: process.env.EMAIL_USER || 'your-email@gmail.com',
-      to: 'test@example.com',
+      to: req.query.email || 'test@example.com',
       subject: 'Test Email - BioPing',
-      text: 'This is a test email from BioPing server.'
+      html: emailTemplates.verification('123456')
     };
 
     const result = await transporter.sendMail(testMailOptions);
     res.json({
       success: true,
       message: 'Test email sent successfully',
-      messageId: result.messageId
+      messageId: result.messageId,
+      to: req.query.email || 'test@example.com'
     });
   } catch (error) {
     console.error('Test email error:', error);
@@ -260,6 +348,187 @@ app.get('/api/test-email', async (req, res) => {
         response: error.response
       }
     });
+  }
+});
+
+// Send verification code endpoint
+app.post('/api/auth/send-verification', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+
+    const { email } = req.body;
+    
+    // Generate a 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store the verification code (in production, this would be in a database)
+    mockDB.verificationCodes.push({
+      email,
+      code: verificationCode,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+
+    // Save data to files
+    saveDataToFiles();
+
+    // Send email with verification code
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        to: email,
+        subject: emailTemplates.verification(verificationCode).subject,
+        html: emailTemplates.verification(verificationCode).html
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
+
+      res.json({
+        success: true,
+        message: 'Verification code sent successfully to your email'
+      });
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
+      console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+      
+      // Return success with the code in response for development
+      res.json({
+        success: true,
+        message: 'Verification code generated (email failed to send)',
+        verificationCode: verificationCode, // Include code in response
+        emailError: 'Email service temporarily unavailable'
+      });
+    }
+
+  } catch (error) {
+    console.error('Send verification error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Verify email code endpoint
+app.post('/api/auth/verify-email', [
+  body('email').isEmail().normalizeEmail(),
+  body('code').isLength({ min: 6, max: 6 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+
+    const { email, code } = req.body;
+    
+    // Find the verification code
+    const verificationRecord = mockDB.verificationCodes.find(
+      record => record.email === email && 
+                record.code === code && 
+                new Date() < record.expiresAt
+    );
+
+    if (!verificationRecord) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid or expired verification code' 
+      });
+    }
+
+    // Remove the used verification code
+    mockDB.verificationCodes = mockDB.verificationCodes.filter(
+      record => !(record.email === email && record.code === code)
+    );
+
+    // Save data to files
+    saveDataToFiles();
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create account endpoint
+app.post('/api/auth/create-account', [
+  body('firstName').notEmpty().trim(),
+  body('lastName').notEmpty().trim(),
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 8 })
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+
+    const { firstName, lastName, email, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = mockDB.users.find(u => u.email === email);
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'User already exists' 
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const newUser = {
+      id: mockDB.users.length + 1,
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      name: `${firstName} ${lastName}`,
+      role: 'user',
+      createdAt: new Date()
+    };
+
+    mockDB.users.push(newUser);
+
+    // Save data to files
+    saveDataToFiles();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: newUser.id,
+        email: newUser.email, 
+        name: newUser.name,
+        role: newUser.role
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      token,
+      user: {
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Create account error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -280,10 +549,44 @@ app.post('/api/auth/login', [
     const user = universalUsers.find(u => u.email === email);
     
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      // Check if it's a registered user
+      const registeredUser = mockDB.users.find(u => u.email === email);
+      if (!registeredUser) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Check password for registered user
+      const isValidPassword = await bcrypt.compare(password, registeredUser.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Generate JWT token for registered user
+      const token = jwt.sign(
+        { 
+          id: registeredUser.id,
+          email: registeredUser.email, 
+          name: registeredUser.name,
+          role: registeredUser.role
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        message: 'Login successful',
+        token,
+        user: {
+          email: registeredUser.email,
+          name: registeredUser.name,
+          role: registeredUser.role
+        },
+        credits: 5
+      });
+      return;
     }
 
-    // Check password
+    // Check password for universal user
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -292,6 +595,7 @@ app.post('/api/auth/login', [
     // Generate JWT token
     const token = jwt.sign(
       { 
+        id: user.id,
         email: user.email, 
         name: user.name,
         role: user.role
@@ -923,8 +1227,10 @@ app.get('/api/pricing-analytics/export', authenticateToken, (req, res) => {
 let biotechData = [];
 
 // Get all biotech data (admin only)
-app.get('/api/admin/biotech-data', (req, res) => {
+app.get('/api/admin/biotech-data', authenticateAdmin, (req, res) => {
   try {
+    console.log('Admin biotech data - Request received');
+    console.log('Admin biotech data - Data count:', biotechData.length);
 
     res.json({
       success: true,
@@ -941,7 +1247,7 @@ app.get('/api/admin/biotech-data', (req, res) => {
 });
 
 // Upload Excel file
-app.post('/api/admin/upload-excel', upload.single('file'), (req, res) => {
+app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (req, res) => {
   try {
 
     if (!req.file) {
@@ -1050,6 +1356,9 @@ app.post('/api/admin/upload-excel', upload.single('file'), (req, res) => {
     };
     mockDB.uploadedFiles.push(fileInfo);
 
+    // Save data to files
+    saveDataToFiles();
+
     res.status(201).json({
       success: true,
       message: `${newData.length} records uploaded successfully`,
@@ -1127,8 +1436,8 @@ app.post('/api/search-biotech', authenticateToken, [
       const query = searchQuery.toLowerCase().trim();
       let tempFilteredData = biotechData.filter(item => {
         if (searchType === 'Company Name') {
-          // Exact match for company name (case insensitive)
-          return item.companyName && item.companyName.toLowerCase() === query;
+          // Partial match for company name (case insensitive) - so "pfizer" will find "Pfizer Inc"
+          return item.companyName && item.companyName.toLowerCase().includes(query);
         } else if (searchType === 'Contact Name') {
           // Partial match for contact name (case insensitive)
           return item.contactPerson && item.contactPerson.toLowerCase().includes(query);
@@ -1491,7 +1800,7 @@ app.post('/api/get-contacts', authenticateToken, [
 });
 
 // Delete multiple records (admin only)
-app.delete('/api/admin/delete-records', (req, res) => {
+app.delete('/api/admin/delete-records', authenticateAdmin, (req, res) => {
   try {
 
     const { ids } = req.body;
@@ -1508,6 +1817,9 @@ app.delete('/api/admin/delete-records', (req, res) => {
 
     const deletedCount = initialLength - biotechData.length;
 
+    // Save data to files
+    saveDataToFiles();
+
     res.json({
       success: true,
       message: `${deletedCount} records deleted successfully`
@@ -1522,7 +1834,7 @@ app.delete('/api/admin/delete-records', (req, res) => {
 });
 
 // Delete single record (admin only)
-app.delete('/api/admin/biotech-data/:id', (req, res) => {
+app.delete('/api/admin/biotech-data/:id', authenticateAdmin, (req, res) => {
   try {
 
     const id = parseInt(req.params.id);
@@ -1550,7 +1862,7 @@ app.delete('/api/admin/biotech-data/:id', (req, res) => {
 });
 
 // Get admin statistics
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', authenticateAdmin, (req, res) => {
   try {
 
     const uniqueCompanies = new Set(biotechData.map(item => item.companyName)).size;
@@ -1605,12 +1917,113 @@ app.get('/api/debug/data', authenticateToken, (req, res) => {
 console.log('Starting server without MongoDB for now...');
 console.log('Server will run with in-memory storage');
 
+// Data storage with file persistence
+const DATA_FILE = path.join(__dirname, 'data', 'biotechData.json');
+const USERS_FILE = path.join(__dirname, 'data', 'users.json');
+const VERIFICATION_FILE = path.join(__dirname, 'data', 'verificationCodes.json');
+const UPLOADED_FILES_FILE = path.join(__dirname, 'data', 'uploadedFiles.json');
+const BD_TRACKER_FILE = path.join(__dirname, 'data', 'bdTracker.json');
+
+// Ensure data directory exists
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Load data from files
+const loadDataFromFiles = () => {
+  try {
+    // Load biotech data
+    if (fs.existsSync(DATA_FILE)) {
+      const data = fs.readFileSync(DATA_FILE, 'utf8');
+      biotechData = JSON.parse(data);
+      console.log(`Loaded ${biotechData.length} biotech records from file`);
+    }
+
+    // Load users
+    if (fs.existsSync(USERS_FILE)) {
+      const data = fs.readFileSync(USERS_FILE, 'utf8');
+      mockDB.users = JSON.parse(data);
+      console.log(`Loaded ${mockDB.users.length} users from file`);
+    }
+
+    // Load verification codes
+    if (fs.existsSync(VERIFICATION_FILE)) {
+      const data = fs.readFileSync(VERIFICATION_FILE, 'utf8');
+      mockDB.verificationCodes = JSON.parse(data);
+      console.log(`Loaded ${mockDB.verificationCodes.length} verification codes from file`);
+    }
+
+    // Load uploaded files info
+    if (fs.existsSync(UPLOADED_FILES_FILE)) {
+      const data = fs.readFileSync(UPLOADED_FILES_FILE, 'utf8');
+      mockDB.uploadedFiles = JSON.parse(data);
+      console.log(`Loaded ${mockDB.uploadedFiles.length} uploaded files info from file`);
+    }
+
+    // Load BD Tracker data
+    if (fs.existsSync(BD_TRACKER_FILE)) {
+      const data = fs.readFileSync(BD_TRACKER_FILE, 'utf8');
+      mockDB.bdTracker = JSON.parse(data);
+      console.log(`Loaded ${mockDB.bdTracker.length} BD Tracker entries from file`);
+    }
+  } catch (error) {
+    console.error('Error loading data from files:', error);
+  }
+};
+
+// Save data to files
+const saveDataToFiles = () => {
+  try {
+    // Save biotech data
+    fs.writeFileSync(DATA_FILE, JSON.stringify(biotechData, null, 2));
+    
+    // Save users
+    fs.writeFileSync(USERS_FILE, JSON.stringify(mockDB.users, null, 2));
+    
+    // Save verification codes
+    fs.writeFileSync(VERIFICATION_FILE, JSON.stringify(mockDB.verificationCodes, null, 2));
+    
+    // Save uploaded files info
+    fs.writeFileSync(UPLOADED_FILES_FILE, JSON.stringify(mockDB.uploadedFiles, null, 2));
+    
+    // Save BD Tracker data
+    fs.writeFileSync(BD_TRACKER_FILE, JSON.stringify(mockDB.bdTracker, null, 2));
+    
+    console.log('Data saved to files successfully');
+  } catch (error) {
+    console.error('Error saving data to files:', error);
+  }
+};
+
 // Mock database connection for now
 const mockDB = {
   users: [],
   verificationCodes: [],
-  uploadedFiles: [] // Store uploaded file info
+  uploadedFiles: [], // Store uploaded file info
+  bdTracker: [] // Store BD Tracker entries
 };
+
+// Load data on startup
+loadDataFromFiles();
+
+// Save data periodically (every 5 minutes)
+setInterval(() => {
+  saveDataToFiles();
+}, 5 * 60 * 1000);
+
+// Save data on server shutdown
+process.on('SIGINT', () => {
+  console.log('Saving data before shutdown...');
+  saveDataToFiles();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Saving data before shutdown...');
+  saveDataToFiles();
+  process.exit(0);
+});
 
 // Email functionality removed - using universal login emails
 
@@ -1618,7 +2031,7 @@ const mockDB = {
 
 
 // Get all users (admin only)
-app.get('/api/admin/users', async (req, res) => {
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   try {
 
     // Return users from mockDB
@@ -1639,7 +2052,7 @@ app.get('/api/admin/users', async (req, res) => {
 });
 
 // Delete user (admin only)
-app.delete('/api/admin/users/:id', async (req, res) => {
+app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
 
     const userId = req.params.id;
@@ -1661,6 +2074,171 @@ app.delete('/api/admin/users/:id', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error deleting user' 
+    });
+  }
+});
+
+// BD Tracker API Endpoints
+
+// Get all BD Tracker entries for specific user
+app.get('/api/bd-tracker', authenticateToken, async (req, res) => {
+  try {
+    console.log('BD Tracker GET - User ID:', req.user.id);
+    console.log('BD Tracker GET - User Email:', req.user.email);
+    console.log('BD Tracker GET - Total entries:', mockDB.bdTracker.length);
+    
+    // Filter entries by user ID
+    const userEntries = mockDB.bdTracker.filter(entry => entry.userId === req.user.id);
+    
+    console.log('BD Tracker GET - User entries:', userEntries.length);
+    console.log('BD Tracker GET - All entries:', mockDB.bdTracker);
+    
+    res.json({
+      success: true,
+      data: userEntries
+    });
+  } catch (error) {
+    console.error('Error fetching BD Tracker entries:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching BD Tracker entries' 
+    });
+  }
+});
+
+// Add new BD Tracker entry
+app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
+  try {
+    console.log('BD Tracker POST - User ID:', req.user.id);
+    console.log('BD Tracker POST - User Email:', req.user.email);
+    
+    const { company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
+
+    // Validate required fields
+    if (!company || !contactPerson) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company and Contact Person are required'
+      });
+    }
+
+    const newEntry = {
+      id: Date.now().toString(),
+      company,
+      programPitched: programPitched || '',
+      outreachDates: outreachDates || '',
+      contactFunction: contactFunction || '',
+      contactPerson,
+      cda: cda || '',
+      feedback: feedback || '',
+      nextSteps: nextSteps || '',
+      timelines: timelines || '',
+      reminders: reminders || '',
+      createdAt: new Date().toISOString(),
+      userId: req.user.id
+    };
+
+    console.log('BD Tracker POST - New entry:', newEntry);
+
+    mockDB.bdTracker.unshift(newEntry);
+    saveDataToFiles();
+
+    res.json({
+      success: true,
+      data: newEntry,
+      message: 'BD Tracker entry added successfully'
+    });
+  } catch (error) {
+    console.error('Error adding BD Tracker entry:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error adding BD Tracker entry' 
+    });
+  }
+});
+
+// Update BD Tracker entry
+app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
+
+    // Validate required fields
+    if (!company || !contactPerson) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company and Contact Person are required'
+      });
+    }
+
+    // Find entry that belongs to this user
+    const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+    
+    if (entryIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'BD Tracker entry not found or not authorized'
+      });
+    }
+
+    mockDB.bdTracker[entryIndex] = {
+      ...mockDB.bdTracker[entryIndex],
+      company,
+      programPitched: programPitched || '',
+      outreachDates: outreachDates || '',
+      contactFunction: contactFunction || '',
+      contactPerson,
+      cda: cda || '',
+      feedback: feedback || '',
+      nextSteps: nextSteps || '',
+      timelines: timelines || '',
+      reminders: reminders || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    saveDataToFiles();
+
+    res.json({
+      success: true,
+      data: mockDB.bdTracker[entryIndex],
+      message: 'BD Tracker entry updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating BD Tracker entry:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error updating BD Tracker entry' 
+    });
+  }
+});
+
+// Delete BD Tracker entry
+app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find entry that belongs to this user
+    const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+    
+    if (entryIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'BD Tracker entry not found or not authorized'
+      });
+    }
+
+    mockDB.bdTracker.splice(entryIndex, 1);
+    saveDataToFiles();
+
+    res.json({
+      success: true,
+      message: 'BD Tracker entry deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting BD Tracker entry:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting BD Tracker entry' 
     });
   }
 });

@@ -1,225 +1,136 @@
-# BioPing - Complete User Signup System
+# BioPing - Biotech Business Development Platform
 
-A full-stack user signup system with email verification, MongoDB integration, and admin dashboard.
+A comprehensive platform for biotech business development professionals to connect with potential partners.
 
-## 🚀 Features
+## Features
 
-### ✅ User Signup System
-- **Complete signup form** with name, email, password, company, and role
-- **Email verification** with 6-digit OTP sent via Nodemailer
-- **Modal popup** for OTP entry with resend functionality
-- **Password strength indicator** with real-time feedback
-- **Form validation** with error handling
+- 🔐 **Secure Authentication**: Email verification with OTP
+- 👥 **User Management**: Signup, login, and user profiles
+- 🔍 **Advanced Search**: Search biotech companies by various criteria
+- 📊 **Admin Panel**: Complete admin interface for data management
+- 📧 **Email Integration**: Automated email notifications
+- 🛡️ **Admin Security**: Restricted admin access to specific email
+- 💾 **Data Persistence**: Permanent file-based storage for all data
+- 🔄 **Auto Backup**: Automatic data saving and backup system
 
-### ✅ Backend Features
-- **Node.js + Express** server with MongoDB integration
-- **JWT authentication** for secure sessions
-- **Email verification** using Nodemailer and Gmail SMTP
-- **Password hashing** with bcrypt
-- **MongoDB Atlas** cloud database
-- **Admin endpoints** for user management
+## Setup Instructions
 
-### ✅ Admin Dashboard
-- **User management** with view and delete functionality
-- **User statistics** (total users, verified users, unique companies)
-- **Real-time data** from MongoDB
-- **Responsive design** with Tailwind CSS
+### 1. Install Dependencies
 
-## 🛠️ Tech Stack
-
-### Frontend
-- **React.js** - User interface
-- **Tailwind CSS** - Styling
-- **Framer Motion** - Animations
-- **React Router** - Navigation
-- **Lucide React** - Icons
-
-### Backend
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **Nodemailer** - Email service
-- **bcrypt** - Password hashing
-- **JWT** - Authentication
-- **Express Validator** - Input validation
-
-## 📁 Project Structure
-
-```
-ravan/
-├── src/
-│   ├── components/
-│   │   ├── Header.js
-│   │   ├── Footer.js
-│   │   └── VerificationModal.js
-│   ├── pages/
-│   │   ├── Signup.js
-│   │   ├── Login.js
-│   │   ├── AdminUsers.js
-│   │   └── ...
-│   └── App.js
-├── server/
-│   ├── models/
-│   │   ├── User.js
-│   │   └── VerificationCode.js
-│   ├── config/
-│   │   └── database.js
-│   └── index.js
-└── README.md
-```
-
-## 🗄️ Database Schema
-
-### User Model
-```javascript
-{
-  firstName: String (required),
-  lastName: String (required),
-  email: String (required, unique),
-  password: String (required, hashed),
-  company: String (required),
-  role: String (enum),
-  isVerified: Boolean (default: false),
-  isActive: Boolean (default: true),
-  lastLogin: Date,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### VerificationCode Model
-```javascript
-{
-  email: String (required),
-  code: String (required, 6 digits),
-  expiresAt: Date (required),
-  isUsed: Boolean (default: false),
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-## 🚀 Installation & Setup
-
-### 1. Clone the repository
 ```bash
-git clone <repository-url>
-cd ravan
-```
-
-### 2. Install dependencies
-```bash
-# Frontend dependencies
+# Install frontend dependencies
 npm install
 
-# Backend dependencies
+# Install backend dependencies
 cd server
 npm install
 ```
 
-### 3. Environment Configuration
+### 2. Email Configuration
 
-Create `.env` file in the `server` directory:
+For email OTP functionality, you need to configure Gmail:
+
+1. **Enable 2-Factor Authentication** on your Gmail account
+2. **Generate an App Password**:
+   - Go to Google Account Settings
+   - Security → 2-Step Verification → App passwords
+   - Generate a new app password for "Mail"
+3. **Update the .env file** in the server directory:
+
 ```env
-# Server Configuration
-PORT=5000
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# MongoDB Configuration
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/biping-db?retryWrites=true&w=majority
-
-# Email Configuration (Gmail)
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
+JWT_SECRET=your-super-secret-jwt-key
+PORT=3001
 ```
 
-### 4. Start the servers
+### 3. Start the Application
+
 ```bash
-# Start backend server
+# Start the backend server (from server directory)
 cd server
 npm start
 
-# Start frontend server (in new terminal)
+# Start the frontend (from root directory)
 npm start
 ```
 
-## 📧 Email Setup
+### 4. Data Management
 
-### Gmail Configuration
-1. Enable 2-factor authentication on your Gmail account
-2. Generate an App Password
-3. Use the App Password in `EMAIL_PASS` (not your regular password)
+```bash
+# Create backup of all data
+cd server
+npm run backup
 
-## 🔐 API Endpoints
+# View data files
+cd server/data
+ls -la *.json
+```
+
+## Admin Access
+
+- **Admin Email**: `universalx0242@gmail.com`
+- **Admin Password**: `password`
+- **Admin URL**: `http://localhost:3000/admin/login`
+
+Only users with the email `universalx0242@gmail.com` can access the admin panel.
+
+## API Endpoints
 
 ### Authentication
 - `POST /api/auth/send-verification` - Send OTP email
-- `POST /api/auth/verify-email` - Verify OTP code
+- `POST /api/auth/verify-email` - Verify email code
 - `POST /api/auth/create-account` - Create user account
 - `POST /api/auth/login` - User login
 
 ### Admin (Protected)
+- `GET /api/admin/biotech-data` - Get all biotech data
+- `POST /api/admin/upload-excel` - Upload Excel files
+- `DELETE /api/admin/delete-records` - Delete records
+- `GET /api/admin/stats` - Get admin statistics
 - `GET /api/admin/users` - Get all users
-- `DELETE /api/admin/users/:id` - Delete user
 
-## 🎯 Usage
+### Search
+- `POST /api/search-biotech` - Search biotech companies
+- `POST /api/get-contacts` - Get contact details (paid feature)
 
-### User Signup Flow
-1. **Fill signup form** at `/signup`
-2. **Click "Send Verification Code"**
-3. **Check email** for 6-digit OTP
-4. **Enter OTP** in modal popup
-5. **Account created** and redirected to login
+## Development
 
-### Admin Dashboard
-1. **Login** as admin user
-2. **Navigate** to `/admin/users`
-3. **View all users** with statistics
-4. **Delete users** as needed
+- **Frontend**: React with Tailwind CSS
+- **Backend**: Node.js with Express
+- **Authentication**: JWT tokens
+- **Email**: Nodemailer with Gmail
+- **File Upload**: Multer for Excel files
+- **Data Storage**: File-based JSON persistence
+- **Backup System**: Automated data backups
 
-## 🔒 Security Features
+## Security Features
 
-- **Password hashing** with bcrypt
-- **JWT authentication** for protected routes
-- **Email verification** with OTP
-- **Input validation** with express-validator
-- **CORS protection** for cross-origin requests
-- **Environment variables** for sensitive data
+- JWT-based authentication
+- Admin-only access to sensitive endpoints
+- Email verification for new users
+- Password hashing with bcrypt
+- CORS protection
+- Input validation with express-validator
 
-## 📊 Admin Features
+## Deployment
 
-- **User Statistics**: Total users, verified users, unique companies
-- **User Management**: View, delete users
-- **Real-time Data**: Live updates from MongoDB
-- **Responsive Design**: Works on all devices
+The application is ready for deployment to AWS or any cloud platform. Make sure to:
 
-## 🐛 Troubleshooting
+1. Set up environment variables
+2. Configure email settings
+3. Set up data persistence (files are automatically created)
+4. Configure CORS for your domain
+5. Set up SSL certificates
+6. Set up automated backups (optional)
 
-### Common Issues
-1. **Email not sending**: Check Gmail credentials and App Password
-2. **MongoDB connection error**: Verify connection string and network
-3. **CORS errors**: Check server configuration
-4. **JWT errors**: Verify JWT_SECRET in environment
+### AWS Deployment Benefits:
+- ✅ **Data Persistence**: Excel uploads survive server restarts
+- ✅ **No Database Required**: File-based storage works immediately
+- ✅ **Easy Scaling**: Can migrate to MongoDB when needed
+- ✅ **Automatic Backups**: Data is saved every 5 minutes
+- ✅ **Crash Recovery**: Data survives server crashes
 
-### Debug Mode
-The signup form includes comprehensive console logging for debugging:
-- Form validation steps
-- API call status
-- Error messages
-- User data flow
+## Support
 
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
----
-
-**Built with ❤️ using React, Node.js, and MongoDB** 
+For any issues or questions, please contact the development team. 

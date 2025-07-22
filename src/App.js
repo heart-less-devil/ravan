@@ -20,6 +20,7 @@ import AdminPanel from './pages/AdminPanel';
 import AdminUsers from './pages/AdminUsers';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import BDTrackerPage from './pages/BDTrackerPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import './App.css';
@@ -127,10 +128,20 @@ function App() {
           <Route path="/dashboard/legal" element={<Dashboard />} />
           <Route path="/dashboard/contact" element={<Dashboard />} />
           <Route path="/dashboard/pricing" element={<Dashboard />} />
+          <Route path="/dashboard/bd-tracker" element={<BDTrackerPage />} />
 
           {/* Admin Routes */}
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/panel" element={
+            <ProtectedAdminRoute>
+              <AdminPanel />
+            </ProtectedAdminRoute>
+          } />
+          <Route path="/admin/users" element={
+            <ProtectedAdminRoute>
+              <AdminUsers />
+            </ProtectedAdminRoute>
+          } />
           
           {/* Test route to check if React is working */}
           <Route path="/test" element={
