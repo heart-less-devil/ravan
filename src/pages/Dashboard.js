@@ -941,8 +941,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
       
       if (result.success) {
         setSearchResults(result.data.results);
-        // Hide search form when results are shown
-        setShowSearchForm(false);
+        // Only hide form if it's from global search, not from search criteria form
+        if (!globalSearchResults) {
+          setShowSearchForm(false);
+        }
         if (result.data.message) {
           setError(result.data.message);
         } else {
@@ -1387,7 +1389,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <div>
               <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
               <p className="text-gray-600">
-                Showing 1 - {Object.keys(groupedResults).length > 0 ? Object.keys(groupedResults).length : searchResults.length} of {Object.keys(groupedResults).length > 0 ? Object.keys(groupedResults).length : searchResults.length} results
+                Showing 1 - {searchResults.length} of {searchResults.length} results
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -1688,34 +1690,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             )}
           </div>
           
-          {/* Pagination Controls */}
-          <div className="flex items-center justify-between mt-6">
-            <div className="flex items-center space-x-2">
-              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7m-8 0l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-            <div className="text-sm text-gray-500">
-              Page 1 of 1
-            </div>
-          </div>
+
         </div>
       )}
 
