@@ -1406,7 +1406,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           </div>
 
           <div className="w-full">
-            {currentSearchType === 'Company Name' ? (
+            {false ? (
               // Company search results - simple table with company summary
               <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
