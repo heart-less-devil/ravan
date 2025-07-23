@@ -302,17 +302,31 @@ const Home = () => {
             <div className="max-w-4xl mx-auto">
               <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
                 <Sparkles className="w-10 h-10 text-white" />
-              </div>
+                </div>
               <h2 className="text-5xl font-bold text-gray-900 mb-8 leading-tight">
                 Built by a <span className="text-orange-400 bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent">Biotech Insider</span>. 
                 <br />
                 Designed to Give Back.
               </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 With 15+ years in pharma and biotech, we know the challenges of breaking through. The BioPing platform offers more than just BD contacts — it's a mix of paid tools and free resources, built to support, guide, and empower emerging biotech's.
               </p>
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+
+            <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-center mt-28"
+            >
+            <h3 className="text-3xl font-bold mb-4" style={{color: 'rgb(30 58 138 / var(--tw-text-opacity, 1))'}}>
+              The most comprehensive, reliable contact database for biotech, pharma - business development and fund-raising outreach.
+                  </h3>
+            <p className="text-lg text-gray-900">
+              Validated through direct meetings and regularly updated for accuracy
+            </p>
+            </motion.div>
         </div>
       </section>
 
@@ -399,97 +413,9 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Resources Section */}
-      <section className="section bg-white py-20">
-        <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Free Resources
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Access our collection of free tools and resources to accelerate your biotech BD efforts
-            </p>
-          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {resources.map((resource, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-2xl p-6 border border-primary-100 hover:shadow-medium transition-all duration-300 group"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl mb-4 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <resource.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{resource.title}</h3>
-                <p className="text-gray-600 mb-4">{resource.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">{resource.downloads} downloads</span>
-                  <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
-                    {resource.type}
-                  </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-        </div>
-      </section>
 
-      {/* Events Section */}
-      <section className="section bg-gradient-to-br from-gray-50 to-primary-50/20 py-20">
-        <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              Upcoming Events
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Join our community events and connect with industry leaders
-            </p>
-          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {upcomingEvents.map((event, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100 hover:shadow-medium transition-all duration-300"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs bg-accent-100 text-accent-700 px-3 py-1 rounded-full font-medium">
-                    {event.type}
-                  </span>
-                  <span className="text-sm text-gray-500">{event.attendees}</span>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{event.title}</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>{event.date}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>{event.location}</span>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Benefits Section */}
       <section className="section bg-white py-20">
@@ -566,45 +492,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="section bg-gradient-to-r from-primary-600 to-secondary-600 py-20">
-        <div className="container-custom text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-4xl font-bold text-white mb-6">
-              Ready to Accelerate Your Biotech's Growth?
-            </h2>
-            <p className="text-xl text-primary-100 mb-8 max-w-3xl mx-auto">
-              Join hundreds of biotech companies who are already using BioPing to connect with the right partners and accelerate their business development.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Link to="/request-demo">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold text-lg shadow-soft hover:shadow-medium transition-all duration-300 flex items-center space-x-2"
-                >
-                  <span>Request Demo</span>
-                  <ArrowRight className="w-5 h-5" />
-                </motion.button>
-              </Link>
-              <Link to="/pricing">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="border-2 border-white/30 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-300"
-                >
-                  View Pricing
-                </motion.button>
-              </Link>
-            </div>
-          </motion.div>
 
-        </div>
-      </section>
 
 
     </div>

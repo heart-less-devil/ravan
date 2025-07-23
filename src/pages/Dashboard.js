@@ -66,6 +66,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
+import CustomerProfile from './CustomerProfile';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -80,6 +81,7 @@ const Dashboard = () => {
   const [globalSearchResults, setGlobalSearchResults] = useState(null);
   const [userCredits, setUserCredits] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
+  const [showCustomerProfile, setShowCustomerProfile] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -149,6 +151,14 @@ const Dashboard = () => {
 
   const closeCreditPopup = () => {
     setShowCreditPopup(false);
+  };
+
+  const handleSettingsClick = () => {
+    setShowCustomerProfile(true);
+  };
+
+  const handleBackFromProfile = () => {
+    setShowCustomerProfile(false);
   };
 
   const handleSearch = async () => {
@@ -275,15 +285,27 @@ const Dashboard = () => {
       {/* Enhanced Sidebar */}
       <motion.div 
         className={`bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-500 overflow-y-auto ${
-          sidebarCollapsed ? 'w-20' : 'w-96'
+          sidebarCollapsed ? 'w-16' : 'w-80'
         }`}
         initial={{ x: -100 }}
         animate={{ x: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="p-6 h-full flex flex-col">
+        {/* Expand Arrow - Only visible when collapsed */}
+        {sidebarCollapsed && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            onClick={() => setSidebarCollapsed(false)}
+            className="absolute top-4 left-4 z-50 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all duration-200"
+          >
+            <ChevronRight className="w-4 h-4 text-white" />
+          </motion.button>
+        )}
+        <div className={`h-full flex flex-col ${sidebarCollapsed ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
           {/* Enhanced Logo */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-8 p-6">
             <motion.div 
               className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg"
               whileHover={{ scale: 1.05, rotate: 5 }}
@@ -309,7 +331,7 @@ const Dashboard = () => {
           </div>
 
           {/* Enhanced Navigation */}
-          <nav className="flex-1 space-y-6">
+          <nav className="flex-1 space-y-6 px-6">
             {['MAIN', 'DATA', 'MY DEALS', 'RESOURCES'].map(section => (
               <div key={section}>
                 {!sidebarCollapsed && (
@@ -339,7 +361,7 @@ const Dashboard = () => {
 
           {/* Enhanced Footer */}
           {!sidebarCollapsed && (
-            <div className="text-xs text-white/40 px-3 py-4 border-t border-white/10">
+            <div className="text-xs text-white/40 px-9 py-4 border-t border-white/10">
               <div className="flex items-center space-x-2 mb-2">
                 <Sparkles className="w-4 h-4" />
                 <span className="font-medium">BioPing Pro</span>
@@ -377,17 +399,17 @@ const Dashboard = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleSearchKeyPress}
                     placeholder="Search anything..."
-                    className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl pl-12 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-80"
+                    className="bg-white/80 backdrop-blur-sm border-2 border-gray-300 rounded-2xl pl-14 pr-6 py-4 text-base font-semibold focus:ring-4 focus:ring-blue-500/50 focus:border-blue-600 focus:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300 w-96 shadow-lg"
                   />
                   <button
                     onClick={handleSearch}
                     disabled={searchLoading}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-blue-500 transition-colors duration-200"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-blue-600 transition-colors duration-200"
                   >
                     {searchLoading ? (
-                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     ) : (
-                      <Search className="w-4 h-4" />
+                      <Search className="w-5 h-5" />
                     )}
                   </button>
                 </div>
@@ -395,20 +417,12 @@ const Dashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Enhanced Notifications */}
-              <button className="relative p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
-                <Bell className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-              </button>
-
               {/* Enhanced Settings */}
-              <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
+              <button 
+                onClick={handleSettingsClick}
+                className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 group"
+              >
                 <Settings className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-              </button>
-
-              {/* Enhanced Help */}
-              <button className="p-3 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 group">
-                <HelpCircle className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
               </button>
 
               {/* Enhanced User Profile */}
@@ -419,7 +433,7 @@ const Dashboard = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <span className="text-white font-bold text-lg">{user.name?.charAt(0) || 'U'}</span>
+                    <span className="text-white font-bold text-xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
                   </motion.div>
                   <div className="hidden sm:block">
                     <div className="text-sm font-semibold text-gray-900">{user.name || 'User'}</div>
@@ -452,7 +466,11 @@ const Dashboard = () => {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-          {renderContent()}
+              {showCustomerProfile ? (
+                <CustomerProfile user={user} onBack={handleBackFromProfile} />
+              ) : (
+                renderContent()
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -688,8 +706,8 @@ const DashboardHome = ({ user }) => {
         </div>
       </motion.div>
 
-      {/* Enhanced Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Enhanced Stats Grid - Hidden */}
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div
             key={index}
@@ -713,7 +731,7 @@ const DashboardHome = ({ user }) => {
             </div>
           </motion.div>
         ))}
-          </div>
+          </div> */}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Enhanced Quick Actions */}
@@ -754,10 +772,6 @@ const DashboardHome = ({ user }) => {
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
-            <button className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center">
-              View All
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </button>
           </div>
           <div className="space-y-4">
             {recentActivity.map((activity, index) => (
@@ -807,7 +821,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [selectedCompanies, setSelectedCompanies] = useState([]);
+
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactDetails, setContactDetails] = useState([]);
   const [expandedRows, setExpandedRows] = useState(new Set());
@@ -895,7 +909,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSelectedCompanies([]);
+
     // DRUG SEARCH: explicitly set isGlobalSearch to false
     setIsGlobalSearch(false);
 
@@ -945,54 +959,9 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     }
   };
 
-  const handleGetContacts = async () => {
-    if (selectedCompanies.length === 0) {
-      alert('Please select companies to get contacts');
-      return;
-    }
 
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_BASE_URL}/api/get-contacts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          companyIds: selectedCompanies
-        })
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to get contacts');
-      }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        setContactDetails(result.data.contacts);
-        setShowContactModal(true);
-      } else {
-        throw new Error(result.message || 'Failed to get contacts');
-      }
-    } catch (error) {
-      console.error('Error getting contacts:', error);
-      alert('Failed to get contacts: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCompanySelect = (companyId) => {
-    setSelectedCompanies(prev => 
-      prev.includes(companyId) 
-        ? prev.filter(id => id !== companyId)
-        : [...prev, companyId]
-    );
-  };
 
   const handleViewMore = (company) => {
     setExpandedRows(prev => {
@@ -1029,6 +998,15 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         newSet.add(contactId);
       }
       return newSet;
+    });
+  };
+
+  const handleCopyEmail = (email) => {
+    navigator.clipboard.writeText(email).then(() => {
+      // Optional: Show a success message
+      console.log('Email copied to clipboard');
+    }).catch(err => {
+      console.error('Failed to copy email:', err);
     });
   };
 
@@ -1341,13 +1319,23 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </motion.button>
           </div>
         </form>
-      </div>
+        </div>
       )}
 
       {/* Search Results */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-600">{error}</p>
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-8 mb-6 shadow-lg">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-red-700 mb-2">No Match Found</h3>
+              <p className="text-red-600 font-medium">Please Refine Your Search Criterion</p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1375,15 +1363,12 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </div>
           </div>
 
-                    <div className="w-full">
+          <div className="w-full">
             {isGlobalSearch ? (
                 // GLOBAL SEARCH: Simple grouped table
-                <table className="w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                    </th>
+            <table className="w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPANY</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COUNTRY</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIER</th>
@@ -1394,14 +1379,6 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 <tbody className="bg-white divide-y divide-gray-200">
                   {Object.entries(groupedResults).map(([companyName, companyData]) => (
                     <tr key={companyName} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={selectedCompanies.includes(companyName)}
-                          onChange={() => handleCompanySelect(companyName)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
@@ -1434,89 +1411,89 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      <input type="checkbox" className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">COMPANY</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CONTACT INFORMATION</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {searchResults.map((result) => (
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {searchResults.map((result) => (
                     <Fragment key={result.id}>
                       <tr className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={selectedCompanies.includes(result.id)}
-                            onChange={() => handleCompanySelect(result.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
                               <Building2 className="w-4 h-4 text-white" />
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{result.companyName}</div>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{result.companyName}</div>
                               <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">PUBLIC</div>
-                            </div>
                           </div>
-                        </td>
+                      </div>
+                    </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                              <span className="text-sm font-semibold text-blue-600">
-                                {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
-                              </span>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{result.contactPerson}</div>
-                              <div className="text-sm text-gray-500">{result.contactTitle || 'Exec. Director'}</div>
-                              <div className="text-sm text-gray-500">{result.contactFunction || 'Business Development'}</div>
-                            </div>
-                          </div>
-                        </td>
+                          <span className="text-sm font-semibold text-blue-600">
+                            {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{result.contactPerson}</div>
+                          <div className="text-sm text-gray-500">{result.contactTitle || 'Exec. Director'}</div>
+                          <div className="text-sm text-gray-500">{result.contactFunction || 'Business Development'}</div>
+                        </div>
+                      </div>
+                    </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
-                              <span className="text-sm text-gray-900">
-                                {revealedEmails.has(result.id) 
-                                  ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
-                                  : `@${result.companyName?.toLowerCase()}.com`
-                                }
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
-                              {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
-                              <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-sm text-gray-900">
+                            {revealedEmails.has(result.id) 
+                              ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
+                              : `@${result.companyName?.toLowerCase()}.com`
+                            }
+                          </span>
+                          {revealedEmails.has(result.id) && (
                             <button
-                              onClick={() => handleRevealEmail(result.id)}
-                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                              onClick={() => handleCopyEmail(result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)}
+                              className="ml-1 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200"
+                              title="Copy email"
                             >
-                              Get Contact Info
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
                             </button>
-                          </div>
-                        </td>
-                      </tr>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
+                          {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
+                          <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <button
+                          onClick={() => handleRevealEmail(result.id)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                        >
+                          Get Contact Info
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                       {/* Expanded Details Section */}
                       {expandedContactDetails.has(result.id) && (
                         <tr className="bg-gray-50">
@@ -1528,30 +1505,21 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">TIER:</span>
                                     <span className="text-sm text-gray-900">{result.tier || 'Large Pharma'}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
+          </div>
+            <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">MODALITY:</span>
                                     <span className="text-sm text-gray-900">{result.modality || 'SM, LM, CT, GT, Bx, RNA'}</span>
-                                  </div>
+            </div>
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">BD FOCUS AREA:</span>
                                     <span className="text-sm text-gray-900">{result.bdPersonTAFocus || 'NULL'}</span>
-                                  </div>
-                                </div>
+            </div>
+          </div>
                                 <div className="space-y-2">
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">REGION:</span>
                                     <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">EMAIL:</span>
-                                    <span className="text-sm text-gray-900">
-                                      {revealedEmails.has(result.id) 
-                                        ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
-                                        : 'Click "Get Contact Info" to reveal'
-                                      }
-                                    </span>
-                                  </div>
+        </div>
                                 </div>
                               </div>
                             </div>
@@ -1569,110 +1537,12 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         </div>
       )}
 
-      {/* No Results Message */}
-      {searchResults && searchResults.length === 0 && !loading && (
-        <div className="text-center py-12 px-6">
-          <div className="max-w-2xl mx-auto">
-            {/* Icon */}
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-full">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
-            
-            {/* Main Message */}
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              🔍 No Results Found
-            </h3>
-            
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 mb-6">
-              <p className="text-gray-700 text-lg mb-4">
-                We couldn't find any companies matching your specific criteria.
-              </p>
-              
-              {/* Search Criteria Display */}
-              <div className="bg-white rounded-xl p-4 mb-4">
-                <h4 className="font-semibold text-gray-900 mb-3">Your Search Criteria:</h4>
-                <div className="space-y-2">
-                  {Object.entries(formData).map(([key, value]) => {
-                    if (value && value !== 'Select Disease Area' && value !== 'Select Stage' && value !== 'Select Modality' && value !== 'Select Region' && value !== 'Select Function') {
-                      return (
-                        <div key={key} className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700 capitalize">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}: <span className="text-blue-600">{value}</span>
-                          </span>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              </div>
-              
-              {/* Suggestions */}
-              <div className="bg-white rounded-xl p-4">
-                <h4 className="font-semibold text-gray-900 mb-3">💡 Suggestions to broaden your search:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Try different Disease Areas</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Consider other Partner Tiers</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Adjust Modality preferences</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Explore different Regions</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Review Function filters</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                    <span>Start with broader criteria</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Action Button */}
-            <button
-              onClick={() => {
-                setFormData({
-                  drugName: '',
-                  diseaseArea: 'Select Disease Area',
-                  developmentStage: 'Select Stage',
-                  modality: 'Select Modality',
-                  partnerType: 'Select Looking For',
-                  region: 'Select Region',
-                  contactFunction: 'Select Function'
-                });
-                setSearchResults(null);
-              }}
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Start New Search
-            </button>
-          </div>
-        </div>
-      )}
+
 
       {/* Contact Details Modal */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900">Contact Details</h3>
               <button

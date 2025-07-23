@@ -1,12 +1,12 @@
 [
   {
     "id": 1,
-    "firstName": "cvbn",
-    "lastName": "cvn",
+    "firstName": "arman",
+    "lastName": "singh",
     "email": "amankk0007@gmail.com",
-    "password": "$2a$10$Ylt0/a2Lcue6qBckK9CEFuVP9D/QnOZZYLLEnwT9JK/MXzngfRhLi",
-    "name": "cvbn cvn",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "arman singh",
     "role": "user",
-    "createdAt": "2025-07-21T16:10:38.226Z"
+    "createdAt": "2025-07-23T13:13:54.493Z"
   }
 ]

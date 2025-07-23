@@ -284,7 +284,17 @@ const Login = () => {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="flex items-center justify-center mb-8"
                   >
-                    <div className="w-20 h-20 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden">
+                    <img 
+                      src="/dfgjk.webp" 
+                      alt="BioPing Logo" 
+                      className="w-48 h-48 object-contain"
+                      onError={(e) => {
+                        console.log('Logo failed to load:', e.target.src);
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="w-24 h-24 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden" style={{display: 'none'}}>
                       <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
                       <svg className="w-12 h-12 text-white relative z-10" viewBox="0 0 24 24" fill="currentColor">
                         <circle cx="12" cy="12" r="2" />

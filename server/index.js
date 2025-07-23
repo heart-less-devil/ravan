@@ -21,7 +21,9 @@ app.use(cors({
     'https://687dc02000e0ca0008eb4b09--deft-paprenjak-1f5e98.netlify.app',
     'https://deft-paprenjak-1f5e98.netlify.app',
     'https://biopingweb.netlify.app',
-    'https://*.netlify.app'
+    'https://*.netlify.app',
+    'https://thebioping.com',
+    'https://www.thebioping.com'
   ],
   credentials: true
 }));
@@ -1697,7 +1699,7 @@ app.post('/api/search-biotech', authenticateToken, [
           totalFound: 0,
           totalShown: 0,
           hasMore: false,
-          message: `🔍 **Search Results: No Matches Found**\n\nWe couldn't find any companies matching your specific criteria:\n\n**Your Search Criteria:**\n${searchCriteria.map(criteria => `• ${criteria}`).join('\n')}\n\n**Suggestions to broaden your search:**\n• Try different Disease Areas\n• Consider other Partner Tiers\n• Adjust Modality preferences\n• Explore different Regions\n• Review Function filters\n\n💡 **Pro Tip:** Start with broader criteria and then narrow down your search for better results.`
+          message: `No Match Found. Please Refine Your Search Criterion`
         }
       });
     }
@@ -1743,7 +1745,7 @@ app.post('/api/search-biotech', authenticateToken, [
         totalFound: filteredData.length,
         totalShown: limitedData.length,
         hasMore: false, // Show all results
-        message: filteredData.length === 0 ? 'No results found. Please try different search criteria.' : null
+        message: filteredData.length === 0 ? 'No Match Found. Please Refine Your Search Criterion' : null
       }
     });
   } catch (error) {

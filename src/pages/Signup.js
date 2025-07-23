@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, RefreshCw, Users, Shield, BarChart3 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, RefreshCw, Users, Shield, BarChart3, X } from 'lucide-react';
 import VerificationModal from '../components/VerificationModal';
 import { API_BASE_URL } from '../config';
 
@@ -23,6 +23,8 @@ const Signup = () => {
   const [verificationError, setVerificationError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('privacy'); // 'privacy' or 'terms'
   
 
   const handleChange = (e) => {
@@ -341,7 +343,17 @@ const Signup = () => {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="flex items-center justify-center mb-8"
                   >
-                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden">
+                    <img 
+                      src="/dfgjk.webp" 
+                      alt="BioPing Logo" 
+                      className="w-48 h-48 object-contain"
+                      onError={(e) => {
+                        console.log('Logo failed to load:', e.target.src);
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="w-48 h-48 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden" style={{display: 'none'}}>
                       <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
                       <svg className="w-12 h-12 text-white relative z-10" viewBox="0 0 24 24" fill="currentColor">
                         <circle cx="12" cy="12" r="2" />
@@ -600,18 +612,42 @@ const Signup = () => {
                         type="checkbox"
                         name="agreeToTerms"
                         checked={formData.agreeToTerms}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          if (!formData.agreeToTerms) {
+                            // If checkbox is being checked, show the modal first
+                            e.preventDefault();
+                            setActiveTab('privacy');
+                            setShowTermsModal(true);
+                          } else {
+                            // If unchecking, allow it
+                            handleChange(e);
+                          }
+                        }}
                         className="mt-1 w-4 h-4 text-purple-600 bg-white/10 border-white/20 rounded focus:ring-purple-500 focus:ring-2"
                       />
                       <div className="text-sm text-gray-300">
                         I agree to the{' '}
-                        <a href="#" className="text-purple-400 hover:text-purple-300 underline">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('terms');
+                            setShowTermsModal(true);
+                          }}
+                          className="text-purple-400 hover:text-purple-300 underline"
+                        >
                           Terms of Service
-                        </a>{' '}
+                        </button>{' '}
                         and{' '}
-                        <a href="#" className="text-purple-400 hover:text-purple-300 underline">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('privacy');
+                            setShowTermsModal(true);
+                          }}
+                          className="text-purple-400 hover:text-purple-300 underline"
+                        >
                           Privacy Policy
-                        </a>
+                        </button>
                         <span className="text-red-400">*</span>
                       </div>
                     </label>
@@ -740,6 +776,153 @@ const Signup = () => {
           </div>
         </div>
       </div>
+
+      {/* Terms and Privacy Policy Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowTermsModal(false)}
+          />
+          
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.3 }}
+            className="relative bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20 backdrop-blur-xl"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowTermsModal(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors z-10"
+            >
+              <X className="w-5 h-5 text-gray-300" />
+            </button>
+
+            {/* Header */}
+            <div className="p-8 border-b border-white/10">
+              <div className="flex space-x-4 mb-6">
+                <button
+                  onClick={() => setActiveTab('privacy')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'privacy'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Privacy Policy
+                </button>
+                <button
+                  onClick={() => setActiveTab('terms')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'terms'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Terms of Service
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 max-h-[60vh] overflow-y-auto">
+              {activeTab === 'privacy' && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <h2 className="text-2xl font-bold text-white mb-6">Privacy Policy - BioPing</h2>
+                  <div className="text-gray-300 leading-relaxed space-y-4">
+                    <p>
+                      At BioPing, your privacy is important to us. This Privacy Policy outlines how we collect, use, and share personal and business-related information through our website and services. By accessing our platform, you agree to this policy.
+                    </p>
+                    <p>
+                      We collect information that you provide directly to us, such as when you create an account, use our services, or contact us. This may include your name, email address, company information, and other business-related data.
+                    </p>
+                    <p>
+                      We use the information we collect to provide, maintain, and improve our services, communicate with you, and ensure the security of our platform. We may also use your information to send you updates about our services and relevant industry information.
+                    </p>
+                    <p>
+                      We do not sell your personal information to third parties. We may share your information with trusted service providers who assist us in operating our platform, and we require these providers to maintain the confidentiality of your information.
+                    </p>
+                    <p>
+                      We implement appropriate security measures to protect your information against unauthorized access, alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure.
+                    </p>
+                    <p>
+                      You have the right to access, update, or delete your personal information. You can also opt out of certain communications from us. To exercise these rights, please contact us.
+                    </p>
+                    <p>
+                      This Privacy Policy may be updated from time to time. We will notify you of any material changes by posting the new policy on our website and updating the effective date.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'terms' && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <h2 className="text-2xl font-bold text-white mb-6">Terms of Use - BioPing</h2>
+                  <div className="text-gray-300 leading-relaxed space-y-4">
+                    <p>
+                      Welcome to BioPing. These Terms & Conditions ("Terms") govern your use of our website, platform, and services ("Services"). By using BioPing, you agree to be bound by these Terms.
+                    </p>
+                    <p>
+                      You must be at least 18 years old to use our Services. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.
+                    </p>
+                    <p>
+                      Our Services provide access to business development information, contacts, and tools. You agree to use this information responsibly and in compliance with applicable laws and regulations.
+                    </p>
+                    <p>
+                      You may not use our Services for any illegal or unauthorized purpose. You agree not to violate any laws, regulations, or third-party rights in connection with your use of our platform.
+                    </p>
+                    <p>
+                      We reserve the right to modify, suspend, or discontinue our Services at any time. We may also update these Terms from time to time, and continued use of our Services constitutes acceptance of any changes.
+                    </p>
+                    <p>
+                      Our Services are provided "as is" without warranties of any kind. We are not liable for any damages arising from your use of our Services, except as required by law.
+                    </p>
+                    <p>
+                      These Terms constitute the entire agreement between you and BioPing regarding your use of our Services. If any provision of these Terms is found to be unenforceable, the remaining provisions will continue in full force and effect.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-8 border-t border-white/10">
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowTermsModal(false)}
+                  className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, agreeToTerms: true }));
+                    setShowTermsModal(false);
+                  }}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                >
+                  I Agree
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Verification Modal */}
       <VerificationModal

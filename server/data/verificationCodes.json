@@ -1,81 +1,8 @@
 [
   {
-    "email": "test@example.com",
-    "code": "360784",
-    "createdAt": "2025-07-21T21:59:31.771Z",
-    "expiresAt": "2025-07-21T22:09:31.771Z"
-  },
-  {
-    "email": "evil04eye08@gmail.com",
-    "code": "960545",
-    "createdAt": "2025-07-21T21:59:58.732Z",
-    "expiresAt": "2025-07-21T22:09:58.733Z"
-  },
-  {
     "email": "amankk0007@gmail.com",
-    "code": "497739",
-    "createdAt": "2025-07-21T23:18:15.141Z",
-    "expiresAt": "2025-07-21T23:28:15.141Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "704344",
-    "createdAt": "2025-07-21T23:22:35.580Z",
-    "expiresAt": "2025-07-21T23:32:35.580Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "393920",
-    "createdAt": "2025-07-21T23:27:21.866Z",
-    "expiresAt": "2025-07-21T23:37:21.866Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "870052",
-    "createdAt": "2025-07-21T23:27:35.418Z",
-    "expiresAt": "2025-07-21T23:37:35.418Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "888519",
-    "createdAt": "2025-07-21T23:28:02.301Z",
-    "expiresAt": "2025-07-21T23:38:02.301Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "990426",
-    "createdAt": "2025-07-21T23:43:05.380Z",
-    "expiresAt": "2025-07-21T23:53:05.380Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "361089",
-    "createdAt": "2025-07-21T23:45:30.672Z",
-    "expiresAt": "2025-07-21T23:55:30.672Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "908488",
-    "createdAt": "2025-07-21T23:47:37.256Z",
-    "expiresAt": "2025-07-21T23:57:37.256Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "830609",
-    "createdAt": "2025-07-21T23:53:29.892Z",
-    "expiresAt": "2025-07-22T00:03:29.892Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "445827",
-    "createdAt": "2025-07-21T23:55:22.305Z",
-    "expiresAt": "2025-07-22T00:05:22.305Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "119486",
-    "createdAt": "2025-07-22T11:21:20.369Z",
-    "expiresAt": "2025-07-22T11:31:20.369Z",
-    "type": "password-reset"
+    "code": "608323",
+    "createdAt": "2025-07-23T09:57:04.307Z",
+    "expiresAt": "2025-07-23T10:07:04.307Z"
   }
 ]

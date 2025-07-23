@@ -74,7 +74,7 @@ const Footer = () => {
             <div className="flex items-center space-x-3 mb-8">
               <div className="relative">
                 <img 
-                  src={require('../img/image.webp')} 
+                  src={require('../img/dfgjk.webp')} 
                   alt="BioPing Logo" 
                   className="h-12 w-auto object-contain"
                 />
@@ -128,51 +128,40 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {Object.entries(footerLinks).map(([category, links]) => (
-                <div key={category}>
-                  <h3 className="text-lg font-semibold mb-6 text-white capitalize">
-                    {category}
-                  </h3>
-                  <ul className="space-y-3">
-                    {links.map((link) => (
-                      <li key={link.name}>
-                        <Link 
-                          to={link.href}
-                          className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors duration-200 text-sm group"
-                        >
-                          <link.icon className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-                          <span>{link.name}</span>
-                        </Link>
-                      </li>
-                    ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Useful Links */}
+              <div>
+                <h3 className="text-orange-400 font-semibold text-lg mb-4">Useful Links</h3>
+                <ul className="space-y-2">
+                  <li><Link to="/" className="text-white hover:text-orange-400 transition-colors">Home</Link></li>
+                  <li><Link to="/about" className="text-white hover:text-orange-400 transition-colors">Company</Link></li>
+                  <li><Link to="/product" className="text-white hover:text-orange-400 transition-colors">Product</Link></li>
+                  <li><Link to="/product" className="text-white hover:text-orange-400 transition-colors">How it works</Link></li>
+                  <li><Link to="/our-value" className="text-white hover:text-orange-400 transition-colors">Our Value</Link></li>
+                  <li><Link to="/privacy" className="text-white hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
+                  <li><Link to="/terms" className="text-white hover:text-orange-400 transition-colors">Terms and Conditions</Link></li>
+                </ul>
+              </div>
+
+              {/* Free Resources */}
+              <div>
+                <h3 className="text-orange-400 font-semibold text-lg mb-4">Free Resources</h3>
+                <ul className="space-y-2">
+                  <li className="text-white">BD Conference Planner - priorities, budgets, and timing</li>
+                  <li className="text-white">BD News & Resource Toolkit</li>
+                  <li className="text-white">BD Process Flow & Best Practices</li>
+                  <li className="text-white">Big Pharma BD Playbook</li>
+                  <li className="text-white">Deal Comps & Benchmarking Data</li>
+                  <li className="text-white">Curated Investor List (200+ VCs)</li>
+                  <li className="text-white">Winning BD Decks + Email & Template Toolkit</li>
+                  <li className="text-white">Fresh content added from time to time</li>
                   </ul>
                 </div>
-              ))}
             </div>
           </div>
         </div>
 
-        {/* Achievements Section */}
-        <div className="border-t border-gray-700 pt-12 mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {achievements.map((achievement, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="w-16 h-16 bg-gradient-to-br from-primary-600/20 to-secondary-600/20 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                  <achievement.icon className="w-8 h-8 text-primary-400" />
-                </div>
-                <h3 className="text-3xl font-bold text-white mb-2">{achievement.number}</h3>
-                <p className="text-gray-300 font-medium">{achievement.label}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
+
 
         {/* Contact & Social */}
         <div className="border-t border-gray-700 pt-12">
@@ -221,7 +210,9 @@ const Footer = () => {
       <div className="border-t border-gray-700 bg-gray-900/50 backdrop-blur-sm">
         <div className="container-custom py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-
+            <div className="text-gray-400 text-sm">
+              © {currentYear} BioPing. All Rights Reserved
+            </div>
 
             {/* Legal Links */}
             <div className="flex items-center space-x-6 text-sm">
