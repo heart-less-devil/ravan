@@ -233,11 +233,10 @@ const Signup = () => {
           localStorage.setItem('isNewUser', 'true');
           localStorage.setItem('userCredits', '5');
           
+          // Redirect to dashboard (payment check is now optional)
           alert('Account created successfully! Redirecting to dashboard...');
           setShowVerificationModal(false);
           setVerificationError('');
-          
-          // Redirect to dashboard
           window.location.href = '/dashboard';
         } else {
           setVerificationError(accountData.message || 'Failed to create account. Please try again.');

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Building2, HeartHandshake, Heart, ArrowRight, CheckCircle, Globe, Target, Shield, TrendingUp, Sparkles, Users, Award, Zap, Star, Quote, Play, Download, Calendar, Clock, MapPin, Phone, Mail, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 
 const Home = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const navigate = useNavigate();
 
   const stats = [
     {
@@ -166,10 +167,14 @@ const Home = () => {
     setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
+
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-primary-50/30 overflow-hidden">
+
+        
         {/* Animated background elements */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary-50/20 to-secondary-50/20 opacity-40"></div>
         
@@ -228,10 +233,11 @@ const Home = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary-700 to-secondary-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </motion.button>
               </Link>
+              
               <Link to="/product">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   className="border-2 border-primary-200 text-primary-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-primary-50 hover:border-primary-300 transition-all duration-300"
                 >
                   Learn More
@@ -491,8 +497,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-
 
 
     </div>

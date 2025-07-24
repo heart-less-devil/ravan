@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
 import PDFViewer from '../components/PDFViewer';
 import BDTrackerPage from './BDTrackerPage';
+import StripePayment from '../components/StripePayment';
 import { 
   Grid, 
   Search, 
@@ -82,50 +83,187 @@ const Dashboard = () => {
   const [userCredits, setUserCredits] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [showCustomerProfile, setShowCustomerProfile] = useState(false);
+  const [userPaymentStatus, setUserPaymentStatus] = useState({ hasPaid: false, currentPlan: 'free' });
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check if user is logged in
     const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
     if (!token) {
       navigate('/login');
       return;
     }
 
-    // Get user profile
-    fetch(`${API_BASE_URL}/api/auth/profile`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.user) {
-        setUser(data.user);
+    // If we have stored user data, set it immediately
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
         
-        // Check if user is new (first time visiting dashboard)
-        const isNewUser = localStorage.getItem('isNewUser');
-        if (isNewUser === 'true') {
-          setShowWelcomePopup(true);
-          localStorage.removeItem('isNewUser');
+        // Reset payment status for users who haven't actually paid
+        // Only universalx0242 should have payment status
+        if (userData.email !== 'universalx0242@gmail.com') {
+          localStorage.removeItem('paymentCompleted');
+          localStorage.setItem('userCurrentPlan', 'free');
         }
-        
-        // Load user credits
-        const savedCredits = localStorage.getItem('userCredits');
-        if (savedCredits) {
-          setUserCredits(parseInt(savedCredits));
-        }
-      } else {
-        localStorage.removeItem('token');
-        navigate('/login');
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
       }
-    })
-    .catch(err => {
-      console.error('Error fetching profile:', err);
-      localStorage.removeItem('token');
-      navigate('/login');
+    }
+
+    // Check if user has completed payment (optional - for premium features)
+    const paymentCompleted = localStorage.getItem('paymentCompleted');
+    const userCurrentPlan = localStorage.getItem('userCurrentPlan');
+    
+    // Debug: Log the payment status
+    console.log('Payment Status Debug:', {
+      paymentCompleted,
+      userCurrentPlan,
+      hasPaid: paymentCompleted === 'true' && userCurrentPlan && userCurrentPlan !== 'free',
+      currentPlan: userCurrentPlan || 'free'
     });
+    
+    // Store payment status for conditional rendering
+    setUserPaymentStatus({
+      hasPaid: paymentCompleted === 'true' && userCurrentPlan && userCurrentPlan !== 'free',
+      currentPlan: userCurrentPlan || 'free'
+    });
+
+    // Load user credits - FIXED: Properly handle 0 credits for free users
+    const savedCredits = localStorage.getItem('userCredits');
+    if (savedCredits !== null) {
+      // If there's a saved value (including 0), use it
+      setUserCredits(parseInt(savedCredits));
+    } else {
+      // Only set to 5 if there's no saved value (new user)
+      setUserCredits(5);
+      localStorage.setItem('userCredits', '5');
+    }
+
+    // Check if user is new (first time visiting dashboard)
+    const isNewUser = localStorage.getItem('isNewUser');
+    if (isNewUser === 'true') {
+      setShowWelcomePopup(true);
+      localStorage.removeItem('isNewUser');
+    }
+
+    // Try to fetch fresh user profile and payment status from backend
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        console.log('=== FETCH USER DATA DEBUG ===');
+        console.log('Token exists:', !!token);
+        console.log('Token length:', token?.length);
+        console.log('API_BASE_URL:', API_BASE_URL);
+        
+        if (!token) {
+          console.log('No token found, redirecting to login');
+          localStorage.clear(); // Clear any corrupted data
+          navigate('/login');
+          return;
+        }
+
+        // Test token validity first
+        try {
+          const testResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (testResponse.status === 401) {
+            console.log('Token expired, redirecting to login');
+            localStorage.clear();
+            navigate('/login');
+            return;
+          }
+        } catch (error) {
+          console.log('Server connection failed, using cached data');
+          // Continue with cached data if server is down
+        }
+
+        // Fetch user profile
+        console.log('Fetching user profile...');
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Profile response status:', profileResponse.status);
+        console.log('Profile response ok:', profileResponse.ok);
+        
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+          console.log('Profile data received:', profileData);
+          if (profileData.user) {
+            setUser(profileData.user);
+            localStorage.setItem('user', JSON.stringify(profileData.user));
+          }
+        } else {
+          console.error('Profile fetch failed:', profileResponse.status, profileResponse.statusText);
+          // Don't redirect, use cached data
+        }
+
+        // Fetch subscription status (includes credit renewal check)
+        console.log('Fetching subscription status...');
+        const subscriptionResponse = await fetch(`${API_BASE_URL}/api/auth/subscription-status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log('Subscription response status:', subscriptionResponse.status);
+        console.log('Subscription response ok:', subscriptionResponse.ok);
+        
+        if (subscriptionResponse.ok) {
+          const subscriptionData = await subscriptionResponse.json();
+          console.log('Subscription data received:', subscriptionData);
+          
+          // Update localStorage with backend data
+          if (subscriptionData.paymentCompleted) {
+            localStorage.setItem('paymentCompleted', 'true');
+          }
+          if (subscriptionData.currentPlan) {
+            localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
+          }
+          // Only update credits from backend for paid users, not free users
+          if (subscriptionData.currentCredits && subscriptionData.paymentCompleted) {
+            localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
+            setUserCredits(subscriptionData.currentCredits);
+          }
+          
+          // Update state with backend data
+          setUserPaymentStatus({
+            hasPaid: subscriptionData.paymentCompleted || false,
+            currentPlan: subscriptionData.currentPlan || 'free'
+          });
+
+          // Show notification if credits were renewed
+          if (subscriptionData.shouldRenewCredits && subscriptionData.creditsToGive > 0) {
+            console.log(`Credits renewed! You now have ${subscriptionData.creditsToGive} credits.`);
+            // You can add a toast notification here
+          }
+        } else {
+          console.error('Subscription fetch failed:', subscriptionResponse.status, subscriptionResponse.statusText);
+          // Use cached data instead of failing
+        }
+      } catch (err) {
+        console.error('=== FETCH USER DATA ERROR ===');
+        console.error('Error type:', err.constructor.name);
+        console.error('Error message:', err.message);
+        console.error('Error stack:', err.stack);
+        // Don't logout, user can still use the app with stored data
+      }
+    };
+
+    fetchUserData();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -133,12 +271,42 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  const consumeCredit = () => {
+  const consumeCredit = async () => {
     if (userCredits > 0) {
-      const newCredits = userCredits - 1;
-      setUserCredits(newCredits);
-      localStorage.setItem('userCredits', newCredits.toString());
-      return true;
+      try {
+        const token = localStorage.getItem('token');
+        
+        // Call backend to use credit
+        const response = await fetch(`${API_BASE_URL}/api/auth/use-credit`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newCredits = data.remainingCredits;
+          setUserCredits(newCredits);
+          localStorage.setItem('userCredits', newCredits.toString());
+          return true;
+        } else {
+          console.error('Failed to use credit on backend');
+          // Fallback to frontend-only update
+          const newCredits = userCredits - 1;
+          setUserCredits(newCredits);
+          localStorage.setItem('userCredits', newCredits.toString());
+          return true;
+        }
+      } catch (error) {
+        console.error('Error using credit:', error);
+        // Fallback to frontend-only update
+        const newCredits = userCredits - 1;
+        setUserCredits(newCredits);
+        localStorage.setItem('userCredits', newCredits.toString());
+        return true;
+      }
     } else {
       setShowCreditPopup(true);
       return false;
@@ -238,7 +406,7 @@ const Dashboard = () => {
     
     switch(path) {
       case '/dashboard':
-        return <DashboardHome user={user} />;
+        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/search':
         return <SearchPage 
           searchType={searchType} 
@@ -265,7 +433,7 @@ const Dashboard = () => {
         return <PricingPage />;
           
       default:
-        return <DashboardHome user={user} />;
+        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} />;
     }
   };
 
@@ -458,6 +626,7 @@ const Dashboard = () => {
 
         {/* Enhanced Content Area */}
         <div className="flex-1 p-8 overflow-y-auto">
+          
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
@@ -598,7 +767,7 @@ const Dashboard = () => {
 };
 
 // Enhanced Dashboard Home Component
-const DashboardHome = ({ user }) => {
+const DashboardHome = ({ user, userPaymentStatus }) => {
   const stats = [
     { 
       label: 'Total Searches', 
@@ -690,10 +859,73 @@ const DashboardHome = ({ user }) => {
         className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-8 text-white shadow-2xl"
       >
         <div className="flex items-center justify-between">
-                <div>
+          <div>
             <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || 'User'}! 👋</h1>
             <p className="text-blue-100 text-lg">Here's what's happening with your BD activities today.</p>
+            <div className="flex items-center space-x-3 mt-4 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2 inline-block">
+              <Calendar className="w-5 h-5" />
+              <span className="font-medium">{new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</span>
+            </div>
+            
+            {/* Upgrade Banner - Only show if user hasn't paid */}
+            {userPaymentStatus && !userPaymentStatus.hasPaid && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-3">
+                  <AlertCircle className="w-4 h-4 text-white" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Upgrade Your Plan</h3>
+                    <p className="text-xs text-blue-100">Get access to premium features and unlimited searches</p>
+                  </div>
                 </div>
+                <Link to="/dashboard/pricing">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-50 transition-all duration-200"
+                  >
+                    View Plans
+                  </motion.button>
+                </Link>
+              </motion.div>
+            )}
+            
+            {/* Current Plan Banner - Show if user has paid */}
+            {userPaymentStatus && userPaymentStatus.hasPaid && userPaymentStatus.currentPlan !== 'free' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="w-4 h-4 text-white" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Current Plan: {userPaymentStatus.currentPlan}</h3>
+                    <p className="text-xs text-blue-100">You have access to premium features and unlimited searches</p>
+                  </div>
+                </div>
+                <Link to="/dashboard/pricing">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-50 transition-all duration-200"
+                  >
+                    Manage Plan
+                  </motion.button>
+                </Link>
+              </motion.div>
+            )}
+          </div>
           <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
             <Calendar className="w-5 h-5" />
             <span className="font-medium">{new Date().toLocaleDateString('en-US', { 
@@ -702,7 +934,7 @@ const DashboardHome = ({ user }) => {
               month: 'long', 
               day: 'numeric' 
             })}</span>
-              </div>
+          </div>
         </div>
       </motion.div>
 
@@ -2078,41 +2310,17 @@ const FreeContent = ({ user }) => {
   const [selectedPDF, setSelectedPDF] = useState(null);
 
   const freeContent = {
-    'Networking': [
+    'Business Development': [
       {
         id: 1,
-        title: 'Networking Fundamentals',
-        description: 'Comprehensive guide for networking strategies and best practices in business development.',
+        title: 'BD Conference Guide',
+        description: 'Comprehensive guide for business development conferences, networking strategies, and partnership opportunities.',
         type: 'PDF',
-        size: '37 MB',
-        views: 1247,
-        rating: 4.8,
-        featured: true,
-        pdfUrl: '/pdf/Networking Fundamentals.pdf'
-      }
-    ],
-    'Security': [
-      {
-        id: 2,
-        title: 'AWS Security Incident Response Guide',
-        description: 'Complete guide for AWS security incident response and best practices.',
-        type: 'PDF',
-        size: '804 KB',
-        views: 2156,
+        size: '2.5 MB',
+        views: 1856,
         rating: 4.9,
         featured: true,
-        pdfUrl: '/pdf/AWS Security Incident Response Guide.pdf'
-      },
-      {
-        id: 3,
-        title: 'Extreme Privacy - Mobile Devices',
-        description: 'Comprehensive guide for mobile device privacy and security measures.',
-        type: 'PDF',
-        size: '2.1 MB',
-        views: 892,
-        rating: 4.6,
-        featured: false,
-        pdfUrl: '/pdf/Extreme Privacy - Mobile Devices .pdf'
+        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
       }
     ]
   };
@@ -2256,11 +2464,12 @@ const FreeContent = ({ user }) => {
       {/* PDF Viewer Modal */}
       {selectedPDF && (
         <PDFViewer
-          pdfUrl={selectedPDF.url}
+          pdfUrl={selectedPDF.pdfUrl}
           title={selectedPDF.title}
           onClose={() => setSelectedPDF(null)}
         />
       )}
+
     </div>
   );
 };
@@ -2581,15 +2790,39 @@ const Contact = () => {
 const PricingPage = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isAnnual, setIsAnnual] = useState(true);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
+    // Get user's current plan from localStorage or default to 'free'
+    return localStorage.getItem('userCurrentPlan') || 'free';
+  });
 
   const plans = [
+    {
+      id: 'test',
+      name: "Test Plan",
+      description: "Perfect for testing payment system",
+      credits: "1 credit per month",
+      monthlyPrice: 1,
+      annualPrice: 12,
+      features: [
+        "✅ 1 Contact Search per month",
+        "✅ Basic company information",
+        "✅ Test payment system",
+        "✅ Full access for testing",
+        "✅ Email support"
+      ],
+      icon: Star,
+      popular: false,
+      color: 'yellow'
+    },
     {
       id: 'free',
       name: "Free",
       description: "Perfect for getting started",
       credits: "5 credits per month",
-      price: 0,
-      period: "yearly",
+      monthlyPrice: 0,
+      annualPrice: 0,
       features: [
         "1 Seat included",
         "Get 5 free contacts",
@@ -2606,8 +2839,8 @@ const PricingPage = () => {
       name: "Basic Plan",
       description: "Ideal for growing businesses",
       credits: "50 credits per month",
-      price: 4800,
-      period: "yearly",
+      monthlyPrice: 400,
+      annualPrice: 4800,
       features: [
         "1 Seat included",
         "Get 50 free contacts / month",
@@ -2623,8 +2856,8 @@ const PricingPage = () => {
       name: "Premium Plan",
       description: "For advanced business development",
       credits: "100 credits per month",
-      price: 7200,
-      period: "yearly",
+      monthlyPrice: 600,
+      annualPrice: 7200,
       features: [
         "1 Seat included",
         "Get 100 free contacts / month",
@@ -2661,8 +2894,64 @@ const PricingPage = () => {
   ];
 
   const handleSelectPlan = (plan) => {
+    if (plan.id === 'free') {
+      // Handle free plan
+      setPaymentStatus('Free plan activated!');
+      return;
+    }
+    
     setSelectedPlan(plan);
-    console.log('Selected plan:', plan);
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = async (paymentIntent) => {
+    // Update user's current plan after successful payment
+    if (selectedPlan && selectedPlan.id !== 'free') {
+      setUserCurrentPlan(selectedPlan.id);
+      localStorage.setItem('userCurrentPlan', selectedPlan.id);
+      localStorage.setItem('paymentCompleted', 'true');
+      
+      // Set credits based on plan
+      let credits = 5; // Default
+      if (selectedPlan.id === 'monthly') {
+        credits = 50;
+      } else if (selectedPlan.id === 'annual') {
+        credits = 100;
+      } else if (selectedPlan.id === 'test') {
+        credits = 1;
+      }
+      localStorage.setItem('userCredits', credits.toString());
+      
+      // Sync with backend
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            paymentCompleted: true,
+            currentPlan: selectedPlan.id
+          })
+        });
+        
+        if (response.ok) {
+          console.log('Payment status synced with backend');
+        }
+      } catch (error) {
+        console.error('Error syncing payment status:', error);
+      }
+    }
+    setPaymentStatus('Payment successful! Plan activated.');
+    setShowPayment(false);
+    console.log('Payment successful:', paymentIntent);
+  };
+
+  const handlePaymentError = (error) => {
+    setPaymentStatus('Payment failed: ' + error);
+    console.error('Payment error:', error);
   };
 
   const getColorClasses = (color) => {
@@ -2682,12 +2971,34 @@ const PricingPage = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             Simple, Transparent <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Pricing</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
             Choose the plan that best fits your business development needs. All plans include 
             our core features with different usage limits and additional capabilities.
           </p>
 
-
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center space-x-4 mb-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl shadow-lg border-2 border-blue-300">
+            <span className={`text-lg font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+              Pay Monthly
+            </span>
+            <button
+              onClick={() => setIsAnnual(!isAnnual)}
+              className={`relative inline-flex h-12 w-24 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 border-2 ${
+                isAnnual 
+                  ? 'bg-blue-600 border-blue-600 shadow-lg' 
+                  : 'bg-gray-200 border-gray-300 shadow-md'
+              }`}
+            >
+              <span
+                className={`inline-block h-10 w-10 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                  isAnnual ? 'translate-x-12' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-lg font-medium ${isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+              Pay Yearly <span className="text-green-600 font-bold">20% off</span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -2726,8 +3037,16 @@ const PricingPage = () => {
                 <div className="mb-6">
                   <div className="text-sm text-gray-600 mb-1">{plan.credits}</div>
                   <div className="text-3xl font-bold text-gray-900">
-                    ${plan.price === 0 ? '0' : plan.price.toLocaleString()} USD / {plan.period}
+                    ${isAnnual ? (plan.annualPrice || plan.price) : (plan.monthlyPrice || plan.price)} USD
                   </div>
+                  <div className="text-sm text-gray-500">
+                    /{isAnnual ? 'yearly' : 'monthly'}
+                  </div>
+                  {isAnnual && plan.monthlyPrice > 0 && (
+                    <div className="text-sm text-green-600 font-medium mt-1">
+                      Save ${((plan.monthlyPrice || plan.price) * 12) - (plan.annualPrice || plan.price)}/year
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2745,12 +3064,19 @@ const PricingPage = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleSelectPlan(plan)}
                 className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 ${
-                  plan.popular 
-                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700' 
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  userCurrentPlan === plan.id
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500'
+                    : plan.popular 
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700' 
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                 }`}
               >
-                {selectedPlan?.id === plan.id ? 'Selected' : 'Choose Plan'}
+                {userCurrentPlan === plan.id 
+                  ? 'Current Plan' 
+                  : plan.id === 'free' 
+                    ? 'Get Started' 
+                    : 'Choose Plan'
+                }
               </motion.button>
             </div>
           </motion.div>
@@ -2816,6 +3142,24 @@ const PricingPage = () => {
           Start Free Trial
         </motion.button>
       </div>
+
+      {/* Payment Modal */}
+      {showPayment && selectedPlan && (
+        <StripePayment
+          plan={selectedPlan}
+          isAnnual={isAnnual}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+          onClose={() => setShowPayment(false)}
+        />
+      )}
+      
+      {/* Payment Status */}
+      {paymentStatus && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          {paymentStatus}
+        </div>
+      )}
     </div>
   );
 };

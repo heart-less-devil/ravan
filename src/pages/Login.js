@@ -29,6 +29,22 @@ const Login = () => {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
+  // Auto-login for universal users
+  React.useEffect(() => {
+    const universalEmails = [
+      'universalx0242@gmail.com',
+      'admin@bioping.com',
+      'demo@bioping.com',
+      'test@bioping.com'
+    ];
+    
+    const storedEmail = localStorage.getItem('lastEmail');
+    if (storedEmail && universalEmails.includes(storedEmail)) {
+      console.log('Auto-login for universal user:', storedEmail);
+      setFormData(prev => ({ ...prev, email: storedEmail }));
+    }
+  }, []);
+
   // Check if admin access is required
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -92,7 +108,7 @@ const Login = () => {
           localStorage.setItem('userCredits', data.credits.toString());
         }
         
-        // Redirect to dashboard
+        // Redirect to dashboard (payment check is now optional)
         navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');

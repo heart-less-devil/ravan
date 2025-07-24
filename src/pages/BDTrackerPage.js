@@ -206,12 +206,21 @@ const BDTrackerPage = () => {
       entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.programPitched.toLowerCase().includes(searchTerm.toLowerCase());
     
-    if (filterStatus === 'all') return matchesSearch;
-    if (filterStatus === 'with-cda' && entry.cda.toLowerCase() === 'yes') return matchesSearch;
-    if (filterStatus === 'without-cda' && entry.cda.toLowerCase() === 'no') return matchesSearch;
-    if (filterStatus === 'pending' && !entry.feedback) return matchesSearch;
+    // Debug logging
+    console.log('Filtering entry:', {
+      entry: entry.company,
+      cda: entry.cda,
+      feedback: entry.feedback,
+      filterStatus: filterStatus,
+      matchesSearch: matchesSearch
+    });
     
-    return matchesSearch;
+    if (filterStatus === 'all') return matchesSearch;
+    if (filterStatus === 'with-cda' && entry.cda && entry.cda.toLowerCase() === 'yes') return matchesSearch;
+    if (filterStatus === 'without-cda' && entry.cda && entry.cda.toLowerCase() === 'no') return matchesSearch;
+    if (filterStatus === 'pending' && (!entry.feedback || entry.feedback.trim() === '')) return matchesSearch;
+    
+    return false; // Don't show entries that don't match any filter
   });
 
   const columns = [
@@ -304,6 +313,22 @@ const BDTrackerPage = () => {
               <option value="without-cda">Without CDA</option>
               <option value="pending">Pending Feedback</option>
             </select>
+          </div>
+          
+          {/* Filter Status Indicator */}
+          <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <span>
+                {filterStatus === 'all' && 'Showing all entries'}
+                {filterStatus === 'with-cda' && 'Showing entries with CDA'}
+                {filterStatus === 'without-cda' && 'Showing entries without CDA'}
+                {filterStatus === 'pending' && 'Showing entries pending feedback'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>Results: {filteredEntries.length} of {entries.length} entries</span>
+            </div>
           </div>
         </div>
 
@@ -436,12 +461,7 @@ const BDTrackerPage = () => {
                           )
                         ) : (
                           <div className="flex items-center gap-2">
-                            {entry[column.key] ? (
-                              <span>{entry[column.key]}</span>
-                            ) : (
-                              <span className="text-gray-400 italic">-</span>
-                            )}
-                            {column.key === 'cda' && entry[column.key] && (
+                            {column.key === 'cda' && entry[column.key] ? (
                               <span className={`px-2 py-1 rounded-full text-xs ${
                                 entry[column.key].toLowerCase() === 'yes' 
                                   ? 'bg-green-100 text-green-800' 
@@ -449,6 +469,10 @@ const BDTrackerPage = () => {
                               }`}>
                                 {entry[column.key]}
                               </span>
+                            ) : entry[column.key] ? (
+                              <span>{entry[column.key]}</span>
+                            ) : (
+                              <span className="text-gray-400 italic">-</span>
                             )}
                           </div>
                         )}

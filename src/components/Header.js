@@ -7,7 +7,22 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [user, setUser] = useState(null);
   const location = useLocation();
+
+  // Check if user is logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        console.error('Error parsing stored user:', err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -107,13 +122,27 @@ const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden lg:flex items-center space-x-4">
-            <Link 
-              to="/login" 
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium group"
-            >
-              <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
-              <span>Login</span>
-            </Link>
+            {user ? (
+              // User is logged in - show ME button
+              <div className="relative group">
+                <Link 
+                  to="/dashboard" 
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium group"
+                >
+                  <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                  <span>ME</span>
+                </Link>
+              </div>
+            ) : (
+              // User is not logged in - show Login button
+              <Link 
+                to="/login" 
+                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium group"
+              >
+                <User className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+                <span>Login</span>
+              </Link>
+            )}
             <Link 
               to="/request-demo" 
               className="relative group flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-xl font-medium shadow-soft hover:shadow-medium transition-all duration-300 overflow-hidden"
@@ -181,16 +210,31 @@ const Header = () => {
                 ))}
                 
                 <div className="pt-4 border-t border-gray-200 space-y-3">
-                  <Link
-                    to="/login"
-                    className="block py-3 px-4 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <User className="w-4 h-4" />
-                      <span>Login</span>
-                    </div>
-                  </Link>
+                  {user ? (
+                    // User is logged in - show ME button
+                    <Link
+                      to="/dashboard"
+                      className="block py-3 px-4 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span>ME</span>
+                      </div>
+                    </Link>
+                  ) : (
+                    // User is not logged in - show Login button
+                    <Link
+                      to="/login"
+                      className="block py-3 px-4 text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-xl transition-all duration-200 font-medium"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <User className="w-4 h-4" />
+                        <span>Login</span>
+                      </div>
+                    </Link>
+                  )}
                   <Link
                     to="/request-demo"
                     className="block py-3 px-4 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-xl transition-all duration-200 font-medium shadow-soft"

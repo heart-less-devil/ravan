@@ -8,16 +8,18 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3005;
 
 // Middleware
 app.use(cors({
   origin: [
     'http://localhost:3000', 
     'http://localhost:3002',
+    'http://localhost:3005',
     'https://687dc02000e0ca0008eb4b09--deft-paprenjak-1f5e98.netlify.app',
     'https://deft-paprenjak-1f5e98.netlify.app',
     'https://biopingweb.netlify.app',
@@ -378,7 +380,7 @@ app.post('/api/auth/send-verification', [
     });
 
     // Save data to files
-    saveDataToFiles();
+    saveDataToFiles('verification_code_sent');
 
     // Send email with verification code
     try {
@@ -409,6 +411,9 @@ app.post('/api/auth/send-verification', [
         emailError: 'Email service temporarily unavailable'
       });
     }
+
+    // Save data to files
+    saveDataToFiles('verification_code_sent');
 
   } catch (error) {
     console.error('Send verification error:', error);
@@ -449,7 +454,7 @@ app.post('/api/auth/verify-email', [
     );
 
     // Save data to files
-    saveDataToFiles();
+    saveDataToFiles('email_verified');
 
     res.json({
       success: true,
@@ -504,7 +509,7 @@ app.post('/api/auth/create-account', [
     mockDB.users.push(newUser);
 
     // Save data to files
-    saveDataToFiles();
+    saveDataToFiles('user_created');
 
     // Generate JWT token
     const token = jwt.sign(
@@ -584,8 +589,11 @@ app.post('/api/auth/login', [
           name: registeredUser.name,
           role: registeredUser.role
         },
-        credits: 5
+        credits: 5 // Give 5 credits to all users
       });
+      
+      // Save login data
+      saveDataToFiles('user_login');
       return;
     }
 
@@ -617,6 +625,9 @@ app.post('/api/auth/login', [
       },
       credits: 5 // Give 5 credits to all users
     });
+    
+    // Save universal user login data
+    saveDataToFiles('universal_user_login');
 
   } catch (error) {
     console.error('Login error:', error);
@@ -626,13 +637,35 @@ app.post('/api/auth/login', [
 
 // Protected route to get user profile
 app.get('/api/auth/profile', authenticateToken, (req, res) => {
+  try {
+    // Find the user in the database
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get payment status from localStorage (this would normally come from database)
+    // For now, we'll return the basic user info and let frontend handle payment status
   res.json({
     user: {
-      email: req.user.email,
-      name: req.user.name,
-      role: req.user.role
-    }
-  });
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt,
+        // Payment info will be handled by frontend localStorage
+        hasPaymentInfo: true // Indicates user can have payment data
+      }
+    });
+    
+    // Save profile access data
+    saveDataToFiles('profile_accessed');
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Dashboard data routes
@@ -1360,7 +1393,7 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
     mockDB.uploadedFiles.push(fileInfo);
 
     // Save data to files
-    saveDataToFiles();
+    saveDataToFiles('user_created');
 
     res.status(201).json({
       success: true,
@@ -1748,6 +1781,10 @@ app.post('/api/search-biotech', authenticateToken, [
         message: filteredData.length === 0 ? 'No Match Found. Please Refine Your Search Criterion' : null
       }
     });
+    
+    // Save search data
+    saveDataToFiles('search_performed');
+    
   } catch (error) {
     console.error('Error searching biotech data:', error);
     res.status(500).json({ 
@@ -1821,7 +1858,7 @@ app.delete('/api/admin/delete-records', authenticateAdmin, (req, res) => {
     const deletedCount = initialLength - biotechData.length;
 
     // Save data to files
-    saveDataToFiles();
+    saveDataToFiles('payment_success');
 
     res.json({
       success: true,
@@ -1933,69 +1970,175 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Load data from files
+// Load data from files with recovery
 const loadDataFromFiles = () => {
   try {
     // Load biotech data
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf8');
       biotechData = JSON.parse(data);
-      console.log(`Loaded ${biotechData.length} biotech records from file`);
+      console.log(`✅ Loaded ${biotechData.length} biotech records from file`);
+    } else {
+      console.log('⚠️ No biotech data file found, starting fresh');
     }
 
     // Load users
     if (fs.existsSync(USERS_FILE)) {
       const data = fs.readFileSync(USERS_FILE, 'utf8');
       mockDB.users = JSON.parse(data);
-      console.log(`Loaded ${mockDB.users.length} users from file`);
+      console.log(`✅ Loaded ${mockDB.users.length} users from file`);
+    } else {
+      console.log('⚠️ No users file found, starting fresh');
+      mockDB.users = [];
     }
 
     // Load verification codes
     if (fs.existsSync(VERIFICATION_FILE)) {
       const data = fs.readFileSync(VERIFICATION_FILE, 'utf8');
       mockDB.verificationCodes = JSON.parse(data);
-      console.log(`Loaded ${mockDB.verificationCodes.length} verification codes from file`);
+      console.log(`✅ Loaded ${mockDB.verificationCodes.length} verification codes from file`);
+    } else {
+      console.log('⚠️ No verification codes file found, starting fresh');
+      mockDB.verificationCodes = [];
     }
 
     // Load uploaded files info
     if (fs.existsSync(UPLOADED_FILES_FILE)) {
       const data = fs.readFileSync(UPLOADED_FILES_FILE, 'utf8');
       mockDB.uploadedFiles = JSON.parse(data);
-      console.log(`Loaded ${mockDB.uploadedFiles.length} uploaded files info from file`);
+      console.log(`✅ Loaded ${mockDB.uploadedFiles.length} uploaded files info from file`);
+    } else {
+      console.log('⚠️ No uploaded files info found, starting fresh');
+      mockDB.uploadedFiles = [];
     }
 
     // Load BD Tracker data
     if (fs.existsSync(BD_TRACKER_FILE)) {
       const data = fs.readFileSync(BD_TRACKER_FILE, 'utf8');
       mockDB.bdTracker = JSON.parse(data);
-      console.log(`Loaded ${mockDB.bdTracker.length} BD Tracker entries from file`);
+      console.log(`✅ Loaded ${mockDB.bdTracker.length} BD Tracker entries from file`);
+    } else {
+      console.log('⚠️ No BD Tracker file found, starting fresh');
+      mockDB.bdTracker = [];
     }
+
+    // Ensure universal users exist
+    const universalEmails = [
+      'universalx0242@gmail.com',
+      'admin@bioping.com',
+      'demo@bioping.com',
+      'test@bioping.com'
+    ];
+
+    universalEmails.forEach(email => {
+      const existingUser = mockDB.users.find(u => u.email === email);
+      if (!existingUser) {
+        console.log(`🔄 Creating universal user: ${email}`);
+        const newUser = {
+          id: mockDB.users.length + 1,
+          firstName: email.split('@')[0],
+          lastName: '',
+          email: email,
+          password: '$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS', // Default password: 'password'
+          name: email.split('@')[0],
+          role: 'user',
+          createdAt: new Date().toISOString(),
+          paymentCompleted: email === 'universalx0242@gmail.com' ? true : false,
+          currentPlan: email === 'universalx0242@gmail.com' ? 'test' : 'free',
+          currentCredits: email === 'universalx0242@gmail.com' ? 1 : 5
+        };
+        mockDB.users.push(newUser);
+      }
+    });
+
+    // Save immediately after ensuring universal users exist
+    saveDataToFiles('subscription_created');
+    
   } catch (error) {
-    console.error('Error loading data from files:', error);
+    console.error('❌ Error loading data from files:', error);
+    console.log('🔄 Attempting to recover from backup...');
+    
+    // Try to recover from backup
+    try {
+      const backupDir = path.join(__dirname, 'backups');
+      if (fs.existsSync(backupDir)) {
+        const backupFiles = fs.readdirSync(backupDir).filter(f => f.endsWith('.json'));
+        if (backupFiles.length > 0) {
+          const latestBackup = backupFiles.sort().pop();
+          const backupPath = path.join(backupDir, latestBackup);
+          const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+          
+          mockDB.users = backupData.users || [];
+          mockDB.verificationCodes = backupData.verificationCodes || [];
+          mockDB.uploadedFiles = backupData.uploadedFiles || [];
+          mockDB.bdTracker = backupData.bdTracker || [];
+          biotechData = backupData.biotechData || [];
+          
+          console.log('✅ Recovered data from backup:', latestBackup);
+          saveDataToFiles('credit_used');
+        }
+      }
+    } catch (recoveryError) {
+      console.error('❌ Recovery failed:', recoveryError);
+      console.log('🔄 Starting with fresh data...');
+      mockDB.users = [];
+      mockDB.verificationCodes = [];
+      mockDB.uploadedFiles = [];
+      mockDB.bdTracker = [];
+      biotechData = [];
+    }
   }
 };
 
-// Save data to files
-const saveDataToFiles = () => {
+// Enhanced save function that saves after every action
+const saveDataToFiles = (action = 'auto') => {
   try {
+    // Create backup before saving
+    const backupDir = path.join(__dirname, 'backups', new Date().toISOString().split('T')[0]);
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
     // Save biotech data
     fs.writeFileSync(DATA_FILE, JSON.stringify(biotechData, null, 2));
+    console.log(`✅ Saved ${biotechData.length} biotech records (${action})`);
     
     // Save users
     fs.writeFileSync(USERS_FILE, JSON.stringify(mockDB.users, null, 2));
+    console.log(`✅ Saved ${mockDB.users.length} users (${action})`);
     
     // Save verification codes
     fs.writeFileSync(VERIFICATION_FILE, JSON.stringify(mockDB.verificationCodes, null, 2));
+    console.log(`✅ Saved ${mockDB.verificationCodes.length} verification codes (${action})`);
     
     // Save uploaded files info
     fs.writeFileSync(UPLOADED_FILES_FILE, JSON.stringify(mockDB.uploadedFiles, null, 2));
+    console.log(`✅ Saved ${mockDB.uploadedFiles.length} uploaded files info (${action})`);
     
     // Save BD Tracker data
     fs.writeFileSync(BD_TRACKER_FILE, JSON.stringify(mockDB.bdTracker, null, 2));
+    console.log(`✅ Saved ${mockDB.bdTracker.length} BD Tracker entries (${action})`);
     
-    console.log('Data saved to files successfully');
+    console.log(`✅ All data saved successfully (${action})`);
   } catch (error) {
-    console.error('Error saving data to files:', error);
+    console.error(`❌ Error saving data (${action}):`, error);
+    // Try to save to backup location
+    try {
+      const backupFile = path.join(__dirname, 'backups', `backup-${Date.now()}.json`);
+      const backupData = {
+        users: mockDB.users,
+        biotechData: biotechData,
+        verificationCodes: mockDB.verificationCodes,
+        uploadedFiles: mockDB.uploadedFiles,
+        bdTracker: mockDB.bdTracker,
+        timestamp: new Date().toISOString(),
+        action: action
+      };
+      fs.writeFileSync(backupFile, JSON.stringify(backupData, null, 2));
+      console.log('✅ Emergency backup saved to:', backupFile);
+    } catch (backupError) {
+      console.error('❌ Emergency backup also failed:', backupError);
+    }
   }
 };
 
@@ -2012,19 +2155,19 @@ loadDataFromFiles();
 
 // Save data periodically (every 5 minutes)
 setInterval(() => {
-  saveDataToFiles();
+  saveDataToFiles('bd_entry_added');
 }, 5 * 60 * 1000);
 
 // Save data on server shutdown
 process.on('SIGINT', () => {
   console.log('Saving data before shutdown...');
-  saveDataToFiles();
+  saveDataToFiles('search_performed');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   console.log('Saving data before shutdown...');
-  saveDataToFiles();
+  saveDataToFiles('file_uploaded');
   process.exit(0);
 });
 
@@ -2144,7 +2287,7 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
     console.log('BD Tracker POST - New entry:', newEntry);
 
     mockDB.bdTracker.unshift(newEntry);
-    saveDataToFiles();
+    saveDataToFiles('bd_entry_added');
 
     res.json({
       success: true,
@@ -2199,7 +2342,7 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
-    saveDataToFiles();
+    saveDataToFiles('bd_entry_updated');
 
     res.json({
       success: true,
@@ -2246,10 +2389,7 @@ app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Server will be started at the end of the file
 
 // Forgot password endpoint
 app.post('/api/auth/forgot-password', [
@@ -2416,11 +2556,614 @@ app.post('/api/auth/reset-password', [
 
 // Protected route to get user profile
 app.get('/api/auth/profile', authenticateToken, (req, res) => {
-  res.json({
-    user: {
-      email: req.user.email,
-      name: req.user.name,
-      role: req.user.role
+  try {
+    // Find the user in the database
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-  });
+
+    // Get payment status from localStorage (this would normally come from database)
+    // For now, we'll return the basic user info and let frontend handle payment status
+    res.json({
+      user: {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        createdAt: user.createdAt,
+        // Payment info will be handled by frontend localStorage
+        hasPaymentInfo: true // Indicates user can have payment data
+      }
+    });
+    
+    // Save profile access data
+    saveDataToFiles('profile_accessed');
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Stripe Payment Routes
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    const { amount, currency = 'usd', planId, isAnnual } = req.body;
+
+    // Define price IDs for different plans and billing cycles
+    const priceIds = {
+      'test': {
+        monthly: 'price_test_monthly', // Replace with actual Stripe price ID
+        annual: 'price_test_annual'    // Replace with actual Stripe price ID
+      },
+      'basic': {
+        monthly: 'price_basic_monthly', // Replace with actual Stripe price ID
+        annual: 'price_basic_annual'    // Replace with actual Stripe price ID
+      },
+      'premium': {
+        monthly: 'price_premium_monthly', // Replace with actual Stripe price ID
+        annual: 'price_premium_annual'    // Replace with actual Stripe price ID
+      }
+    };
+
+    // Create or get customer for better tracking
+    let customer = null;
+    const customerEmail = req.body.customerEmail;
+    
+    if (customerEmail) {
+      // Try to find existing customer
+      const existingCustomers = await stripe.customers.list({
+        email: customerEmail,
+        limit: 1
+      });
+      
+      if (existingCustomers.data.length > 0) {
+        customer = existingCustomers.data[0];
+      } else {
+        // Create new customer
+        customer = await stripe.customers.create({
+          email: customerEmail,
+          metadata: {
+            planId: planId,
+            isAnnual: isAnnual ? 'true' : 'false'
+          }
+        });
+      }
+    }
+
+    // Create payment intent with customer (if available) or as guest
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount * 100, // Convert to cents
+      currency: currency,
+      customer: customer ? customer.id : undefined, // Link to customer if available
+      metadata: {
+        planId: planId,
+        isAnnual: isAnnual ? 'true' : 'false',
+        customerType: customer ? 'registered' : 'guest',
+        integration_check: 'accept_a_payment'
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret
+    });
+  } catch (error) {
+    console.error('Payment intent error:', error);
+    res.status(500).json({ error: 'Payment failed' });
+  }
+});
+
+// Create subscription (for future use)
+app.post('/api/create-subscription', async (req, res) => {
+  try {
+    const { planId, isAnnual, customerEmail } = req.body;
+
+    // Define price IDs for different plans and billing cycles
+    const priceIds = {
+      'test': {
+        monthly: 'price_test_monthly', // Replace with actual Stripe price ID
+        annual: 'price_test_annual'    // Replace with actual Stripe price ID
+      },
+      'basic': {
+        monthly: 'price_basic_monthly', // Replace with actual Stripe price ID
+        annual: 'price_basic_annual'    // Replace with actual Stripe price ID
+      },
+      'premium': {
+        monthly: 'price_premium_monthly', // Replace with actual Stripe price ID
+        annual: 'price_premium_annual'    // Replace with actual Stripe price ID
+      }
+    };
+
+    const priceId = priceIds[planId]?.[isAnnual ? 'annual' : 'monthly'];
+    
+    if (!priceId) {
+      return res.status(400).json({ error: 'Invalid plan or billing cycle' });
+    }
+
+    // Create or get customer
+    let customer = await stripe.customers.list({
+      email: customerEmail,
+      limit: 1
+    });
+
+    if (customer.data.length === 0) {
+      customer = await stripe.customers.create({
+        email: customerEmail
+      });
+    } else {
+      customer = customer.data[0];
+    }
+
+    // Create subscription
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent']
+    });
+
+    res.json({
+      subscriptionId: subscription.id,
+      clientSecret: subscription.latest_invoice.payment_intent.client_secret
+    });
+  } catch (error) {
+    console.error('Subscription error:', error);
+    res.status(500).json({ error: 'Subscription failed' });
+  }
+});
+
+
+
+// Webhook for Stripe events
+app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_ygLySaPSLLs4S4xpWuXWvblGsqA4nhV7';
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      console.log('Payment succeeded:', paymentIntent.id);
+      
+      // Handle guest vs registered customer
+      const customerType = paymentIntent.metadata?.customerType || 'guest';
+      console.log('Customer type:', customerType);
+      
+      // Update user payment status in database if registered customer
+      if (customerType === 'registered' && paymentIntent.metadata?.userEmail) {
+        try {
+          const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
+          if (userIndex !== -1) {
+            mockDB.users[userIndex].paymentCompleted = true;
+            mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
+            mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+            saveDataToFiles();
+            console.log('User payment status updated in database');
+          }
+        } catch (error) {
+          console.error('Error updating user payment status:', error);
+        }
+      }
+      
+      // Send payment confirmation email
+      try {
+        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email;
+        if (customerEmail) {
+          const mailOptions = {
+            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+            to: customerEmail,
+            subject: 'BioPing - Payment Confirmation',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+                  <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+                  <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Payment Confirmation</p>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                  <h2 style="color: #333; margin-bottom: 20px;">Payment Successful!</h2>
+                  <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+                    Thank you for your payment! Your transaction has been processed successfully.
+                  </p>
+                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                      <span style="font-weight: bold;">Amount:</span>
+                      <span>$${(paymentIntent.amount / 100).toFixed(2)} USD</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                      <span style="font-weight: bold;">Transaction ID:</span>
+                      <span style="font-family: monospace;">${paymentIntent.id}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="font-weight: bold;">Date:</span>
+                      <span>${new Date().toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                    You will receive a detailed invoice shortly. If you have any questions, please contact our support team.
+                  </p>
+                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px;">
+                      Best regards,<br>
+                      The BioPing Team
+                    </p>
+                  </div>
+                </div>
+              </div>
+            `
+          };
+          
+          await transporter.sendMail(mailOptions);
+          console.log('Payment confirmation email sent to:', customerEmail);
+        }
+      } catch (emailError) {
+        console.error('Failed to send payment confirmation email:', emailError);
+      }
+      break;
+
+    case 'customer.subscription.created':
+      const subscription = event.data.object;
+      console.log('Subscription created:', subscription.id);
+      
+      // Send subscription welcome email
+      try {
+        const customer = await stripe.customers.retrieve(subscription.customer);
+        if (customer.email) {
+          const mailOptions = {
+            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+            to: customer.email,
+            subject: 'BioPing - Welcome to Your Subscription!',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+                  <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+                  <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to Your Subscription!</p>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                  <h2 style="color: #333; margin-bottom: 20px;">Welcome to BioPing!</h2>
+                  <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+                    Your subscription has been activated successfully. You now have access to all the features included in your plan.
+                  </p>
+                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                      <span style="font-weight: bold;">Subscription ID:</span>
+                      <span style="font-family: monospace;">${subscription.id}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                      <span style="font-weight: bold;">Status:</span>
+                      <span style="color: #10B981; font-weight: bold;">Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                      <span style="font-weight: bold;">Next Billing:</span>
+                      <span>${new Date(subscription.current_period_end * 1000).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                    You can manage your subscription anytime from your account dashboard. If you have any questions, our support team is here to help!
+                  </p>
+                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px;">
+                      Best regards,<br>
+                      The BioPing Team
+                    </p>
+                  </div>
+                </div>
+              </div>
+            `
+          };
+          
+          await transporter.sendMail(mailOptions);
+          console.log('Subscription welcome email sent to:', customer.email);
+        }
+      } catch (emailError) {
+        console.error('Failed to send subscription welcome email:', emailError);
+      }
+      break;
+
+    case 'customer.subscription.updated':
+      console.log('Subscription updated:', event.data.object.id);
+      break;
+
+    case 'customer.subscription.deleted':
+      console.log('Subscription cancelled:', event.data.object.id);
+      break;
+
+    case 'invoice.payment_succeeded':
+      console.log('Invoice payment succeeded:', event.data.object.id);
+      break;
+
+    case 'invoice.payment_failed':
+      console.log('Invoice payment failed:', event.data.object.id);
+      break;
+      
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📧 Email server status: ${transporter.verify() ? 'Ready' : 'Not ready'}`);
+  console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
+}); 
+
+// Update user payment status
+app.post('/api/auth/update-payment-status', authenticateToken, (req, res) => {
+  try {
+    const { paymentCompleted, currentPlan, currentCredits, lastCreditRenewal, nextCreditRenewal } = req.body;
+    
+    // Find the user in the database
+    const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update user payment information
+    mockDB.users[userIndex].paymentCompleted = paymentCompleted;
+    mockDB.users[userIndex].currentPlan = currentPlan;
+    mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+    
+    // Update subscription data if provided
+    if (currentCredits !== undefined) {
+      mockDB.users[userIndex].currentCredits = currentCredits;
+    }
+    if (lastCreditRenewal) {
+      mockDB.users[userIndex].lastCreditRenewal = lastCreditRenewal;
+    }
+    if (nextCreditRenewal) {
+      mockDB.users[userIndex].nextCreditRenewal = nextCreditRenewal;
+    }
+
+    // Save to file
+    saveDataToFiles();
+
+    res.json({
+      success: true,
+      message: 'Payment status updated successfully',
+      user: {
+        email: mockDB.users[userIndex].email,
+        name: mockDB.users[userIndex].name,
+        paymentCompleted: mockDB.users[userIndex].paymentCompleted,
+        currentPlan: mockDB.users[userIndex].currentPlan,
+        currentCredits: mockDB.users[userIndex].currentCredits
+      }
+    });
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get user payment status
+app.get('/api/auth/payment-status', authenticateToken, (req, res) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Only universalx0242 should have payment status
+    // All other users should be free
+    let hasPaid = false;
+    let currentPlan = 'free';
+    
+    if (user.email === 'universalx0242@gmail.com') {
+      hasPaid = user.paymentCompleted || true; // Force true for universalx0242
+      currentPlan = user.currentPlan || 'monthly';
+    } else {
+      // Reset other users to free
+      hasPaid = false;
+      currentPlan = 'free';
+      
+      // Update user in database to ensure they're marked as free
+      const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+      if (userIndex !== -1) {
+        mockDB.users[userIndex].paymentCompleted = false;
+        mockDB.users[userIndex].currentPlan = 'free';
+        saveDataToFiles();
+      }
+    }
+
+    res.json({
+      paymentCompleted: hasPaid,
+      currentPlan: currentPlan,
+      paymentUpdatedAt: user.paymentUpdatedAt
+    });
+  } catch (error) {
+    console.error('Error fetching payment status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Subscription management endpoints
+app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if subscription is active and when credits should renew
+    const now = new Date();
+    const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
+    const nextRenewal = user.nextCreditRenewal ? new Date(user.nextCreditRenewal) : null;
+    
+    let shouldRenewCredits = false;
+    let creditsToGive = 0;
+
+    if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
+      // Check if it's time to renew credits based on plan type
+      if (!lastCreditRenewal || now >= nextRenewal) {
+        shouldRenewCredits = true;
+        
+        // Set credits based on plan
+        if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
+          creditsToGive = 50;
+        } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
+          creditsToGive = 100;
+        } else if (user.currentPlan === 'test') {
+          creditsToGive = 1;
+        }
+        
+        // Update user with new credits and renewal date
+        const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+        if (userIndex !== -1) {
+          mockDB.users[userIndex].currentCredits = creditsToGive;
+          mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
+          
+          // Set renewal period based on plan type
+          let renewalDays = 30; // Default monthly
+          if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
+            renewalDays = 30; // Annual plans have monthly EMI, so monthly renewal
+          }
+          // Monthly plans don't auto-renew, so no next renewal date
+          if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
+            mockDB.users[userIndex].nextCreditRenewal = null; // No auto-renewal for monthly
+          } else {
+            mockDB.users[userIndex].nextCreditRenewal = new Date(now.getTime() + renewalDays * 24 * 60 * 60 * 1000).toISOString();
+          }
+          saveDataToFiles();
+        }
+      }
+    }
+
+    // Return current credits (don't override if user has used some)
+    let currentCredits = user.currentCredits;
+    if (currentCredits === undefined || currentCredits === null) {
+      // Set default credits based on plan
+      if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
+        if (user.currentPlan === 'monthly') {
+          currentCredits = 50;
+        } else if (user.currentPlan === 'annual') {
+          currentCredits = 100;
+        } else if (user.currentPlan === 'test') {
+          currentCredits = 1;
+        }
+      } else {
+        currentCredits = 5; // Free users
+      }
+    }
+
+    res.json({
+      paymentCompleted: user.paymentCompleted || false,
+      currentPlan: user.currentPlan || 'free',
+      currentCredits: currentCredits,
+      lastCreditRenewal: user.lastCreditRenewal,
+      nextCreditRenewal: user.nextCreditRenewal,
+      shouldRenewCredits,
+      creditsToGive
+    });
+  } catch (error) {
+    console.error('Error fetching subscription status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update user credits (when they use credits)
+app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
+  try {
+    const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const user = mockDB.users[userIndex];
+    
+    if (user.currentCredits > 0) {
+      user.currentCredits -= 1;
+      saveDataToFiles('credit_used');
+      
+      res.json({
+        success: true,
+        remainingCredits: user.currentCredits,
+        message: 'Credit used successfully'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'No credits remaining'
+      });
+    }
+  } catch (error) {
+    console.error('Error using credit:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+}); 
+
+// Data export endpoint (for backup)
+app.get('/api/admin/export-data', authenticateAdmin, (req, res) => {
+  try {
+    const exportData = {
+      users: mockDB.users,
+      biotechData: biotechData,
+      verificationCodes: mockDB.verificationCodes,
+      uploadedFiles: mockDB.uploadedFiles,
+      bdTracker: mockDB.bdTracker,
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="bioping-backup-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(exportData);
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ message: 'Export failed' });
+  }
+});
+
+// Data import endpoint (for restore)
+app.post('/api/admin/import-data', authenticateAdmin, upload.single('backup'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No backup file provided' });
+    }
+    
+    const backupData = JSON.parse(req.file.buffer.toString());
+    
+    // Validate backup data
+    if (!backupData.users || !backupData.biotechData) {
+      return res.status(400).json({ message: 'Invalid backup file format' });
+    }
+    
+    // Import data
+    mockDB.users = backupData.users || [];
+    mockDB.verificationCodes = backupData.verificationCodes || [];
+    mockDB.uploadedFiles = backupData.uploadedFiles || [];
+    mockDB.bdTracker = backupData.bdTracker || [];
+    biotechData = backupData.biotechData || [];
+    
+    // Save imported data
+    saveDataToFiles('data_imported');
+    
+    res.json({ 
+      message: 'Data imported successfully',
+      importedUsers: mockDB.users.length,
+      importedBiotechRecords: biotechData.length,
+      importedBdTrackerEntries: mockDB.bdTracker.length
+    });
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ message: 'Import failed' });
+  }
 }); 

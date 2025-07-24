@@ -1,12 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, ArrowRight, Building2, Users, Target, Zap, CreditCard, Calendar, Globe } from 'lucide-react';
+import StripePayment from '../components/StripePayment';
+import { API_BASE_URL } from '../config';
 
 const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
+    // Check if user is logged in first
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return null; // No current plan if not logged in
+    }
+    // Get user's current plan from localStorage or default to 'free'
+    return localStorage.getItem('userCurrentPlan') || 'free';
+  });
+
+  // Check login status on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setUserCurrentPlan(null);
+    } else {
+      const storedPlan = localStorage.getItem('userCurrentPlan') || 'free';
+      setUserCurrentPlan(storedPlan);
+    }
+  }, []);
 
   const plans = [
     {
+      id: 'test',
+      name: "Test Plan",
+      description: "Perfect for testing payment system",
+      credits: "1 credit per month",
+      monthlyPrice: 1,
+      annualPrice: 12,
+      features: [
+        "✅ 1 Contact Search per month",
+        "✅ Basic company information",
+        "✅ Test payment system",
+        "✅ Full access for testing",
+        "✅ Email support"
+      ],
+      icon: Star,
+      popular: false,
+      buttonText: "Test Payment",
+      buttonStyle: "primary",
+      color: "yellow"
+    },
+    {
+      id: 'free',
       name: "Free",
       description: "Perfect for getting started",
       credits: "5 credits per month",
@@ -25,6 +71,7 @@ const Pricing = () => {
       buttonStyle: "outline"
     },
     {
+      id: 'basic',
       name: "Basic Plan",
       description: "Ideal for growing businesses",
       credits: "50 credits per month",
@@ -43,6 +90,7 @@ const Pricing = () => {
       buttonStyle: "outline"
     },
     {
+      id: 'premium',
       name: "Premium Plan",
       description: "For advanced users and teams",
       credits: "100 credits per month",
@@ -85,6 +133,82 @@ const Pricing = () => {
     }
   ];
 
+  const handlePlanSelect = (plan) => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Redirect to login if not logged in
+      window.location.href = '/login';
+      return;
+    }
+    
+    if (plan.id === 'free') {
+      // Handle free plan
+      setPaymentStatus('Free plan activated!');
+      return;
+    }
+    
+    setSelectedPlan(plan);
+    setShowPayment(true);
+  };
+
+  const handlePaymentSuccess = async (paymentIntent) => {
+    // Update user's current plan after successful payment
+    if (selectedPlan && selectedPlan.id !== 'free') {
+      setUserCurrentPlan(selectedPlan.id);
+      localStorage.setItem('userCurrentPlan', selectedPlan.id);
+      localStorage.setItem('paymentCompleted', 'true');
+      
+      // Set initial credits based on plan
+      let credits = 5; // Default
+      if (selectedPlan.id === 'monthly') {
+        credits = 50;
+      } else if (selectedPlan.id === 'annual') {
+        credits = 100;
+      } else if (selectedPlan.id === 'test') {
+        credits = 1;
+      }
+      localStorage.setItem('userCredits', credits.toString());
+      
+      // Sync with backend and set up subscription
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            paymentCompleted: true,
+            currentPlan: selectedPlan.id,
+            currentCredits: credits,
+            lastCreditRenewal: new Date().toISOString(),
+            nextCreditRenewal: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+          })
+        });
+        
+        if (response.ok) {
+          console.log('Payment status and subscription synced with backend');
+        }
+      } catch (error) {
+        console.error('Error syncing payment status:', error);
+      }
+    }
+    setPaymentStatus('Payment successful! Plan activated.');
+    setShowPayment(false);
+    console.log('Payment successful:', paymentIntent);
+  };
+
+  const handlePaymentError = (error) => {
+    setPaymentStatus('Payment failed: ' + error);
+    console.error('Payment error:', error);
+  };
+
+  const getPlanPrice = (plan) => {
+    return isAnnual ? plan.annualPrice : plan.monthlyPrice;
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -105,24 +229,26 @@ const Pricing = () => {
             </p>
 
             {/* Billing Toggle */}
-            <div className="flex items-center justify-center space-x-4 mb-8">
-              <span className={`text-lg ${!isAnnual ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+            <div className="flex items-center justify-center space-x-4 mb-8 bg-gradient-to-r from-primary-50 to-secondary-50 p-6 rounded-xl shadow-lg border-2 border-primary-300">
+              <span className={`text-lg font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
                 Pay Monthly
               </span>
               <button
                 onClick={() => setIsAnnual(!isAnnual)}
-                className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                  isAnnual ? 'bg-primary-600' : 'bg-gray-200'
+                className={`relative inline-flex h-12 w-24 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary-300 focus:ring-offset-2 border-2 ${
+                  isAnnual 
+                    ? 'bg-primary-600 border-primary-600 shadow-lg' 
+                    : 'bg-gray-200 border-gray-300 shadow-md'
                 }`}
               >
                 <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    isAnnual ? 'translate-x-9' : 'translate-x-1'
+                  className={`inline-block h-10 w-10 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                    isAnnual ? 'translate-x-12' : 'translate-x-1'
                   }`}
                 />
               </button>
-              <span className={`text-lg ${isAnnual ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                Pay Yearly 20% off
+              <span className={`text-lg font-medium ${isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+                Pay Yearly <span className="text-green-600 font-bold">20% off</span>
               </span>
             </div>
           </motion.div>
@@ -187,12 +313,18 @@ const Pricing = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
-                      plan.buttonStyle === 'primary' 
-                        ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-soft hover:shadow-medium' 
-                        : 'border-2 border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300'
+                      userCurrentPlan === plan.id
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
+                        : plan.buttonStyle === 'primary' 
+                          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-soft hover:shadow-medium' 
+                          : 'border-2 border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300'
                     }`}
+                    onClick={() => handlePlanSelect(plan)}
                   >
-                    {plan.buttonText}
+                    {userCurrentPlan === plan.id 
+                      ? 'Current Plan' 
+                      : plan.buttonText
+                    }
                   </motion.button>
                 </div>
               </motion.div>
@@ -340,6 +472,21 @@ const Pricing = () => {
           </motion.div>
         </div>
       </section>
+
+      {showPayment && selectedPlan && (
+        <StripePayment
+          plan={selectedPlan}
+          isAnnual={isAnnual}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+          onClose={() => setShowPayment(false)}
+        />
+      )}
+      {paymentStatus && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          {paymentStatus}
+        </div>
+      )}
     </div>
   );
 };

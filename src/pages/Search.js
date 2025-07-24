@@ -84,7 +84,7 @@ const Search = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 max-h-screen overflow-hidden">
       {/* Custom CSS for clean select styling */}
       <style jsx>{`
         select {
@@ -102,7 +102,7 @@ const Search = () => {
         }
       `}</style>
 
-      <div className="container-custom py-8">
+      <div className="container-custom py-8 max-h-screen overflow-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
