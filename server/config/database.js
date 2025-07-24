@@ -2,42 +2,51 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    // Check if MONGODB_URI is defined
-    if (!process.env.MONGODB_URI) {
-      console.error('MONGODB_URI is not defined in environment variables');
-      process.exit(1);
-    }
-
-    console.log('Attempting to connect to MongoDB...');
-    console.log('MongoDB URI length:', process.env.MONGODB_URI.length);
-    console.log('MongoDB URI (first 50 chars):', process.env.MONGODB_URI.substring(0, 50));
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bioping';
     
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+    const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
+    // Create universal users if they don't exist
+    const User = require('../models/User');
+    
+    const universalEmails = [
+      'universalx0242@gmail.com',
+      'admin@bioping.com',
+      'demo@bioping.com',
+      'test@bioping.com'
+    ];
 
-    mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
-    });
-
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
-      process.exit(0);
-    });
-
+    for (const email of universalEmails) {
+      const existingUser = await User.findOne({ email });
+      if (!existingUser) {
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash('password', 10);
+        
+        const newUser = new User({
+          firstName: email.split('@')[0],
+          lastName: '',
+          email: email,
+          password: hashedPassword,
+          company: 'BioPing',
+          role: 'other',
+          paymentCompleted: email === 'universalx0242@gmail.com',
+          currentPlan: email === 'universalx0242@gmail.com' ? 'test' : 'free',
+          currentCredits: email === 'universalx0242@gmail.com' ? 1 : 5
+        });
+        
+        await newUser.save();
+        console.log(`✅ Created universal user: ${email}`);
+      }
+    }
+    
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    process.exit(1);
+    console.error('❌ MongoDB connection error:', error);
+    console.log('🔄 Continuing with file-based storage...');
   }
 };
 

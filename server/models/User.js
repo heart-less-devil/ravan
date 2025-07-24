@@ -46,6 +46,29 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
     default: null
+  },
+  // Payment and subscription fields
+  paymentCompleted: {
+    type: Boolean,
+    default: false
+  },
+  currentPlan: {
+    type: String,
+    enum: ['free', 'monthly', 'annual', 'test'],
+    default: 'free'
+  },
+  currentCredits: {
+    type: Number,
+    default: 5
+  },
+  lastCreditRenewal: {
+    type: Date
+  },
+  nextCreditRenewal: {
+    type: Date
+  },
+  paymentUpdatedAt: {
+    type: Date
   }
 }, {
   timestamps: true

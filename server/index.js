@@ -8,11 +8,28 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || '');
 require('dotenv').config();
+
+// Import database connection
+const connectDB = require('./config/database');
+
+// Import models
+const User = require('./models/User');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
+
+// Connect to MongoDB
+connectDB();
+
+// Initialize Stripe with fallback for development
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+const stripe = require('stripe')(stripeSecretKey);
+
+// Log Stripe configuration
+console.log('🔧 Stripe configuration:');
+console.log('  - Secret key available:', !!process.env.STRIPE_SECRET_KEY);
+console.log('  - Using fallback key:', !process.env.STRIPE_SECRET_KEY);
 
 // Middleware
 app.use(cors({
@@ -48,6 +65,30 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    server: 'BioPing Backend',
+    version: '1.0.0'
+  });
+});
+
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Server is running!',
+    endpoints: [
+      '/api/health',
+      '/api/auth/login',
+      '/api/auth/signup',
+      '/api/create-payment-intent',
+      '/api/auth/subscription-status'
+    ]
+  });
+});
+
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ 
@@ -74,7 +115,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-    pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'
+    pass: process.env.EMAIL_PASS || ''
   }
 });
 
@@ -574,8 +615,15 @@ app.post('/api/auth/login', [
     const user = universalUsers.find(u => u.email === email);
     
     if (!user) {
-      // Check if it's a registered user
-      const registeredUser = mockDB.users.find(u => u.email === email);
+      // Check if it's a registered user (try MongoDB first, then file-based)
+      let registeredUser = null;
+      try {
+        registeredUser = await User.findOne({ email });
+      } catch (dbError) {
+        console.log('MongoDB not available, checking file-based storage...');
+        registeredUser = mockDB.users.find(u => u.email === email);
+      }
+
       if (!registeredUser) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
@@ -589,9 +637,9 @@ app.post('/api/auth/login', [
       // Generate JWT token for registered user
       const token = jwt.sign(
         { 
-          id: registeredUser.id,
+          id: registeredUser._id || registeredUser.id,
           email: registeredUser.email, 
-          name: registeredUser.name,
+          name: registeredUser.name || `${registeredUser.firstName} ${registeredUser.lastName}`,
           role: registeredUser.role
         },
         JWT_SECRET,
@@ -603,10 +651,10 @@ app.post('/api/auth/login', [
         token,
         user: {
           email: registeredUser.email,
-          name: registeredUser.name,
+          name: registeredUser.name || `${registeredUser.firstName} ${registeredUser.lastName}`,
           role: registeredUser.role
         },
-        credits: 5 // Give 5 credits to all users
+        credits: registeredUser.currentCredits || 5
       });
       
       // Save login data
@@ -3196,3 +3244,98 @@ app.post('/api/admin/import-data', authenticateAdmin, upload.single('backup'), (
     res.status(500).json({ message: 'Import failed' });
   }
 }); 
+
+// Signup endpoint
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { firstName, lastName, email, password } = req.body;
+
+    // Validate input
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Check if user already exists (try MongoDB first, then fallback to file-based)
+    let existingUser = null;
+    try {
+      existingUser = await User.findOne({ email });
+    } catch (dbError) {
+      console.log('MongoDB not available, checking file-based storage...');
+      existingUser = mockDB.users.find(u => u.email === email);
+    }
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user object
+    const newUserData = {
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      company: 'BioPing',
+      role: 'other',
+      paymentCompleted: false,
+      currentPlan: 'free',
+      currentCredits: 5
+    };
+
+    let newUser = null;
+    let userId = null;
+
+    // Try to save to MongoDB first
+    try {
+      newUser = new User(newUserData);
+      await newUser.save();
+      userId = newUser._id;
+      console.log(`✅ New user saved to MongoDB: ${email}`);
+    } catch (dbError) {
+      console.log('MongoDB save failed, using file-based storage...');
+      // Fallback to file-based storage
+      newUser = {
+        id: mockDB.users.length + 1,
+        ...newUserData,
+        name: `${firstName} ${lastName}`,
+        createdAt: new Date().toISOString()
+      };
+      mockDB.users.push(newUser);
+      userId = newUser.id;
+      saveDataToFiles('user_signup');
+      console.log(`✅ New user saved to file: ${email}`);
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: userId,
+        email: newUser.email,
+        name: newUser.name || `${firstName} ${lastName}`,
+        role: newUser.role
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ New user registered: ${email}`);
+
+    res.json({
+      success: true,
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: userId,
+        email: newUser.email,
+        name: newUser.name || `${firstName} ${lastName}`,
+        role: newUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
