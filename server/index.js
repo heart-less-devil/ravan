@@ -15,6 +15,7 @@ const connectDB = require('./config/database');
 
 // Import models
 const User = require('./models/User');
+const BDTracker = require('./models/BDTracker');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -2296,13 +2297,19 @@ app.get('/api/bd-tracker', authenticateToken, async (req, res) => {
   try {
     console.log('BD Tracker GET - User ID:', req.user.id);
     console.log('BD Tracker GET - User Email:', req.user.email);
-    console.log('BD Tracker GET - Total entries:', mockDB.bdTracker.length);
     
-    // Filter entries by user ID
-    const userEntries = mockDB.bdTracker.filter(entry => entry.userId === req.user.id);
+    let userEntries = [];
     
-    console.log('BD Tracker GET - User entries:', userEntries.length);
-    console.log('BD Tracker GET - All entries:', mockDB.bdTracker);
+    // Try MongoDB first
+    try {
+      userEntries = await BDTracker.find({ userId: req.user.id }).sort({ createdAt: -1 });
+      console.log('BD Tracker GET - MongoDB entries:', userEntries.length);
+    } catch (dbError) {
+      console.log('MongoDB not available, using file-based storage...');
+      // Fallback to file-based storage
+      userEntries = mockDB.bdTracker.filter(entry => entry.userId === req.user.id);
+      console.log('BD Tracker GET - File entries:', userEntries.length);
+    }
     
     res.json({
       success: true,
@@ -2333,26 +2340,51 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
       });
     }
 
-    const newEntry = {
-      id: Date.now().toString(),
-      company,
-      programPitched: programPitched || '',
-      outreachDates: outreachDates || '',
-      contactFunction: contactFunction || '',
-      contactPerson,
-      cda: cda || '',
-      feedback: feedback || '',
-      nextSteps: nextSteps || '',
-      timelines: timelines || '',
-      reminders: reminders || '',
-      createdAt: new Date().toISOString(),
-      userId: req.user.id
-    };
+    let newEntry = null;
 
-    console.log('BD Tracker POST - New entry:', newEntry);
+    // Try MongoDB first
+    try {
+      newEntry = new BDTracker({
+        userId: req.user.id,
+        company,
+        programPitched: programPitched || '',
+        outreachDates: outreachDates || '',
+        contactFunction: contactFunction || '',
+        contactPerson,
+        cda: cda || '',
+        feedback: feedback || '',
+        nextSteps: nextSteps || '',
+        timelines: timelines || '',
+        reminders: reminders || '',
+        status: 'active',
+        priority: 'medium'
+      });
 
-    mockDB.bdTracker.unshift(newEntry);
-    saveDataToFiles('bd_entry_added');
+      await newEntry.save();
+      console.log('BD Tracker POST - MongoDB entry created:', newEntry._id);
+    } catch (dbError) {
+      console.log('MongoDB save failed, using file-based storage...');
+      // Fallback to file-based storage
+      newEntry = {
+        id: Date.now().toString(),
+        company,
+        programPitched: programPitched || '',
+        outreachDates: outreachDates || '',
+        contactFunction: contactFunction || '',
+        contactPerson,
+        cda: cda || '',
+        feedback: feedback || '',
+        nextSteps: nextSteps || '',
+        timelines: timelines || '',
+        reminders: reminders || '',
+        createdAt: new Date().toISOString(),
+        userId: req.user.id
+      };
+
+      mockDB.bdTracker.unshift(newEntry);
+      saveDataToFiles('bd_entry_added');
+      console.log('BD Tracker POST - File entry created:', newEntry.id);
+    }
 
     res.json({
       success: true,
@@ -2382,36 +2414,70 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Find entry that belongs to this user
-    const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
-    
-    if (entryIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'BD Tracker entry not found or not authorized'
-      });
+    let updatedEntry = null;
+
+    // Try MongoDB first
+    try {
+      updatedEntry = await BDTracker.findOneAndUpdate(
+        { _id: id, userId: req.user.id },
+        {
+          company,
+          programPitched: programPitched || '',
+          outreachDates: outreachDates || '',
+          contactFunction: contactFunction || '',
+          contactPerson,
+          cda: cda || '',
+          feedback: feedback || '',
+          nextSteps: nextSteps || '',
+          timelines: timelines || '',
+          reminders: reminders || ''
+        },
+        { new: true }
+      );
+
+      if (!updatedEntry) {
+        return res.status(404).json({
+          success: false,
+          message: 'BD Tracker entry not found or not authorized'
+        });
+      }
+
+      console.log('BD Tracker PUT - MongoDB entry updated:', updatedEntry._id);
+    } catch (dbError) {
+      console.log('MongoDB update failed, using file-based storage...');
+      // Fallback to file-based storage
+      const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+      
+      if (entryIndex === -1) {
+        return res.status(404).json({
+          success: false,
+          message: 'BD Tracker entry not found or not authorized'
+        });
+      }
+
+      mockDB.bdTracker[entryIndex] = {
+        ...mockDB.bdTracker[entryIndex],
+        company,
+        programPitched: programPitched || '',
+        outreachDates: outreachDates || '',
+        contactFunction: contactFunction || '',
+        contactPerson,
+        cda: cda || '',
+        feedback: feedback || '',
+        nextSteps: nextSteps || '',
+        timelines: timelines || '',
+        reminders: reminders || '',
+        updatedAt: new Date().toISOString()
+      };
+
+      updatedEntry = mockDB.bdTracker[entryIndex];
+      saveDataToFiles('bd_entry_updated');
+      console.log('BD Tracker PUT - File entry updated:', updatedEntry.id);
     }
-
-    mockDB.bdTracker[entryIndex] = {
-      ...mockDB.bdTracker[entryIndex],
-      company,
-      programPitched: programPitched || '',
-      outreachDates: outreachDates || '',
-      contactFunction: contactFunction || '',
-      contactPerson,
-      cda: cda || '',
-      feedback: feedback || '',
-      nextSteps: nextSteps || '',
-      timelines: timelines || '',
-      reminders: reminders || '',
-      updatedAt: new Date().toISOString()
-    };
-
-    saveDataToFiles('bd_entry_updated');
 
     res.json({
       success: true,
-      data: mockDB.bdTracker[entryIndex],
+      data: updatedEntry,
       message: 'BD Tracker entry updated successfully'
     });
   } catch (error) {
@@ -2428,18 +2494,35 @@ app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Find entry that belongs to this user
-    const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
-    
-    if (entryIndex === -1) {
+    let deleted = false;
+
+    // Try MongoDB first
+    try {
+      const result = await BDTracker.findOneAndDelete({ _id: id, userId: req.user.id });
+      
+      if (result) {
+        console.log('BD Tracker DELETE - MongoDB entry deleted:', result._id);
+        deleted = true;
+      }
+    } catch (dbError) {
+      console.log('MongoDB delete failed, using file-based storage...');
+      // Fallback to file-based storage
+      const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+      
+      if (entryIndex !== -1) {
+        mockDB.bdTracker.splice(entryIndex, 1);
+        saveDataToFiles('bd_entry_deleted');
+        console.log('BD Tracker DELETE - File entry deleted:', id);
+        deleted = true;
+      }
+    }
+
+    if (!deleted) {
       return res.status(404).json({
         success: false,
         message: 'BD Tracker entry not found or not authorized'
       });
     }
-
-    mockDB.bdTracker.splice(entryIndex, 1);
-    saveDataToFiles();
 
     res.json({
       success: true,
