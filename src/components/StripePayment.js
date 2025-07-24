@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Shield, Lock, CreditCard, CheckCircle, AlertCircle, X, Star, Users, Target, Building2, Zap, Database, Download, MessageSquare, BarChart3, Users2 } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 // Load Stripe with correct publishable key
 const stripePromise = loadStripe('pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT');
@@ -26,7 +27,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
     try {
       // Create payment intent for subscription
-      const response = await fetch('http://localhost:3005/api/create-payment-intent', {
+      const response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
