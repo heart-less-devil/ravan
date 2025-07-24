@@ -90,6 +90,72 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// MongoDB connection test endpoint
+app.get('/api/test-mongodb', async (req, res) => {
+  try {
+    console.log('🔧 Testing MongoDB connection...');
+    
+    // Test MongoDB connection
+    const User = require('./models/User');
+    const testUser = await User.findOne({ email: 'test@example.com' });
+    
+    // Test creating a user
+    const testUserData = {
+      firstName: 'Test',
+      lastName: 'User',
+      email: 'mongodb-test@example.com',
+      password: 'test123',
+      company: 'BioPing',
+      role: 'other',
+      paymentCompleted: false,
+      currentPlan: 'free',
+      currentCredits: 5
+    };
+    
+    // Check if test user exists
+    let existingTestUser = await User.findOne({ email: testUserData.email });
+    if (existingTestUser) {
+      await User.findByIdAndDelete(existingTestUser._id);
+      console.log('🧹 Cleaned up existing test user');
+    }
+    
+    // Create test user
+    const newTestUser = new User(testUserData);
+    await newTestUser.save();
+    console.log('✅ Test user created in MongoDB');
+    
+    // Verify user was saved
+    const savedUser = await User.findOne({ email: testUserData.email });
+    if (savedUser) {
+      console.log('✅ Test user verified in MongoDB');
+      // Clean up
+      await User.findByIdAndDelete(savedUser._id);
+      console.log('🧹 Test user cleaned up');
+      
+      res.json({
+        success: true,
+        message: 'MongoDB connection test successful!',
+        details: {
+          connection: 'Connected',
+          database: 'bioping',
+          testUser: 'Created and verified',
+          cleanup: 'Completed'
+        }
+      });
+    } else {
+      throw new Error('Test user not found after creation');
+    }
+    
+  } catch (error) {
+    console.error('❌ MongoDB test failed:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'MongoDB connection test failed',
+      error: error.message
+    });
+  }
+});
+
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ 
@@ -611,29 +677,42 @@ app.post('/api/auth/login', [
     }
 
     const { email, password } = req.body;
+    console.log(`🔧 Login attempt for: ${email}`);
 
     // Check if it's a universal email
     const user = universalUsers.find(u => u.email === email);
     
     if (!user) {
+      console.log('🔍 Checking MongoDB for registered user...');
       // Check if it's a registered user (try MongoDB first, then file-based)
       let registeredUser = null;
       try {
         registeredUser = await User.findOne({ email });
+        console.log('✅ MongoDB query completed');
+        if (registeredUser) {
+          console.log(`✅ Found user in MongoDB: ${email}`);
+        } else {
+          console.log('⚠️ User not found in MongoDB, checking file storage...');
+        }
       } catch (dbError) {
-        console.log('MongoDB not available, checking file-based storage...');
+        console.log('❌ MongoDB not available, checking file-based storage...');
+        console.log('MongoDB Error:', dbError.message);
         registeredUser = mockDB.users.find(u => u.email === email);
       }
 
       if (!registeredUser) {
+        console.log('❌ User not found in any storage');
         return res.status(401).json({ message: 'Invalid credentials' });
       }
       
       // Check password for registered user
       const isValidPassword = await bcrypt.compare(password, registeredUser.password);
       if (!isValidPassword) {
+        console.log('❌ Invalid password');
         return res.status(401).json({ message: 'Invalid credentials' });
       }
+      
+      console.log('✅ Password verified successfully');
       
       // Generate JWT token for registered user
       const token = jwt.sign(
@@ -646,6 +725,8 @@ app.post('/api/auth/login', [
         JWT_SECRET,
         { expiresIn: '24h' }
       );
+
+      console.log(`🎉 Login successful for: ${email}`);
 
       res.json({
         message: 'Login successful',
@@ -663,11 +744,15 @@ app.post('/api/auth/login', [
       return;
     }
 
+    console.log('🔍 Universal user login...');
     // Check password for universal user
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('❌ Invalid password for universal user');
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    console.log('✅ Universal user password verified');
 
     // Generate JWT token
     const token = jwt.sign(
@@ -680,6 +765,8 @@ app.post('/api/auth/login', [
       JWT_SECRET,
       { expiresIn: '24h' }
     );
+
+    console.log(`🎉 Universal user login successful: ${email}`);
 
     res.json({
       message: 'Login successful',
@@ -696,7 +783,8 @@ app.post('/api/auth/login', [
     saveDataToFiles('universal_user_login');
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -713,8 +801,8 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
 
     // Get payment status from localStorage (this would normally come from database)
     // For now, we'll return the basic user info and let frontend handle payment status
-  res.json({
-    user: {
+    res.json({
+      user: {
         email: user.email,
         name: user.name,
         role: user.role,
@@ -2020,8 +2108,8 @@ app.get('/api/debug/data', authenticateToken, (req, res) => {
 });
 
 // Connect to MongoDB
-console.log('Starting server without MongoDB for now...');
-console.log('Server will run with in-memory storage');
+console.log('🔧 Initializing server...');
+console.log('📡 Attempting MongoDB connection...');
 
 // Data storage with file persistence
 const DATA_FILE = path.join(__dirname, 'data', 'biotechData.json');
@@ -3338,16 +3426,22 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
+    console.log(`🔧 Signup attempt for: ${email}`);
+
     // Check if user already exists (try MongoDB first, then fallback to file-based)
     let existingUser = null;
     try {
+      console.log('🔍 Checking MongoDB for existing user...');
       existingUser = await User.findOne({ email });
+      console.log('✅ MongoDB query completed');
     } catch (dbError) {
-      console.log('MongoDB not available, checking file-based storage...');
+      console.log('❌ MongoDB not available, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
       existingUser = mockDB.users.find(u => u.email === email);
     }
 
     if (existingUser) {
+      console.log('⚠️ User already exists');
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -3372,12 +3466,14 @@ app.post('/api/auth/signup', async (req, res) => {
 
     // Try to save to MongoDB first
     try {
+      console.log('💾 Attempting to save user to MongoDB...');
       newUser = new User(newUserData);
       await newUser.save();
       userId = newUser._id;
-      console.log(`✅ New user saved to MongoDB: ${email}`);
+      console.log(`✅ New user saved to MongoDB: ${email} (ID: ${userId})`);
     } catch (dbError) {
-      console.log('MongoDB save failed, using file-based storage...');
+      console.log('❌ MongoDB save failed, using file-based storage...');
+      console.log('MongoDB Save Error:', dbError.message);
       // Fallback to file-based storage
       newUser = {
         id: mockDB.users.length + 1,
@@ -3388,7 +3484,7 @@ app.post('/api/auth/signup', async (req, res) => {
       mockDB.users.push(newUser);
       userId = newUser.id;
       saveDataToFiles('user_signup');
-      console.log(`✅ New user saved to file: ${email}`);
+      console.log(`✅ New user saved to file: ${email} (ID: ${userId})`);
     }
 
     // Generate JWT token
@@ -3403,7 +3499,7 @@ app.post('/api/auth/signup', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log(`✅ New user registered: ${email}`);
+    console.log(`🎉 New user registered successfully: ${email}`);
 
     res.json({
       success: true,
@@ -3417,7 +3513,8 @@ app.post('/api/auth/signup', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error('❌ Signup error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error' });
   }
 });

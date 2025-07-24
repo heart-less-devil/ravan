@@ -2839,8 +2839,8 @@ const PricingPage = () => {
       name: "Basic Plan",
       description: "Ideal for growing businesses",
       credits: "50 credits per month",
-      monthlyPrice: 400,
-      annualPrice: 4800,
+      monthlyPrice: 500,
+      annualPrice: null, // Remove annual option
       features: [
         "1 Seat included",
         "Get 50 free contacts / month",

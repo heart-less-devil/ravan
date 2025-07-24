@@ -146,7 +146,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                      paymentData.currentPlan === 'test' ? 1 : 5;
             totalCredits = credits;
             subscriptionStatus = 'active';
-            amount = paymentData.currentPlan === 'monthly' ? 400 : 
+            amount = paymentData.currentPlan === 'monthly' ? 500 : 
                     paymentData.currentPlan === 'annual' ? 4800 : 
                     paymentData.currentPlan === 'test' ? 1 : 0;
             
