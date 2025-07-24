@@ -638,9 +638,22 @@ app.post('/api/auth/create-account', [
 
     const { firstName, lastName, email, password } = req.body;
 
-    // Check if user already exists
-    const existingUser = mockDB.users.find(u => u.email === email);
+    console.log(`🔧 Create account attempt for: ${email}`);
+
+    // Check if user already exists (try MongoDB first, then file-based)
+    let existingUser = null;
+    try {
+      console.log('🔍 Checking MongoDB for existing user...');
+      existingUser = await User.findOne({ email });
+      console.log('✅ MongoDB query completed');
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
+      existingUser = mockDB.users.find(u => u.email === email);
+    }
+
     if (existingUser) {
+      console.log('⚠️ User already exists');
       return res.status(400).json({ 
         success: false,
         message: 'User already exists' 
@@ -650,48 +663,74 @@ app.post('/api/auth/create-account', [
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
-    const newUser = {
-      id: mockDB.users.length + 1,
+    // Create new user object
+    const newUserData = {
       firstName,
       lastName,
       email,
       password: hashedPassword,
-      name: `${firstName} ${lastName}`,
-      role: 'user',
-      createdAt: new Date()
+      company: 'BioPing',
+      role: 'other',
+      paymentCompleted: false,
+      currentPlan: 'free',
+      currentCredits: 5
     };
 
-    mockDB.users.push(newUser);
+    let newUser = null;
+    let userId = null;
 
-    // Save data to files
-    saveDataToFiles('user_created');
+    // Try to save to MongoDB first
+    try {
+      console.log('💾 Attempting to save user to MongoDB...');
+      newUser = new User(newUserData);
+      await newUser.save();
+      userId = newUser._id;
+      console.log(`✅ New user saved to MongoDB: ${email} (ID: ${userId})`);
+    } catch (dbError) {
+      console.log('❌ MongoDB save failed, using file-based storage...');
+      console.log('MongoDB Save Error:', dbError.message);
+      // Fallback to file-based storage
+      newUser = {
+        id: mockDB.users.length + 1,
+        ...newUserData,
+        name: `${firstName} ${lastName}`,
+        createdAt: new Date().toISOString()
+      };
+      mockDB.users.push(newUser);
+      userId = newUser.id;
+      saveDataToFiles('user_created');
+      console.log(`✅ New user saved to file: ${email} (ID: ${userId})`);
+    }
 
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: newUser.id,
-        email: newUser.email, 
-        name: newUser.name,
+      {
+        id: userId,
+        email: newUser.email,
+        name: newUser.name || `${firstName} ${lastName}`,
         role: newUser.role
       },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
+    console.log(`🎉 Account created successfully: ${email}`);
+
     res.status(201).json({
       success: true,
       message: 'Account created successfully',
       token,
       user: {
+        id: userId,
         email: newUser.email,
-        name: newUser.name,
+        name: newUser.name || `${firstName} ${lastName}`,
         role: newUser.role
       }
     });
 
   } catch (error) {
-    console.error('Create account error:', error);
+    console.error('❌ Create account error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error' });
   }
 });
