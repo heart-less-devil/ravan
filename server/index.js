@@ -104,7 +104,7 @@ app.get('/api/test-mongodb', async (req, res) => {
       firstName: 'Test',
       lastName: 'User',
       email: 'mongodb-test@example.com',
-      password: 'test123',
+      password: 'testpassword123', // Fixed: 8+ characters
       company: 'BioPing',
       role: 'other',
       paymentCompleted: false,
@@ -178,23 +178,32 @@ const upload = multer({
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Email configuration with better Gmail setup
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-    pass: process.env.EMAIL_PASS || ''
-  }
-});
+let transporter = null;
 
-// Verify transporter configuration
-transporter.verify(function(error, success) {
-  if (error) {
-    console.log('❌ Email configuration error:', error);
-    console.log('🔧 Please check your Gmail app password');
-  } else {
-    console.log('✅ Email server is ready to send messages');
-  }
-});
+try {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+      pass: process.env.EMAIL_PASS || ''
+    }
+  });
+
+  // Verify transporter configuration
+  transporter.verify(function(error, success) {
+    if (error) {
+      console.log('❌ Email configuration error:', error.message);
+      console.log('🔧 Email functionality will be disabled');
+      transporter = null; // Disable email functionality
+    } else {
+      console.log('✅ Email server is ready to send messages');
+    }
+  });
+} catch (error) {
+  console.log('❌ Email configuration failed:', error.message);
+  console.log('🔧 Email functionality will be disabled');
+  transporter = null; // Disable email functionality
+}
 
 // Email templates
 const emailTemplates = {
@@ -453,6 +462,14 @@ app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
 // Test email configuration
 app.get('/api/test-email', async (req, res) => {
   try {
+    if (!transporter) {
+      return res.status(503).json({
+        success: false,
+        message: 'Email service is not configured',
+        error: 'Transporter is null'
+      });
+    }
+
     const testMailOptions = {
       from: process.env.EMAIL_USER || 'your-email@gmail.com',
       to: req.query.email || 'test@example.com',
@@ -509,6 +526,20 @@ app.post('/api/auth/send-verification', [
 
     // Send email with verification code
     try {
+      if (!transporter) {
+        console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
+        console.log(`📧 Email service not configured, but code is: ${verificationCode}`);
+        
+        // Return success with the code in response for development
+        res.json({
+          success: true,
+          message: 'Verification code generated (email service not configured)',
+          verificationCode: verificationCode, // Include code in response
+          emailError: 'Email service not configured'
+        });
+        return;
+      }
+
       const mailOptions = {
         from: process.env.EMAIL_USER || 'your-email@gmail.com',
         to: email,
