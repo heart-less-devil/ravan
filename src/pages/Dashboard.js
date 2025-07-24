@@ -2799,24 +2799,6 @@ const PricingPage = () => {
 
   const plans = [
     {
-      id: 'test',
-      name: "Test Plan",
-      description: "Perfect for testing payment system",
-      credits: "1 credit per month",
-      monthlyPrice: 1,
-      annualPrice: 12,
-      features: [
-        "✅ 1 Contact Search per month",
-        "✅ Basic company information",
-        "✅ Test payment system",
-        "✅ Full access for testing",
-        "✅ Email support"
-      ],
-      icon: Star,
-      popular: false,
-      color: 'yellow'
-    },
-    {
       id: 'free',
       name: "Free",
       description: "Perfect for getting started",
@@ -2840,7 +2822,7 @@ const PricingPage = () => {
       description: "Ideal for growing businesses",
       credits: "50 credits per month",
       monthlyPrice: 500,
-      annualPrice: null, // Remove annual option
+      annualPrice: 4800, // Monthly and yearly both available
       features: [
         "1 Seat included",
         "Get 50 free contacts / month",

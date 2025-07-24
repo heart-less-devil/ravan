@@ -3065,16 +3065,45 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       // Update user payment status in database if registered customer
       if (customerType === 'registered' && paymentIntent.metadata?.userEmail) {
         try {
+          // Try to update in MongoDB first
+          const User = require('./models/User');
+          const updatedUser = await User.findOneAndUpdate(
+            { email: paymentIntent.metadata.userEmail },
+            {
+              paymentCompleted: true,
+              currentPlan: paymentIntent.metadata.planId || 'monthly',
+              paymentUpdatedAt: new Date(),
+              currentCredits: paymentIntent.metadata.planId === 'basic' ? 50 : 
+                             paymentIntent.metadata.planId === 'premium' ? 100 : 5
+            },
+            { new: true }
+          );
+          
+          if (updatedUser) {
+            console.log('✅ User payment status updated in MongoDB:', paymentIntent.metadata.userEmail);
+          } else {
+            console.log('⚠️ User not found in MongoDB, updating file storage...');
+            // Fallback to file-based storage
+            const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
+            if (userIndex !== -1) {
+              mockDB.users[userIndex].paymentCompleted = true;
+              mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
+              mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+              saveDataToFiles('payment_succeeded');
+              console.log('✅ User payment status updated in file storage');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error updating user payment status:', error);
+          // Fallback to file-based storage
           const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
           if (userIndex !== -1) {
             mockDB.users[userIndex].paymentCompleted = true;
             mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
             mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
-            saveDataToFiles();
-            console.log('User payment status updated in database');
+            saveDataToFiles('payment_succeeded');
+            console.log('✅ User payment status updated in file storage (fallback)');
           }
-        } catch (error) {
-          console.error('Error updating user payment status:', error);
         }
       }
       
