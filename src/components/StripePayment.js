@@ -22,10 +22,15 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
     setError(null);
 
     if (!stripe || !elements) {
+      setError('Stripe not loaded. Please refresh the page.');
+      onError && onError('Stripe not loaded. Please refresh the page.');
+      setLoading(false);
       return;
     }
 
     try {
+      console.log('Creating payment intent...', { amount, planId: plan.id, isAnnual });
+      
       // Create payment intent for subscription
       const response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
         method: 'POST',
@@ -40,7 +45,25 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         }),
       });
 
-      const { clientSecret } = await response.json();
+      console.log('Payment intent response status:', response.status);
+      console.log('Payment intent response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Payment intent error response:', errorData);
+        throw new Error(`Payment intent failed: ${response.status} ${errorData}`);
+      }
+
+      const responseData = await response.json();
+      console.log('Payment intent response data:', responseData);
+
+      if (!responseData.clientSecret) {
+        throw new Error('No client secret received from server');
+      }
+
+      const { clientSecret } = responseData;
+
+      console.log('Confirming payment with client secret...');
 
       // Confirm payment
       const { error: paymentError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
@@ -49,13 +72,18 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         },
       });
 
+      console.log('Payment confirmation result:', { paymentError, paymentIntent });
+
       if (paymentError) {
+        console.error('Payment confirmation error:', paymentError);
         setError(paymentError.message);
         onError && onError(paymentError.message);
       } else {
+        console.log('Payment successful:', paymentIntent);
         onSuccess && onSuccess(paymentIntent);
       }
     } catch (err) {
+      console.error('Payment process error:', err);
       setError('Payment failed. Please try again.');
       onError && onError('Payment failed. Please try again.');
     } finally {

@@ -27,8 +27,25 @@ app.use(cors({
     'https://thebioping.com',
     'https://www.thebioping.com'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Additional CORS headers for preflight requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://thebioping.com');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 app.use(express.json());
 
 // Configure multer for file uploads
@@ -2590,7 +2607,11 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
 // Stripe Payment Routes
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
+    console.log('Payment intent request received:', req.body);
     const { amount, currency = 'usd', planId, isAnnual } = req.body;
+
+    console.log('Stripe secret key available:', !!process.env.STRIPE_SECRET_KEY);
+    console.log('Processing payment for:', { amount, planId, isAnnual });
 
     // Define price IDs for different plans and billing cycles
     const priceIds = {
@@ -2612,6 +2633,8 @@ app.post('/api/create-payment-intent', async (req, res) => {
     let customer = null;
     const customerEmail = req.body.customerEmail;
     
+    console.log('Customer email:', customerEmail);
+    
     if (customerEmail) {
       // Try to find existing customer
       const existingCustomers = await stripe.customers.list({
@@ -2621,6 +2644,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
       
       if (existingCustomers.data.length > 0) {
         customer = existingCustomers.data[0];
+        console.log('Found existing customer:', customer.id);
       } else {
         // Create new customer
         customer = await stripe.customers.create({
@@ -2630,8 +2654,11 @@ app.post('/api/create-payment-intent', async (req, res) => {
             isAnnual: isAnnual ? 'true' : 'false'
           }
         });
+        console.log('Created new customer:', customer.id);
       }
     }
+
+    console.log('Creating payment intent with amount:', amount * 100);
 
     // Create payment intent with customer (if available) or as guest
     const paymentIntent = await stripe.paymentIntents.create({
@@ -2649,12 +2676,14 @@ app.post('/api/create-payment-intent', async (req, res) => {
       },
     });
 
+    console.log('Payment intent created successfully:', paymentIntent.id);
+
     res.json({
       clientSecret: paymentIntent.client_secret
     });
   } catch (error) {
     console.error('Payment intent error:', error);
-    res.status(500).json({ error: 'Payment failed' });
+    res.status(500).json({ error: 'Payment failed', details: error.message });
   }
 });
 
