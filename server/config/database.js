@@ -29,7 +29,7 @@ const connectDB = async () => {
         
         const newUser = new User({
           firstName: email.split('@')[0],
-          lastName: '',
+          lastName: 'User', // Fixed: Added proper lastName
           email: email,
           password: hashedPassword,
           company: 'BioPing',
