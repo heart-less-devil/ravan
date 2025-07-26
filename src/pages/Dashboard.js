@@ -2,7 +2,7 @@ import React, { useState, useEffect, Fragment } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
-import PDFViewer from '../components/PDFViewer';
+import SecurePDFViewer from '../components/SecurePDFViewer';
 import BDTrackerPage from './BDTrackerPage';
 import StripePayment from '../components/StripePayment';
 import { 
@@ -2320,7 +2320,7 @@ const FreeContent = ({ user }) => {
         views: 1856,
         rating: 4.9,
         featured: true,
-        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+        pdfUrl: '/pdf/BD Conferences, Priority & Budgets.pdf'
       }
     ]
   };
@@ -2463,7 +2463,7 @@ const FreeContent = ({ user }) => {
       
       {/* PDF Viewer Modal */}
       {selectedPDF && (
-        <PDFViewer
+        <SecurePDFViewer
           pdfUrl={selectedPDF.pdfUrl}
           title={selectedPDF.title}
           onClose={() => setSelectedPDF(null)}

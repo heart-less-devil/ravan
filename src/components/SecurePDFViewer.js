@@ -4,8 +4,8 @@ import { X, ZoomIn, ZoomOut, RotateCw, Eye, Shield, Lock, User, Clock, AlertCirc
 import * as pdfjsLib from 'pdfjs-dist';
 import './SecurePDFViewer.css';
 
-// Set up PDF.js worker - use local file
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Set up PDF.js worker - use CDN for better compatibility
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
   // Security Features Summary:
@@ -23,8 +23,6 @@ const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
   const [pdfDocument, setPdfDocument] = useState(null);
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -34,44 +32,45 @@ const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
   const [preferIframe, setPreferIframe] = useState(true); // Start with iframe to avoid PDF.js issues
   const [securityAlert, setSecurityAlert] = useState('');
   const [showAlert, setShowAlert] = useState(false);
+  const [allPagesRendered, setAllPagesRendered] = useState(false);
+  const [isRendering, setIsRendering] = useState(false);
 
   // Generate watermark text with user ID and timestamp
   useEffect(() => {
     const timestamp = new Date().toISOString();
-    const watermark = `USER: ${userId || 'GUEST'} | ${timestamp} | SECURED CONTENT`;
+    const watermark = `USER: ${userId || 'GUEST'} | ${timestamp}`;
     setWatermarkText(watermark);
   }, [userId]);
 
-  // Load PDF using PDF.js or iframe fallback
+  // Load PDF using PDF.js with enhanced canvas rendering
   useEffect(() => {
     const loadPDF = async () => {
       try {
         setIsLoading(true);
+        setAllPagesRendered(false);
         
-        // If we prefer iframe or PDF.js is not available, use iframe directly
-        if (preferIframe || !pdfjsAvailable) {
-          console.log('Using iframe fallback directly');
-          setUseFallback(true);
-          setIsLoading(false);
-          return;
-        }
+        console.log('Loading PDF with enhanced canvas rendering...');
         
-        console.log('Attempting to load PDF with PDF.js...');
+        // Use a more compatible approach for Chrome
+        const loadingTask = pdfjsLib.getDocument({
+          url: pdfUrl,
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+          cMapPacked: true,
+          standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'
+        });
         
-        // Load PDF document
-        const loadingTask = pdfjsLib.getDocument(pdfUrl);
         const pdf = await loadingTask.promise;
         setPdfDocument(pdf);
-        setTotalPages(pdf.numPages);
         
-        // Render first page
-        await renderPage(pdf, 1);
+        // Render all pages at once for better security
+        await renderAllPages(pdf);
         setIsLoading(false);
+        setAllPagesRendered(true);
       } catch (error) {
         console.error('Error loading PDF:', error);
         setIsLoading(false);
         
-        // If PDF.js fails, immediately use iframe fallback
+        // If PDF.js fails, use iframe fallback
         console.log('PDF.js failed, using iframe fallback');
         setPdfjsAvailable(false);
         setUseFallback(true);
@@ -80,35 +79,61 @@ const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
     };
 
     loadPDF();
-  }, [pdfUrl, preferIframe, pdfjsAvailable]);
+  }, [pdfUrl]);
 
-  // Render PDF page
-  const renderPage = async (pdf, pageNumber) => {
+  // Render all pages for enhanced security
+  const renderAllPages = async (pdf) => {
+    if (isRendering) return; // Prevent multiple simultaneous renders
+    
+    const container = containerRef.current;
+    if (!container) return;
+
+    setIsRendering(true);
+    
     try {
-      const page = await pdf.getPage(pageNumber);
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
+      // Clear existing content completely
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
 
-      const viewport = page.getViewport({ scale: scale });
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        try {
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: scale });
 
-      const renderContext = {
-        canvasContext: context,
-        viewport: viewport
-      };
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
 
-      await page.render(renderContext).promise;
-      setCurrentPage(pageNumber);
-    } catch (error) {
-      console.error('Error rendering page:', error);
-    }
-  };
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          canvas.style.display = 'block';
+          canvas.style.margin = '0 auto 20px auto';
+          canvas.style.width = '100%';
+          canvas.style.height = 'auto';
+          canvas.style.border = '1px solid #eee';
+          canvas.style.maxWidth = '100%';
+          canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
 
-  // Navigate to specific page
-  const goToPage = async (pageNumber) => {
-    if (pageNumber >= 1 && pageNumber <= totalPages && pdfDocument) {
-      await renderPage(pdfDocument, pageNumber);
+          // Add security attributes
+          canvas.setAttribute('data-secure', 'true');
+          canvas.style.userSelect = 'none';
+          canvas.style.webkitUserSelect = 'none';
+          canvas.style.mozUserSelect = 'none';
+          canvas.style.msUserSelect = 'none';
+
+          const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+          };
+
+          await page.render(renderContext).promise;
+          container.appendChild(canvas);
+        } catch (error) {
+          console.error(`Error rendering page ${pageNum}:`, error);
+        }
+      }
+    } finally {
+      setIsRendering(false);
     }
   };
 
@@ -346,30 +371,29 @@ const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
   const handleZoomIn = () => {
     const newScale = Math.min(scale + 0.2, 3);
     setScale(newScale);
-    if (pdfDocument) {
-      renderPage(pdfDocument, currentPage);
-    }
   };
 
   const handleZoomOut = () => {
     const newScale = Math.max(scale - 0.2, 0.5);
     setScale(newScale);
-    if (pdfDocument) {
-      renderPage(pdfDocument, currentPage);
-    }
   };
 
   const handleRotate = () => {
-    setRotation(prev => prev + 90);
+    setRotation(rotation + 90);
   };
 
   const handleReset = () => {
     setScale(1);
     setRotation(0);
-    if (pdfDocument) {
-      renderPage(pdfDocument, currentPage);
-    }
   };
+
+  // Re-render all pages when scale or pdfDocument changes
+  useEffect(() => {
+    if (pdfDocument) {
+      renderAllPages(pdfDocument);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale, pdfDocument]);
 
   return (
     <AnimatePresence>
@@ -399,29 +423,6 @@ const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Page Navigation */}
-              {totalPages > 0 && (
-                <div className="flex items-center space-x-2 mr-4">
-                  <button
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage <= 1}
-                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
-                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
-              
               {/* Zoom Controls */}
               <button
                 onClick={handleZoomOut}
@@ -468,99 +469,11 @@ const SecurePDFViewer = ({ pdfUrl, onClose, title, userId }) => {
           </div>
 
           {/* PDF Container */}
-          <div className="flex-1 overflow-hidden relative" ref={containerRef}>
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading PDF...</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Loading indicator only */}
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading PDF...</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Security notice */}
-            {!isLoading && (
-              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium z-50">
-                <div className="flex items-center space-x-2">
-                  <Shield className="w-4 h-4" />
-                  <span>Website Only Access</span>
-                </div>
-              </div>
-            )}
-            
-            {/* Security alert */}
-            {showAlert && (
-              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-3 rounded-lg text-sm font-medium z-50 animate-pulse">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{securityAlert}</span>
-                </div>
-              </div>
-            )}
-            
-            <div className="h-full overflow-auto bg-gray-100 p-4">
-              <div 
-                className="bg-white shadow-lg mx-auto relative"
-                style={{
-                  transform: `rotate(${rotation}deg)`,
-                  transformOrigin: 'center',
-                  transition: 'transform 0.3s ease'
-                }}
-              >
-                {/* PDF Canvas */}
-                {!useFallback ? (
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full h-auto border-0"
-                    style={{
-                      pointerEvents: 'auto',
-                      userSelect: 'none',
-                      webkitUserSelect: 'none',
-                      imageRendering: 'crisp-edges',
-                      textRendering: 'optimizeLegibility'
-                    }}
-                  />
-                ) : (
-                  /* Fallback iframe for basic PDF viewing */
-                  <iframe
-                    src={pdfUrl}
-                    className="w-full h-[800px] border-0"
-                    style={{
-                      pointerEvents: 'auto',
-                      userSelect: 'none',
-                      webkitUserSelect: 'none'
-                    }}
-                    sandbox="allow-same-origin allow-scripts allow-forms"
-                    referrerPolicy="no-referrer"
-                  />
-                )}
-                
-                {/* Security overlay with watermark */}
-                <div className="absolute inset-0 pointer-events-none security-overlay">
-                  <div className="absolute inset-0 watermark-grid"></div>
-                  <div className="absolute top-4 left-4 text-xs text-red-600 font-mono opacity-30">
-                    {watermarkText}
-                  </div>
-                  <div className="absolute bottom-4 right-4 text-xs text-red-600 font-mono opacity-30">
-                    {watermarkText}
-                  </div>
-                </div>
-                
-                {/* Security mode overlay */}
-                <div className="absolute inset-0 pointer-events-none security-mode-overlay"></div>
-              </div>
-            </div>
-          </div>
+          <div
+            ref={containerRef}
+            className="h-full overflow-auto bg-gray-100 p-4"
+            style={{ minHeight: '600px', width: '100%' }}
+          />
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200 bg-gray-50">

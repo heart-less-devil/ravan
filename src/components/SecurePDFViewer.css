@@ -7,6 +7,14 @@
   -ms-user-select: none;
   user-select: none;
   position: relative;
+  scroll-behavior: smooth;
+  overflow-y: auto;
+}
+
+/* Smooth scrolling for PDF content */
+.secure-pdf-container canvas {
+  transition: all 0.3s ease;
+  border-radius: 4px;
 }
 
 /* Disable all text selection */
@@ -63,13 +71,13 @@
 /* Watermark grid pattern */
 .watermark-grid {
   background-image: 
-    linear-gradient(45deg, rgba(255, 0, 0, 0.05) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 0, 0, 0.05) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255, 0, 0, 0.05) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255, 0, 0, 0.05) 75%);
+    linear-gradient(45deg, rgba(255, 0, 0, 0.02) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 0, 0, 0.02) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 0, 0, 0.02) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 0, 0, 0.02) 75%);
   background-size: 20px 20px;
   background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-  opacity: 0.3;
+  opacity: 0.1;
 }
 
 /* Security mode overlay - activated during security events */
@@ -104,7 +112,7 @@
 
 /* Additional watermark text */
 .security-overlay::before {
-  content: "SECURED CONTENT";
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
