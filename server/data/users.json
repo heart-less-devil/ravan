@@ -37,16 +37,41 @@
   },
   {
     "id": 4,
-    "firstName": "universalx0242",
+    "firstName": "universal0242",
     "lastName": "",
     "email": "universalx0242@gmail.com",
     "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
-    "name": "universalx0242",
+    "name": "universal0242",
     "role": "user",
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "test",
-    "currentCredits": 1
+    "currentCredits": 0,
+    "lastCreditRenewal": "2025-08-01T20:37:34.589Z",
+    "nextCreditRenewal": "2025-08-31T20:37:34.589Z",
+    "company": "Company",
+    "invoices": [
+      {
+        "id": "INV-001",
+        "amount": 1,
+        "currency": "USD",
+        "status": "paid",
+        "date": "2025-08-01T22:55:19.528Z",
+        "description": "Test Plan - $1.00",
+        "plan": "Test Plan"
+      }
+    ],
+    "paymentHistory": [
+      {
+        "id": "PAY-001",
+        "amount": 1,
+        "currency": "USD",
+        "status": "completed",
+        "date": "2025-08-01T22:55:19.528Z",
+        "description": "Test Plan Payment",
+        "plan": "Test Plan"
+      }
+    ]
   },
   {
     "id": 5,
@@ -86,5 +111,19 @@
     "paymentCompleted": false,
     "currentPlan": "free",
     "currentCredits": 5
+  },
+  {
+    "id": 8,
+    "firstName": "aman",
+    "lastName": "k",
+    "email": "nishax03261@gmail.com",
+    "password": "$2a$10$WATRYGng8GMKxV6CD9m8z.5907lT5X2/xfaf5p7pispTMdnJ4iopW",
+    "company": "BioPing",
+    "role": "other",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5,
+    "name": "aman k",
+    "createdAt": "2025-08-01T22:32:38.187Z"
   }
 ]

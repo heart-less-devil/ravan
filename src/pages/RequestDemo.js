@@ -96,7 +96,7 @@ const RequestDemo = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <h1 className="hero-title mb-6">
+            <h1 className="text-4xl font-bold text-gray-900 mb-6">
               Request a <span className="gradient-text">Demo</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -117,7 +117,7 @@ const RequestDemo = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="section-title mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-8">
                 Schedule Your Demo
               </h2>
               
@@ -307,7 +307,7 @@ const RequestDemo = () => {
               className="space-y-8"
             >
               <div>
-                <h2 className="section-title mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-8">
                   What to Expect
                 </h2>
                 <p className="text-lg text-gray-600 mb-8">
@@ -346,7 +346,7 @@ const RequestDemo = () => {
                 transition={{ duration: 0.6, delay: 0.7 }}
                 className="bg-gradient-to-br from-primary-600 to-secondary-500 rounded-2xl p-8 text-white"
               >
-                <h3 className="text-2xl font-bold mb-4">
+                <h3 className="text-xl font-bold mb-4">
                   Demo Agenda
                 </h3>
                 <div className="space-y-3">
@@ -390,7 +390,7 @@ const RequestDemo = () => {
             transition={{ duration: 0.6 }}
             className="max-w-3xl mx-auto"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6">
               Ready to See BioPing in Action?
             </h2>
             <p className="text-xl text-white/90 mb-8">

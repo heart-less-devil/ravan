@@ -62,12 +62,13 @@ const Pricing = () => {
         "1 Seat included",
         "Get 50 free contacts / month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources"
+        "Unlimited Access to Free Resources",
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Users,
       popular: false,
       buttonText: "Choose plan",
-      buttonStyle: "outline"
+      buttonStyle: "primary"
     },
     {
       id: 'premium',
@@ -81,7 +82,8 @@ const Pricing = () => {
         "1 Seat included",
         "Get 100 free contacts / month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources"
+        "Unlimited Access to Free Resources",
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
@@ -198,12 +200,12 @@ const Pricing = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="text-center mb-14"
           >
-            <h1 className="hero-title mb-6">
+            <h1 className="text-5xl font-bold text-gray-900 mb-2">
               Simple, Transparent <span className="gradient-text">Pricing</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
               Choose the plan that best fits your business needs. All plans include 
               our core features with different usage limits and additional capabilities.
             </p>
@@ -236,7 +238,7 @@ const Pricing = () => {
       </section>
 
       {/* Pricing Cards */}
-      <section className="section bg-white">
+      <section className="section bg-white -mt-36">
         <div className="container-custom">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {plans.map((plan, index) => (
@@ -256,7 +258,7 @@ const Pricing = () => {
                   </div>
                 )}
                 
-                <div className={`card p-8 h-full ${plan.popular ? 'border-2 border-orange-500 shadow-large' : 'border border-gray-200'}`}>
+                <div className={`card p-8 h-full bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 shadow-large`}>
                   <div className="text-center mb-8">
                     <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                       <plan.icon className="w-8 h-8 text-primary-600" />
@@ -284,7 +286,7 @@ const Pricing = () => {
                     {plan.features.map((feature, featureIndex) => (
                       <div key={featureIndex} className="flex items-start space-x-3">
                         <Check className="w-5 h-5 text-accent-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700 text-sm">{feature}</span>
+                        <span className="text-gray-700 text-base">{feature}</span>
                       </div>
                     ))}
                   </div>
@@ -314,7 +316,7 @@ const Pricing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="section bg-gradient-to-br from-gray-50 to-primary-50/20">
+      <section className="section bg-gradient-to-br from-gray-50 to-primary-50/20 -mt-20">
         <div className="container-custom">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -356,7 +358,7 @@ const Pricing = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="section bg-white">
+      <section className="section bg-white -mt-16">
         <div className="container-custom">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

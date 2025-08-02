@@ -12,14 +12,14 @@ const Home = () => {
     {
       icon: Building2,
       number: "500+",
-      label: "Biotech Companies",
+      label: "Pharma & Biotech's",
       description: "Leading biotech and pharma companies"
     },
     {
       icon: HeartHandshake,
-      number: "2500+",
-      label: "BD Contacts",
-      description: "Validated business development contacts"
+      number: "5000+",
+      label: "BD and Other Contacts",
+      description: "Validated contacts from 1:1 mtgs"
     },
     {
       icon: Heart,
@@ -186,7 +186,7 @@ const Home = () => {
         {/* Grid pattern overlay */}
         <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
-        <div className="container-custom text-center relative z-10">
+        <div className="container-custom text-center relative z-10 -mt-56 ">
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -198,7 +198,7 @@ const Home = () => {
               variants={itemVariants}
               className="mb-0"
             >
-              <div className="flex justify-center mb-4">
+              <div className="flex justify-center mb-0">
                 <img 
                   src="/image.png" 
                   alt="BioPing Logo" 
@@ -209,18 +209,18 @@ const Home = () => {
                   }}
                 />
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold text-blue-900 mb-6">
+              <h1 className="text-5xl md:text-6xl font-bold text-blue-900 mb-2 -mt-16">
                 Your <span className="text-orange-400">Trusted</span> BD Partner
               </h1>
-              <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed">
-                Our Mission - To empower the life sciences industry achieve <span className="font-bold">smarter outreach, better partners, and faster deals</span> - through validated BD and investor contacts that drive real results.
+              <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed mb-12">
+                Empowering life sciences teams to connect smarter, partner better, and close deals faster—through verified BD and investor contacts that deliver real results.
               </p>
             </motion.div>
             
             {/* CTA Buttons */}
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
+              className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-6 "
             >
               <Link to="/request-demo">
                 <motion.button
@@ -245,36 +245,19 @@ const Home = () => {
               </Link>
             </motion.div>
 
-            {/* Trust Indicators */}
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-wrap justify-center items-center gap-8 text-gray-500"
-            >
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-accent-500" />
-                <span className="text-sm font-medium">15+ Years Industry Experience</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-accent-500" />
-                <span className="text-sm font-medium">500+ Biotech Companies</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-accent-500" />
-                <span className="text-sm font-medium">2500+ Validated Contacts</span>
-              </div>
-            </motion.div>
+
           </motion.div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="section bg-white py-20">
+      <section className="section bg-white py-2 -mt-12">
         <div className="container-custom">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
           >
             {stats.map((stat, index) => (
               <motion.div
@@ -336,95 +319,14 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="section bg-gradient-to-br from-gray-50 to-primary-50/20 py-20">
-        <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              What Our Clients Say
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Join hundreds of biotech companies who trust BioPing for their business development needs
-            </p>
-          </motion.div>
 
-          <div className="relative max-w-4xl mx-auto">
-            <motion.div
-              key={activeTestimonial}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="bg-white rounded-3xl p-8 shadow-large border border-gray-100"
-            >
-              <div className="flex items-start space-x-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {testimonials[activeTestimonial].avatar}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-1 mb-4">
-                    {[...Array(testimonials[activeTestimonial].rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <blockquote className="text-lg text-gray-700 mb-6 leading-relaxed">
-                    "{testimonials[activeTestimonial].content}"
-                  </blockquote>
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {testimonials[activeTestimonial].name}
-                    </div>
-                    <div className="text-gray-600">
-                      {testimonials[activeTestimonial].role}
-                    </div>
-                    <div className="text-primary-600 font-medium">
-                      {testimonials[activeTestimonial].company}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Navigation */}
-            <div className="flex justify-center space-x-4 mt-8">
-              <button
-                onClick={prevTestimonial}
-                className="w-12 h-12 bg-white rounded-full shadow-soft flex items-center justify-center hover:shadow-medium transition-all duration-200"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <div className="flex space-x-2">
-                {testimonials.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveTestimonial(index)}
-                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                      index === activeTestimonial ? 'bg-primary-600' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={nextTestimonial}
-                className="w-12 h-12 bg-white rounded-full shadow-soft flex items-center justify-center hover:shadow-medium transition-all duration-200"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
 
 
 
 
       {/* Benefits Section */}
-      <section className="section bg-white py-20">
+      <section className="section bg-white py-12">
         <div className="container-custom">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <motion.div
@@ -470,7 +372,7 @@ const Home = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Network Access</h3>
-                      <p className="text-gray-600">Connect with verified BD contacts</p>
+                      <p className="text-gray-600">Connect with verified BD, R&D and other contacts</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -478,8 +380,8 @@ const Home = () => {
                       <Award className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Industry Expertise</h3>
-                      <p className="text-gray-600"></p>
+                      <h3 className="text-lg font-semibold text-gray-900">Deal Smarter</h3>
+                      <p className="text-gray-600">Expert BD Tools, Tips & Strategy That Actually Work</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
@@ -487,8 +389,26 @@ const Home = () => {
                       <Zap className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Fast Results</h3>
-                      <p className="text-gray-600">Accelerate your BD process</p>
+                      <h3 className="text-lg font-semibold text-gray-900">BD at Speed</h3>
+                      <p className="text-gray-600">Precision strategy and high-value contacts to move fast</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-teal-600 rounded-xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Track Outreach, Close Faster</h3>
+                      <p className="text-gray-600">Log BD outreach, track and follow-up – all in one file</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
+                      <Star className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">1:1 BD Support from Deal Pro</h3>
+                      <p className="text-gray-600">BD expert shares tips – 15+ years & $20B+ in deals</p>
                     </div>
                   </div>
                 </div>

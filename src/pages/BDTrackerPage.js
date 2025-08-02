@@ -41,8 +41,9 @@ const BDTrackerPage = () => {
     cda: '',
     feedback: '',
     nextSteps: '',
-    timelines: '',
-    reminders: ''
+    priority: '',
+    followUp: '',
+    projectName: ''
   });
 
   // Load data from backend on component mount
@@ -196,8 +197,28 @@ const BDTrackerPage = () => {
   };
 
   const handleDownloadExcel = () => {
-    // Implementation for Excel download
-    alert('Excel download functionality will be implemented');
+    // Get project name from user
+    const projectName = prompt('Enter project name for the Excel file:');
+    if (!projectName) return;
+    
+    // Create CSV content
+    const headers = columns.map(col => col.label).join(',');
+    const rows = filteredEntries.map(entry => 
+      columns.map(col => `"${entry[col.key] || ''}"`).join(',')
+    ).join('\n');
+    
+    const csvContent = `${headers}\n${rows}`;
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName}_BD_Tracker_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const filteredEntries = entries.filter(entry => {
@@ -219,21 +240,22 @@ const BDTrackerPage = () => {
     if (filterStatus === 'with-cda' && entry.cda && entry.cda.toLowerCase() === 'yes') return matchesSearch;
     if (filterStatus === 'without-cda' && entry.cda && entry.cda.toLowerCase() === 'no') return matchesSearch;
     if (filterStatus === 'pending' && (!entry.feedback || entry.feedback.trim() === '')) return matchesSearch;
+    if (filterStatus === 'high-priority' && entry.priority && entry.priority.toLowerCase() === 'high') return matchesSearch;
     
     return false; // Don't show entries that don't match any filter
   });
 
   const columns = [
     { key: 'company', label: 'Company', icon: Building },
-    { key: 'programPitched', label: 'Program Pitched', icon: FileSpreadsheet },
+    { key: 'programPitched', label: 'Program', icon: FileSpreadsheet },
     { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },
     { key: 'contactFunction', label: 'Contact Function', icon: User },
     { key: 'contactPerson', label: 'Contact Person', icon: User },
-    { key: 'cda', label: 'CDA (Yes or No)', icon: CheckCircle },
+    { key: 'cda', label: 'CDA', icon: CheckCircle },
     { key: 'feedback', label: 'Feedback', icon: MessageSquare },
     { key: 'nextSteps', label: 'Next Steps', icon: ArrowRight },
-    { key: 'timelines', label: 'Timelines to Remember', icon: Clock },
-    { key: 'reminders', label: 'Reminders', icon: Bell }
+    { key: 'priority', label: 'Priority', icon: AlertCircle },
+    { key: 'followUp', label: 'Follow Up', icon: Clock }
   ];
 
   if (loading) {
@@ -251,7 +273,7 @@ const BDTrackerPage = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <Link to="/dashboard" className="text-gray-500 hover:text-gray-700">
@@ -287,7 +309,7 @@ const BDTrackerPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-4 py-8">
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -312,6 +334,7 @@ const BDTrackerPage = () => {
               <option value="with-cda">With CDA</option>
               <option value="without-cda">Without CDA</option>
               <option value="pending">Pending Feedback</option>
+              <option value="high-priority">High Priority</option>
             </select>
           </div>
           
@@ -324,6 +347,7 @@ const BDTrackerPage = () => {
                 {filterStatus === 'with-cda' && 'Showing entries with CDA'}
                 {filterStatus === 'without-cda' && 'Showing entries without CDA'}
                 {filterStatus === 'pending' && 'Showing entries pending feedback'}
+                {filterStatus === 'high-priority' && 'Showing high priority entries'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -349,6 +373,22 @@ const BDTrackerPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Project Name:</strong> {formData.projectName || 'Not set'}
+                <button 
+                  onClick={() => {
+                    const projectName = prompt('Enter project name:');
+                    if (projectName) {
+                      setFormData(prev => ({ ...prev, projectName }));
+                    }
+                  }}
+                  className="ml-2 text-blue-600 underline hover:text-blue-800"
+                >
+                  {formData.projectName ? 'Change' : 'Set Project Name'}
+                </button>
+              </p>
+            </div>
             
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {columns.map((column) => (
@@ -365,6 +405,17 @@ const BDTrackerPage = () => {
                       <option value="">Select...</option>
                       <option value="Yes">Yes</option>
                       <option value="No">No</option>
+                    </select>
+                  ) : column.key === 'priority' ? (
+                    <select
+                      value={formData[column.key]}
+                      onChange={(e) => handleInputChange(column.key, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select...</option>
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
                     </select>
                   ) : (
                     <input
@@ -451,6 +502,17 @@ const BDTrackerPage = () => {
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>
                             </select>
+                          ) : column.key === 'priority' ? (
+                            <select
+                              value={formData[column.key]}
+                              onChange={(e) => handleInputChange(column.key, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value="">Select...</option>
+                              <option value="High">High</option>
+                              <option value="Medium">Medium</option>
+                              <option value="Low">Low</option>
+                            </select>
                           ) : (
                             <input
                               type="text"
@@ -466,6 +528,16 @@ const BDTrackerPage = () => {
                                 entry[column.key].toLowerCase() === 'yes' 
                                   ? 'bg-green-100 text-green-800' 
                                   : 'bg-red-100 text-red-800'
+                              }`}>
+                                {entry[column.key]}
+                              </span>
+                            ) : column.key === 'priority' && entry[column.key] ? (
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                entry[column.key].toLowerCase() === 'high' 
+                                  ? 'bg-red-100 text-red-800'
+                                  : entry[column.key].toLowerCase() === 'medium'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-green-100 text-green-800'
                               }`}>
                                 {entry[column.key]}
                               </span>
@@ -538,8 +610,8 @@ const BDTrackerPage = () => {
               <span>With CDA: {entries.filter(e => e.cda?.toLowerCase() === 'yes').length}</span>
             </div>
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-600" />
-              <span>Pending Feedback: {entries.filter(e => !e.feedback).length}</span>
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <span>High Priority: {entries.filter(e => e.priority?.toLowerCase() === 'high').length}</span>
             </div>
           </div>
         </div>

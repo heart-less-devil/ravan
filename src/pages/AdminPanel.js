@@ -15,7 +15,8 @@ import {
   Filter,
   BarChart3,
   DollarSign,
-  RefreshCw
+  RefreshCw,
+  Mail
 } from 'lucide-react';
 import { API_BASE_URL, ADMIN_API_BASE_URL } from '../config';
 
@@ -34,11 +35,24 @@ const AdminPanel = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState('upload');
   const [selectedItems, setSelectedItems] = useState([]);
+  const [userActivity, setUserActivity] = useState([]);
+  const [trialData, setTrialData] = useState([]);
+  const [potentialCustomers, setPotentialCustomers] = useState([]);
+  const [consultingSessions, setConsultingSessions] = useState([]);
+  const [contactSubmissions, setContactSubmissions] = useState([]);
+  const [showPasswords, setShowPasswords] = useState(false);
 
   useEffect(() => {
     // Load data from backend
     fetchBiotechData();
+
+    
     fetchUsers();
+    fetchUserActivity();
+    fetchTrialData();
+    fetchPotentialCustomers();
+    fetchConsultingSessions();
+    fetchContactSubmissions();
   }, []);
 
   const fetchBiotechData = async () => {
@@ -105,13 +119,160 @@ const AdminPanel = () => {
       const result = await response.json();
       
       if (result.success) {
-        setUsers(result.data.users);
+        setUsers(Array.isArray(result.data.users) ? result.data.users : []);
       } else {
         throw new Error(result.message || 'Failed to fetch users');
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      // Don't set error for users, just log it
+      setError(error.message);
+    }
+  };
+
+  const fetchUserActivity = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/user-activity`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user activity');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setUserActivity(Array.isArray(result.data) ? result.data : []);
+      } else {
+        throw new Error(result.message || 'Failed to fetch user activity');
+      }
+    } catch (error) {
+      console.error('Error fetching user activity:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchTrialData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/trial-data`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch trial data');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setTrialData(Array.isArray(result.data) ? result.data : []);
+      } else {
+        throw new Error(result.message || 'Failed to fetch trial data');
+      }
+    } catch (error) {
+      console.error('Error fetching trial data:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchPotentialCustomers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/potential-customers`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch potential customers');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setPotentialCustomers(Array.isArray(result.data) ? result.data : []);
+      } else {
+        throw new Error(result.message || 'Failed to fetch potential customers');
+      }
+    } catch (error) {
+      console.error('Error fetching potential customers:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchConsultingSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/consulting-sessions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to fetch consulting sessions'}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setConsultingSessions(Array.isArray(result.sessions) ? result.sessions : []);
+      } else {
+        throw new Error(result.message || 'Failed to fetch consulting sessions');
+      }
+    } catch (error) {
+      console.error('Error fetching consulting sessions:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchContactSubmissions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/contact-submissions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to fetch contact submissions'}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setContactSubmissions(Array.isArray(result.data) ? result.data : []);
+      } else {
+        throw new Error(result.message || 'Failed to fetch contact submissions');
+      }
+    } catch (error) {
+      console.error('Error fetching contact submissions:', error);
+      setError(error.message);
     }
   };
 
@@ -314,6 +475,55 @@ const AdminPanel = () => {
     // In a real application, you would save the settings to the backend
   };
 
+  const handleViewSession = (session) => {
+    const sessionDetails = `
+Session Details:
+---------------
+User: ${session.userName}
+Email: ${session.userEmail}
+Company: ${session.userCompany}
+Date: ${new Date(session.date).toLocaleDateString()}
+Time: ${session.time}
+Topic: ${session.topic}
+Notes: ${session.notes || 'No notes'}
+Status: ${session.status}
+Created: ${new Date(session.createdAt).toLocaleString()}
+    `;
+    alert(sessionDetails);
+  };
+
+  const handleCompleteSession = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/complete-session/${sessionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to complete session'}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Session marked as completed!');
+        // Refresh the sessions list
+        fetchConsultingSessions();
+      } else {
+        throw new Error(result.message || 'Failed to complete session');
+      }
+    } catch (error) {
+      console.error('Error completing session:', error);
+      alert('Error completing session: ' + error.message);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Enhanced Header */}
@@ -510,6 +720,11 @@ const AdminPanel = () => {
                 { id: 'upload', name: 'Upload Data', icon: Upload },
                 { id: 'manage', name: 'Manage Data', icon: FileText },
                 { id: 'users', name: 'Users', icon: Users },
+                { id: 'activity', name: 'User Activity', icon: BarChart3 },
+                { id: 'trials', name: 'Trial Data', icon: RefreshCw },
+                { id: 'customers', name: 'Potential Customers', icon: Users },
+                { id: 'consulting', name: 'Consulting Sessions', icon: Users },
+                { id: 'contacts', name: 'Contact Submissions', icon: Mail },
                 { id: 'settings', name: 'Settings', icon: Settings }
               ].map((tab) => (
                 <button
@@ -728,8 +943,28 @@ const AdminPanel = () => {
               >
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-semibold text-gray-900">Registered Users</h3>
-                  <div className="text-sm text-gray-500">
-                    Total Users: {users.length}
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm text-gray-500">
+                      Total Users: {users.length}
+                    </div>
+                    <button
+                      onClick={() => setShowPasswords(!showPasswords)}
+                      className="flex items-center space-x-2 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
+                    >
+                      <span>{showPasswords ? '👁️' : '🙈'}</span>
+                      <span>{showPasswords ? 'Hide' : 'Show'} Passwords</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const passwords = users.map(u => `${u.email}: ${u.password || 'N/A'}`).join('\n');
+                        navigator.clipboard.writeText(passwords);
+                        alert('All passwords copied to clipboard!');
+                      }}
+                      className="flex items-center space-x-2 px-3 py-1 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"
+                    >
+                      <span>📋</span>
+                      <span>Copy All</span>
+                    </button>
                   </div>
                 </div>
 
@@ -746,6 +981,7 @@ const AdminPanel = () => {
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
@@ -753,7 +989,7 @@ const AdminPanel = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {users.map((user) => (
+                        {Array.isArray(users) && users.map((user) => (
                           <tr key={user.email} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">
@@ -761,6 +997,21 @@ const AdminPanel = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                                {showPasswords ? (user.password || 'N/A') : (user.password ? '••••••••' : 'N/A')}
+                              </span>
+                              <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(user.password || '');
+                                  alert('Password copied to clipboard!');
+                                }}
+                                className="ml-2 text-blue-600 hover:text-blue-800 text-xs"
+                                title="Copy password"
+                              >
+                                📋
+                              </button>
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.company}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.role}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -777,6 +1028,295 @@ const AdminPanel = () => {
                     </table>
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {activeTab === 'activity' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">User Activity & Registration</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900">Login & Registration Tracking</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Array.isArray(userActivity) && userActivity.map((activity, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {activity.userName || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{activity.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                activity.action === 'login' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {activity.action}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(activity.timestamp).toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{activity.ipAddress || 'N/A'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'trials' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Trial Management</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900">Trial Start & End Dates</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trial Start</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trial End</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Remaining</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Array.isArray(trialData) && trialData.map((trial, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {trial.userName || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{trial.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(trial.trialStart).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(trial.trialEnd).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                trial.status === 'active' ? 'bg-green-100 text-green-800' : 
+                                trial.status === 'expired' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {trial.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {trial.daysRemaining} days
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'customers' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Potential Customers</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900">Customer Details for Follow-up</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Activity</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Array.isArray(potentialCustomers) && potentialCustomers.map((customer, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {customer.firstName} {customer.lastName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.company}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{customer.phone || 'N/A'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(customer.registrationDate).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(customer.lastActivity).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <button className="text-blue-600 hover:text-blue-800 mr-2">Email</button>
+                              <button className="text-green-600 hover:text-green-800">Call</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'consulting' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">BD Consulting Sessions</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900">Scheduled and Completed Sessions</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Array.isArray(consultingSessions) && consultingSessions.map((session, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {session.userName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{session.userCompany}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(session.date).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.time}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.topic}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                session.status === 'scheduled' 
+                                  ? 'bg-yellow-100 text-yellow-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {session.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <button 
+                                onClick={() => handleViewSession(session)}
+                                className="text-blue-600 hover:text-blue-800 mr-2"
+                              >
+                                View
+                              </button>
+                              <button 
+                                onClick={() => handleCompleteSession(session.id)}
+                                className="text-green-600 hover:text-green-800"
+                              >
+                                Complete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'contacts' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Form Submissions</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900">All Contact Form Submissions</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Array.isArray(contactSubmissions) && contactSubmissions.map((submission, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {submission.name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{submission.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{submission.company}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                              {submission.message}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(submission.timestamp).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                submission.status === 'new' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {submission.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <button 
+                                onClick={() => alert(`Full Message:\n\n${submission.message}`)}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </motion.div>
             )}
 

@@ -300,16 +300,18 @@ const Login = () => {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="flex items-center justify-center mb-8"
                   >
-                    <img 
-                      src="/dfgjk.webp" 
-                      alt="BioPing Logo" 
-                      className="w-48 h-48 object-contain"
-                      onError={(e) => {
-                        console.log('Logo failed to load:', e.target.src);
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
+                    <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity duration-300">
+                      <img 
+                        src="/dfgjk.webp" 
+                        alt="BioPing Logo" 
+                        className="w-48 h-48 object-contain"
+                        onError={(e) => {
+                          console.log('Logo failed to load:', e.target.src);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    </Link>
                     <div className="w-24 h-24 bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden" style={{display: 'none'}}>
                       <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
                       <svg className="w-12 h-12 text-white relative z-10" viewBox="0 0 24 24" fill="currentColor">
@@ -531,11 +533,11 @@ const Login = () => {
                   <div className="grid grid-cols-3 gap-6 text-center">
                     <div>
                       <div className="text-3xl font-bold text-white">500+</div>
-                      <div className="text-gray-300 text-sm">Companies</div>
+                      <div className="text-gray-300 text-sm">Pharma & Biotech's</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-white">2500+</div>
-                      <div className="text-gray-300 text-sm">Contacts</div>
+                      <div className="text-3xl font-bold text-white">5000+</div>
+                      <div className="text-gray-300 text-sm">BD and Other Contacts</div>
                     </div>
                     <div>
                       <div className="text-3xl font-bold text-white">200+</div>

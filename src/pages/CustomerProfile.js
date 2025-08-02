@@ -58,11 +58,11 @@ import { API_BASE_URL } from '../config';
 
 const CustomerProfile = ({ user: propUser, onBack }) => {
   const [user, setUser] = useState({
-    name: 'Loading...',
-    email: 'Loading...',
-    company: 'Loading...',
-    role: 'Loading...',
-    avatar: 'L',
+    name: propUser?.name || 'Loading...',
+    email: propUser?.email || 'Loading...',
+    company: propUser?.company || 'Loading...',
+    role: propUser?.role || 'Loading...',
+    avatar: propUser?.name?.charAt(0) || 'L',
     plan: 'Free',
     planStatus: 'active',
     credits: 5,
@@ -72,7 +72,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     lastLogin: new Date().toISOString(),
     subscription: {
       id: '',
-      status: 'inactive',
+      status: 'active',
       currentPeriodStart: new Date().toISOString(),
       currentPeriodEnd: new Date().toISOString(),
       amount: 0,
@@ -87,6 +87,11 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    company: ''
+  });
 
   // Load user data and payment status
   useEffect(() => {
@@ -120,6 +125,13 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
         // Get payment status
         const paymentResponse = await fetch(`${API_BASE_URL}/api/auth/payment-status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        // Get user invoices
+        const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -163,12 +175,20 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
             }
           }
 
+          // Get invoices data
+          let invoices = [];
+          if (invoicesResponse.ok) {
+            const invoicesData = await invoicesResponse.json();
+            invoices = invoicesData.data || [];
+          }
+
           setUser(prev => ({
             ...prev,
             plan: planName,
             planStatus: planStatus,
             credits: credits,
             totalCredits: totalCredits,
+            invoices: invoices,
             subscription: {
               ...prev.subscription,
               status: subscriptionStatus,
@@ -243,14 +263,97 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     }).format(amount);
   };
 
-  const handleDownloadInvoice = (invoice) => {
-    // Simulate invoice download
-    console.log('Downloading invoice:', invoice.id);
+  const handleDownloadInvoice = async (invoice) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${invoice.id}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to download invoice. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      alert('Error downloading invoice. Please try again.');
+    }
   };
 
   const handleCopyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     // Show success message
+  };
+
+  const handleEditProfile = () => {
+    setEditForm({
+      name: user.name,
+      company: user.company
+    });
+    setEditingProfile(true);
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Updating profile with:', editForm);
+      console.log('Token:', token);
+      
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editForm)
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Success result:', result);
+        setUser(prev => ({
+          ...prev,
+          name: editForm.name,
+          company: editForm.company
+        }));
+        setEditingProfile(false);
+        alert('Profile updated successfully!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        alert(`Failed to update profile: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProfile(false);
+    setEditForm({
+      name: user.name,
+      company: user.company
+    });
+  };
+
+  const handleManageSubscription = () => {
+    // Navigate to pricing page or open subscription modal
+    window.location.href = '/dashboard/pricing';
   };
 
   if (loading) {
@@ -465,7 +568,10 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                   <div className="bg-white rounded-2xl shadow-lg p-6">
                     <div className="flex items-center justify-between mb-6">
                       <h3 className="text-lg font-semibold text-gray-900">Subscription Management</h3>
-                      <button className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
+                      <button 
+                        onClick={handleManageSubscription}
+                        className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                      >
                         Manage Subscription
                       </button>
                     </div>
@@ -649,8 +755,10 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
                             <input
                               type="text"
-                              value={user.name}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              value={editingProfile ? editForm.name : user.name}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                              disabled={!editingProfile}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
                             />
                           </div>
                           <div>
@@ -658,15 +766,18 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                             <input
                               type="email"
                               value={user.email}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
                             />
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
                             <input
                               type="text"
-                              value={user.company}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              value={editingProfile ? editForm.company : user.company}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, company: e.target.value }))}
+                              disabled={!editingProfile}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
                             />
                           </div>
                           <div>
@@ -674,7 +785,8 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                             <input
                               type="text"
                               value={user.role}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100"
                             />
                           </div>
                         </div>
@@ -705,12 +817,29 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                       </div>
 
                       <div className="flex space-x-4">
-                        <button className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors">
-                          Save Changes
-                        </button>
-                        <button className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                          Cancel
-                        </button>
+                        {editingProfile ? (
+                          <>
+                            <button 
+                              onClick={handleSaveProfile}
+                              className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                            >
+                              Save Changes
+                            </button>
+                            <button 
+                              onClick={handleCancelEdit}
+                              className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <button 
+                            onClick={handleEditProfile}
+                            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+                          >
+                            Edit Profile
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

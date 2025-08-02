@@ -38,6 +38,7 @@ app.use(cors({
     'http://localhost:3000', 
     'http://localhost:3002',
     'http://localhost:3005',
+    'http://localhost:3001',
     'https://687dc02000e0ca0008eb4b09--deft-paprenjak-1f5e98.netlify.app',
     'https://deft-paprenjak-1f5e98.netlify.app',
     'https://biopingweb.netlify.app',
@@ -52,7 +53,20 @@ app.use(cors({
 
 // Additional CORS headers for preflight requests
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://thebioping.com');
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    'http://localhost:3002',
+    'http://localhost:3005',
+    'https://thebioping.com',
+    'https://www.thebioping.com'
+  ];
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -299,8 +313,8 @@ const authenticateAdmin = (req, res, next) => {
     
     console.log('Admin auth - User email:', user.email);
     
-    // Check if user is admin (only universalx0242@gmail.com can be admin)
-    if (user.email !== 'universalx0242@gmail.com') {
+    // Check if user is admin (universalx0242@gmail.com or admin@bioping.com can be admin)
+    if (user.email !== 'universalx0242@gmail.com' && user.email !== 'admin@bioping.com') {
       console.log('Admin auth - Access denied for:', user.email);
       return res.status(403).json({ message: 'Admin access required' });
     }
@@ -988,9 +1002,273 @@ app.get('/api/dashboard/legal', authenticateToken, (req, res) => {
 
 app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
   res.json({
-    email: "gauravvij1980@gmail.com",
+    email: "universalx0242@gmail.com",
     message: "Please contact us via email if you find any discrepancies."
   });
+});
+
+// Contact form endpoint
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, email, company, message } = req.body;
+    
+    // Validate required fields
+    if (!name || !email || !message) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name, email, and message are required' 
+      });
+    }
+
+    // Log the contact form submission
+    console.log('Contact form submission:', {
+      name,
+      email,
+      company,
+      message,
+      timestamp: new Date().toISOString()
+    });
+
+    // Send email notification to universal email
+    const emailContent = `
+New Contact Form Submission:
+---------------------------
+Name: ${name}
+Email: ${email}
+Company: ${company || 'Not specified'}
+Message: ${message}
+Timestamp: ${new Date().toLocaleString()}
+    `;
+
+    // Send real email to universalx0242@gmail.com
+    console.log('🔧 Email Configuration Check:');
+    console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
+    console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+    
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('❌ Email credentials not configured. Skipping email send.');
+      console.log('To enable email sending, set EMAIL_USER and EMAIL_PASS environment variables.');
+    } else {
+      try {
+        console.log('📧 Attempting to send email...');
+        
+        const transporter = nodemailer.createTransporter({
+          service: 'gmail',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS
+          }
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: 'universalx0242@gmail.com',
+          subject: 'New Contact Form Submission - BioPing',
+          text: emailContent,
+          html: `
+            <h2>New Contact Form Submission</h2>
+            <p><strong>Name:</strong> ${name}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Company:</strong> ${company || 'Not specified'}</p>
+            <p><strong>Message:</strong></p>
+            <p>${message}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+          `
+        };
+
+        console.log('📧 Mail options prepared:', {
+          from: mailOptions.from,
+          to: mailOptions.to,
+          subject: mailOptions.subject
+        });
+
+        const result = await transporter.sendMail(mailOptions);
+        console.log('✅ Email sent successfully to universalx0242@gmail.com');
+        console.log('📧 Email result:', result.messageId);
+      } catch (emailError) {
+        console.error('❌ Error sending email:', emailError);
+        console.error('❌ Error details:', emailError.message);
+        // Don't fail the request if email fails
+      }
+    }
+
+    // Log the contact form submission
+    console.log('Contact form submission:', {
+      name,
+      email,
+      company,
+      message,
+      timestamp: new Date().toISOString()
+    });
+
+    // In a real application, you would send an email here
+    // For now, we'll just log it and return success
+    const contactData = {
+      id: Date.now().toString(),
+      name,
+      email,
+      company: company || 'Not specified',
+      message,
+      timestamp: new Date().toISOString(),
+      status: 'new'
+    };
+
+    // Store in memory (in production, save to database)
+    if (!global.contactSubmissions) {
+      global.contactSubmissions = [];
+    }
+    global.contactSubmissions.push(contactData);
+
+    res.json({
+      success: true,
+      message: 'Contact form submitted successfully. We will get back to you within 24 hours.',
+      data: contactData
+    });
+  } catch (error) {
+    console.error('Error processing contact form:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error. Please try again later.' 
+    });
+  }
+});
+
+// Get contact submissions (admin only)
+app.get('/api/admin/contact-submissions', authenticateAdmin, async (req, res) => {
+  try {
+    const submissions = global.contactSubmissions || [];
+    res.json({
+      success: true,
+      data: submissions
+    });
+  } catch (error) {
+    console.error('Error fetching contact submissions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// BD Consulting endpoints
+app.post('/api/consulting/book-session', authenticateToken, async (req, res) => {
+  try {
+    const { date, time, topic, notes } = req.body;
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has paid plan (Basic or Premium)
+    if (user.currentPlan === 'free') {
+      return res.status(403).json({ message: 'Consulting sessions are only available for paid plans' });
+    }
+
+    // Check if user has already used their consulting hour
+    const existingSession = consultingSessions.find(session => 
+      session.userEmail === user.email && session.status === 'completed'
+    );
+
+    if (existingSession) {
+      return res.status(400).json({ message: 'You have already used your consulting session' });
+    }
+
+    const session = {
+      id: Date.now().toString(),
+      userEmail: user.email,
+      userName: user.name,
+      userCompany: user.company,
+      date: date,
+      time: time,
+      topic: topic,
+      notes: notes,
+      status: 'scheduled',
+      createdAt: new Date().toISOString()
+    };
+
+    consultingSessions.push(session);
+    
+    res.json({
+      success: true,
+      message: 'Consulting session booked successfully',
+      session: session
+    });
+  } catch (error) {
+    console.error('Error booking consulting session:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/consulting/user-sessions', authenticateToken, async (req, res) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userSessions = consultingSessions.filter(session => 
+      session.userEmail === user.email
+    );
+
+    res.json({
+      success: true,
+      sessions: userSessions
+    });
+  } catch (error) {
+    console.error('Error fetching user sessions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// BD Consulting tracking system
+let consultingSessions = [
+  {
+    id: '1',
+    userEmail: 'test@example.com',
+    userName: 'Test User',
+    userCompany: 'Test Company',
+    date: '2024-01-20',
+    time: '10:00 AM',
+    topic: 'BD Strategy Discussion',
+    notes: 'Initial consultation for partnership strategy',
+    status: 'scheduled',
+    createdAt: new Date().toISOString()
+  }
+];
+
+app.get('/api/admin/consulting-sessions', authenticateAdmin, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      sessions: consultingSessions
+    });
+  } catch (error) {
+    console.error('Error fetching consulting sessions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.put('/api/admin/complete-session/:sessionId', authenticateAdmin, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    const sessionIndex = consultingSessions.findIndex(session => session.id === sessionId);
+    
+    if (sessionIndex === -1) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+    
+    consultingSessions[sessionIndex].status = 'completed';
+    consultingSessions[sessionIndex].completedAt = new Date().toISOString();
+    
+    res.json({
+      success: true,
+      message: 'Session marked as completed',
+      session: consultingSessions[sessionIndex]
+    });
+  } catch (error) {
+    console.error('Error completing session:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Pricing Analytics Backend Routes
@@ -1746,7 +2024,7 @@ app.post('/api/search-biotech', authenticateToken, [
         filteredData = biotechData.filter(item => {
           const taValue = item[taColumn];
           console.log('Checking:', item.companyName, 'TA Value:', taValue, 'Type:', typeof taValue, 'Column exists:', taColumn in item);
-          return taValue === '1' || taValue === 1;
+          return taValue === '1' || taValue === 1 || taValue === true;
         });
         console.log('After disease area filter, records found:', filteredData.length);
       } else {
@@ -1770,11 +2048,11 @@ app.post('/api/search-biotech', authenticateToken, [
           
           console.log('Checking tier for:', item.companyName, 'Item tier:', itemTier, 'Search tier:', partnerType);
           
-          if (partnerType === 'Tier 1 - Mostly Large Pharma') {
-            isMatch = itemTier.toLowerCase().includes('large') || itemTier.toLowerCase().includes('large pharma');
-          } else if (partnerType === 'Tier 2 - Mid Cap') {
+                      if (partnerType === 'Tier 1 - Large Pharma') {
+            isMatch = itemTier.toLowerCase().includes('large pharma') || itemTier.toLowerCase().includes('large');
+          } else if (partnerType === 'Tier 2 - Mid-Size') {
             isMatch = itemTier.toLowerCase().includes('mid') || itemTier.toLowerCase().includes('mid cap');
-          } else if (partnerType === 'Tier 3 - Small Cap') {
+          } else if (partnerType === 'Tier 3 - Small Biotech\'s') {
             isMatch = itemTier.toLowerCase().includes('small') || itemTier.toLowerCase().includes('small cap');
           }
           
@@ -2269,11 +2547,62 @@ const loadDataFromFiles = () => {
           createdAt: new Date().toISOString(),
           paymentCompleted: email === 'universalx0242@gmail.com' ? true : false,
           currentPlan: email === 'universalx0242@gmail.com' ? 'test' : 'free',
-          currentCredits: email === 'universalx0242@gmail.com' ? 1 : 5
+          currentCredits: email === 'universalx0242@gmail.com' ? 1 : 5,
+          // Add invoice data for universalx0242@gmail.com
+          invoices: email === 'universalx0242@gmail.com' ? [
+            {
+              id: 'INV-001',
+              amount: 1.00,
+              currency: 'USD',
+              status: 'paid',
+              date: new Date().toISOString(),
+              description: 'Test Plan - $1.00',
+              plan: 'Test Plan'
+            }
+          ] : [],
+          paymentHistory: email === 'universalx0242@gmail.com' ? [
+            {
+              id: 'PAY-001',
+              amount: 1.00,
+              currency: 'USD',
+              status: 'completed',
+              date: new Date().toISOString(),
+              description: 'Test Plan Payment',
+              plan: 'Test Plan'
+            }
+          ] : []
         };
         mockDB.users.push(newUser);
       }
     });
+
+    // Update existing universalx0242@gmail.com user with invoice data
+    const universalUser = mockDB.users.find(u => u.email === 'universalx0242@gmail.com');
+    if (universalUser && (!universalUser.invoices || universalUser.invoices.length === 0)) {
+      console.log('🔄 Adding invoice data to universal user...');
+      universalUser.invoices = [
+        {
+          id: 'INV-001',
+          amount: 1.00,
+          currency: 'USD',
+          status: 'paid',
+          date: new Date().toISOString(),
+          description: 'Test Plan - $1.00',
+          plan: 'Test Plan'
+        }
+      ];
+      universalUser.paymentHistory = [
+        {
+          id: 'PAY-001',
+          amount: 1.00,
+          currency: 'USD',
+          status: 'completed',
+          date: new Date().toISOString(),
+          description: 'Test Plan Payment',
+          plan: 'Test Plan'
+        }
+      ];
+    }
 
     // Save immediately after ensuring universal users exist
     saveDataToFiles('subscription_created');
@@ -3242,6 +3571,213 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
   }
 
   res.json({ received: true });
+});
+
+// Admin endpoints for Gaurav Vij
+app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
+  try {
+    // Get user activity data (login/registration tracking)
+    const userActivity = mockDB.users.map(user => ({
+      userName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      action: 'registration',
+      timestamp: user.createdAt || new Date().toISOString(),
+      ipAddress: 'N/A'
+    }));
+
+    res.json({
+      success: true,
+      data: userActivity
+    });
+  } catch (error) {
+    console.error('Error fetching user activity:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch user activity' });
+  }
+});
+
+app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
+  try {
+    // Get trial data (start/end dates)
+    const trialData = mockDB.users.map(user => {
+      const registrationDate = new Date(user.createdAt || new Date());
+      const trialStart = registrationDate;
+      const trialEnd = new Date(registrationDate.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 days
+      const now = new Date();
+      const daysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000)));
+      
+      return {
+        userName: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        trialStart: trialStart.toISOString(),
+        trialEnd: trialEnd.toISOString(),
+        status: daysRemaining > 0 ? 'active' : 'expired',
+        daysRemaining
+      };
+    });
+
+    res.json({
+      success: true,
+      data: trialData
+    });
+  } catch (error) {
+    console.error('Error fetching trial data:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch trial data' });
+  }
+});
+
+app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) => {
+  try {
+    // Get potential customer details for follow-up
+    const potentialCustomers = mockDB.users.map(user => ({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      company: user.company || 'N/A',
+      phone: user.phone || 'N/A',
+      registrationDate: user.createdAt || new Date().toISOString(),
+      lastActivity: user.lastLogin || user.createdAt || new Date().toISOString()
+    }));
+
+    res.json({
+      success: true,
+      data: potentialCustomers
+    });
+  } catch (error) {
+    console.error('Error fetching potential customers:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch potential customers' });
+  }
+});
+
+// Download invoice endpoint
+app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    
+    // Find the user
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Find the specific invoice
+    const invoice = user.invoices?.find(inv => inv.id === invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    // Generate invoice PDF (simplified version)
+    const invoiceData = {
+      id: invoice.id,
+      user: user,
+      amount: invoice.amount,
+      date: invoice.date,
+      status: invoice.status,
+      description: invoice.description,
+      plan: invoice.plan
+    };
+
+    // Create a simple PDF-like response
+    const invoiceText = `
+INVOICE
+========
+Invoice ID: ${invoiceData.id}
+Date: ${new Date(invoiceData.date).toLocaleDateString()}
+Customer: ${user.name}
+Email: ${user.email}
+Company: ${user.company}
+Plan: ${invoiceData.plan}
+Description: ${invoiceData.description}
+Amount: $${invoiceData.amount}
+Status: ${invoiceData.status}
+
+Thank you for your payment!
+    `.trim();
+
+    // Send as text file instead of PDF for now
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceId}.txt`);
+    res.send(invoiceText);
+  } catch (error) {
+    console.error('Error generating invoice:', error);
+    res.status(500).json({ message: 'Error generating invoice' });
+  }
+});
+
+// Update user profile endpoint
+app.put('/api/auth/update-profile', authenticateToken, async (req, res) => {
+  try {
+    console.log('Profile update request received');
+    console.log('User email:', req.user.email);
+    console.log('Request body:', req.body);
+    
+    const { name, company } = req.body;
+    
+    // Find the user in the database
+    const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+    console.log('User index:', userIndex);
+    console.log('Total users:', mockDB.users.length);
+    
+    if (userIndex === -1) {
+      console.log('User not found in database');
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('User found, updating profile...');
+    console.log('Current user data:', mockDB.users[userIndex]);
+
+    // Update user profile
+    if (name) {
+      mockDB.users[userIndex].name = name;
+      mockDB.users[userIndex].firstName = name.split(' ')[0] || name;
+      mockDB.users[userIndex].lastName = name.split(' ').slice(1).join(' ') || '';
+      console.log('Updated name to:', name);
+    }
+    
+    if (company) {
+      mockDB.users[userIndex].company = company;
+      console.log('Updated company to:', company);
+    }
+
+    // Save to file
+    saveDataToFiles('profile_update');
+    console.log('Data saved to file');
+
+    const responseData = {
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        email: mockDB.users[userIndex].email,
+        name: mockDB.users[userIndex].name,
+        company: mockDB.users[userIndex].company,
+        role: mockDB.users[userIndex].role
+      }
+    };
+
+    console.log('Sending response:', responseData);
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get user invoices endpoint
+app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      data: user.invoices || []
+    });
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.listen(PORT, () => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -50,25 +51,43 @@ const ContactUs = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setIsSubmitted(true);
+        setFormData({ name: '', email: '', company: '', message: '' });
+        setErrors({});
+      } else {
+        alert(result.message || 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      alert('Failed to send message. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
-      setFormData({ name: '', email: '', company: '', message: '' });
-    }, 2000);
+    }
   };
 
   const contactInfo = [
     {
       icon: Mail,
       title: "Email",
-      value: "hello@bioping.com",
+      value: "universalx0242@gmail.com",
       description: "Send us an email anytime"
     },
     {
       icon: Phone,
       title: "Phone",
-      value: "+1 (555) 123-4567",
+      value: "+1 650 455 5850",
       description: "Mon-Fri from 8am to 6pm"
     },
     {
@@ -88,7 +107,7 @@ const ContactUs = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="text-center mb-8"
           >
             <h1 className="hero-title mb-6">
               Contact - <span className="gradient-text">BioPing</span>
@@ -103,14 +122,14 @@ const ContactUs = () => {
       {/* Contact Form Section */}
       <section className="section bg-gray-50">
         <div className="container-custom">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Form */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="section-title mb-8">
+              <h2 className="section-title mb-6 -mt-4">
                 Get in Touch
               </h2>
               
@@ -138,7 +157,7 @@ const ContactUs = () => {
                 </motion.div>
               ) : (
                 <div className="card p-8">
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-2">
                         Your Name <span className="text-red-500">*</span>
@@ -244,19 +263,19 @@ const ContactUs = () => {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="space-y-8"
+              className="space-y-6"
             >
               <div>
-                <h2 className="section-title mb-8">
+                <h2 className="section-title mb-6 -mt-4">
                   Contact Information
                 </h2>
-                <p className="text-lg text-gray-600 mb-8">
+                <p className="text-lg text-gray-600 mb-6">
                   We're here to help you achieve your business goals. 
                   Reach out to us through any of the channels below.
                 </p>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {contactInfo.map((info, index) => (
                   <motion.div
                     key={index}
@@ -345,11 +364,11 @@ const ContactUs = () => {
               },
               {
                 question: "What industries do you specialize in?",
-                answer: "We work with businesses across various industries, with particular expertise in technology, healthcare, and professional services."
+                answer: "We are dedicated to life sciences sector which includes pharma and biotech."
               },
               {
                 question: "How do you ensure data privacy and security?",
-                answer: "We follow industry best practices for data protection and are compliant with relevant privacy regulations."
+                answer: "see our Privacy and Terms and Conditions section for details"
               }
             ].map((faq, index) => (
               <motion.div

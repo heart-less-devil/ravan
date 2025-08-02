@@ -17,6 +17,7 @@ const ProtectedAdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
+  
   // Check if user is admin (universalx0242@gmail.com)
   if (user.email !== 'universalx0242@gmail.com') {
     console.log('ProtectedAdminRoute - Not admin, redirecting to login with admin message');

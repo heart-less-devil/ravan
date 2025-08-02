@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
 import SecurePDFViewer from '../components/SecurePDFViewer';
 import BDTrackerPage from './BDTrackerPage';
+import QuickGuide from './QuickGuide';
+import BDInsights from './BDInsights';
 import StripePayment from '../components/StripePayment';
 import { 
   Grid, 
@@ -84,6 +86,8 @@ const Dashboard = () => {
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [showCustomerProfile, setShowCustomerProfile] = useState(false);
   const [userPaymentStatus, setUserPaymentStatus] = useState({ hasPaid: false, currentPlan: 'free' });
+  const [error, setError] = useState(null);
+  const [daysRemaining, setDaysRemaining] = useState(3);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -132,15 +136,34 @@ const Dashboard = () => {
       currentPlan: userCurrentPlan || 'free'
     });
 
-    // Load user credits - FIXED: Properly handle 0 credits for free users
+    // Load user credits - 5 credits for 3 days only
     const savedCredits = localStorage.getItem('userCredits');
-    if (savedCredits !== null) {
-      // If there's a saved value (including 0), use it
-      setUserCredits(parseInt(savedCredits));
-    } else {
-      // Only set to 5 if there's no saved value (new user)
+    const registrationDate = localStorage.getItem('registrationDate');
+    const currentDate = new Date();
+    
+    // If no registration date, set it (first time user)
+    if (!registrationDate) {
+      localStorage.setItem('registrationDate', currentDate.toISOString());
       setUserCredits(5);
       localStorage.setItem('userCredits', '5');
+    } else {
+      // Check if 3 days have passed since registration
+      const regDate = new Date(registrationDate);
+      const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysSinceRegistration >= 3) {
+        // 3 days passed - set credits to 0
+        setUserCredits(0);
+        localStorage.setItem('userCredits', '0');
+      } else {
+        // Still within 3 days - use saved credits
+        if (savedCredits !== null) {
+          setUserCredits(parseInt(savedCredits));
+        } else {
+          setUserCredits(5);
+          localStorage.setItem('userCredits', '5');
+        }
+      }
     }
 
     // Check if user is new (first time visiting dashboard)
@@ -333,10 +356,18 @@ const Dashboard = () => {
     if (!searchQuery.trim()) return;
     
     setSearchLoading(true);
+    setError(null); // Clear any previous errors
     try {
       const token = localStorage.getItem('token');
       
+      if (!token) {
+        setError('Please login again to search.');
+        return;
+      }
+      
       console.log('Searching with:', { searchType, searchQuery });
+      console.log('Using token:', token);
+      console.log('API URL:', `${API_BASE_URL}/api/search-biotech`);
       
       const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
@@ -350,22 +381,44 @@ const Dashboard = () => {
         })
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error('Failed to search data');
+        const errorText = await response.text();
+        console.error('API Error:', response.status, errorText);
+        throw new Error(`Search failed: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
       console.log('Search result:', result);
+      console.log('Result success:', result.success);
+      console.log('Result data:', result.data);
+      console.log('Results length:', result.data?.results?.length);
       
       if (result.success) {
+        // Check if no results found
+        if (result.data.results.length === 0) {
+          setError(`Not in System`);
+          return;
+        }
+        
         // Set global search results for immediate access
-        setGlobalSearchResults({
+        const globalResults = {
           results: result.data.results,
           searchType: searchType,
           searchQuery: searchQuery,
-          isGlobalSearch: searchType === 'Company Name' // Only group for company searches, Contact Name shows detailed results
-        });
+          isGlobalSearch: true // All global searches should hide the form
+        };
+        
+        console.log('Setting global search results:', globalResults);
+        setGlobalSearchResults(globalResults);
+        
+        // Clear any existing error
+        setError(null);
+        
         // Navigate to search page (global search results will be handled by globalSearchResults prop)
+        console.log('Navigating to search page...');
         navigate('/dashboard/search');
       } else {
         throw new Error(result.message || 'Search failed');
@@ -373,6 +426,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error searching data:', error);
       setSearchResults([]);
+      setError('Search failed. Please try again.');
     } finally {
       setSearchLoading(false);
     }
@@ -388,13 +442,12 @@ const Dashboard = () => {
     { name: 'Dashboard', path: '/dashboard', icon: Grid, section: 'MAIN' },
     { name: 'Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
     { name: 'BD Tracker', path: '/dashboard/bd-tracker', icon: TrendingUp, section: 'MY DEALS' },
-    { name: 'Saved Searches', path: '/dashboard/saved-searches', icon: FileText, section: 'MY DEALS' },
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
-    { name: 'Self Coaching Tips', path: '/dashboard/resources/coaching-tips', icon: User, section: 'RESOURCES' },
+    { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },
     { name: 'Pricing', path: '/dashboard/pricing', icon: DollarSign, section: 'RESOURCES' },
-    { name: 'Free Content', path: '/dashboard/resources/free-content', icon: Heart, section: 'RESOURCES' },
+                      { name: 'BD Insights', path: '/dashboard/resources/free-content', icon: TrendingUp, section: 'RESOURCES' },
     { name: 'Legal Disclaimer', path: '/dashboard/legal', icon: Scale, section: 'RESOURCES' },
-    { name: 'Contact', path: '/dashboard/contact', icon: User, section: 'RESOURCES' },
+    { name: 'Contact Us', path: '/dashboard/contact', icon: User, section: 'RESOURCES' },
   ];
 
   const getSectionItems = (section) => {
@@ -417,14 +470,15 @@ const Dashboard = () => {
         />;
       case '/dashboard/bd-tracker':
         return <BDTrackerPage />;
-      case '/dashboard/saved-searches':
-        return <SavedSearches />;
+
       case '/dashboard/resources/definitions':
         return <Definitions />;
-      case '/dashboard/resources/coaching-tips':
-        return <CoachingTips />;
-      case '/dashboard/resources/free-content':
-        return <FreeContent user={user} />;
+      case '/dashboard/resources/quick-guide':
+        return <QuickGuide />;
+      case '/dashboard/resources/bd-insights':
+        return <BDInsights user={user} userPaymentStatus={userPaymentStatus} />;
+                          case '/dashboard/resources/free-content':
+                      return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/legal':
         return <LegalDisclaimer />;
       case '/dashboard/contact':
@@ -507,22 +561,29 @@ const Dashboard = () => {
                     {section}
                   </div>
                 )}
-                {getSectionItems(section).map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${
-                      location.pathname === item.path 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                        : 'text-white/60 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <item.icon className={`w-10 h-10 ${location.pathname === item.path ? 'text-white' : 'text-white/60 group-hover:text-white'}`} strokeWidth={1.5} />
-                    {!sidebarCollapsed && (
-                      <span className="font-medium text-sm">{item.name}</span>
-                    )}
-                  </Link>
-                ))}
+                {getSectionItems(section).map((item) => {
+                  // Hide paid-only items for free users
+                  if (item.paidOnly && !userPaymentStatus.hasPaid) {
+                    return null;
+                  }
+                  
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${
+                        location.pathname === item.path 
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                          : 'text-white/60 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <item.icon className={`w-10 h-10 ${location.pathname === item.path ? 'text-white' : 'text-white/60 group-hover:text-white'}`} strokeWidth={1.5} />
+                      {!sidebarCollapsed && (
+                        <span className="font-medium text-sm">{item.name}</span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             ))}
           </nav>
@@ -550,37 +611,36 @@ const Dashboard = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-4">
-                <select 
-                  value={searchType}
-                  onChange={(e) => setSearchType(e.target.value)}
-                  className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-48"
+              <div className="text-sm font-medium text-gray-600">Quick Search</div>
+              <select 
+                value={searchType}
+                onChange={(e) => setSearchType(e.target.value)}
+                className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-40"
+              >
+                <option value="Company Name">Company Name</option>
+                <option value="Contact Name">Contact Name</option>
+              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={handleSearchKeyPress}
+                  placeholder="Type Keywords"
+                  className="bg-white/80 backdrop-blur-sm border-2 border-gray-300 rounded-2xl pl-14 pr-6 py-3 text-base font-medium focus:ring-4 focus:ring-blue-500/50 focus:border-blue-600 focus:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300 w-64 shadow-lg"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={searchLoading}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-blue-600 transition-colors duration-200"
                 >
-                  <option value="Company Name">Company Name</option>
-                  <option value="Contact Name">Contact Name</option>
-                </select>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={handleSearchKeyPress}
-                    placeholder="Search anything..."
-                    className="bg-white/80 backdrop-blur-sm border-2 border-gray-300 rounded-2xl pl-14 pr-6 py-4 text-base font-semibold focus:ring-4 focus:ring-blue-500/50 focus:border-blue-600 focus:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300 w-96 shadow-lg"
-                  />
-                  <button
-                    onClick={handleSearch}
-                    disabled={searchLoading}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-blue-600 transition-colors duration-200"
-                  >
-                    {searchLoading ? (
-                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <Search className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
+                  {searchLoading ? (
+                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Search className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
             
@@ -729,7 +789,7 @@ const Dashboard = () => {
           </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Free Credits Exhausted!</h2>
           <p className="text-gray-600 mb-6">
-                  You've used all your free credits. Upgrade to a paid plan to continue accessing contact details and unlock unlimited searches.
+                  You've used all your free credits. Upgrade to a paid plan to continue accessing contact details and other features.
                 </p>
                 <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 mb-6">
                   <div className="flex items-center justify-center mb-2">
@@ -737,15 +797,15 @@ const Dashboard = () => {
                     <span className="text-sm font-medium text-orange-700">Premium Features Locked</span>
                   </div>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Unlimited contact details</li>
-                    <li>• Advanced search filters</li>
-                    <li>• Export functionality</li>
-                    <li>• Priority support</li>
+                    <li>• Access to more contacts</li>
+                    <li>• Access to free resources</li>
+                    <li>• Enhanced support from BD experts</li>
           </ul>
         </div>
                 <div className="flex space-x-3">
                   <Link
                     to="/dashboard/pricing"
+                    onClick={closeCreditPopup}
                     className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 px-6 rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition-all duration-200"
                   >
                     Upgrade Now
@@ -844,7 +904,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
 
   const quickActions = [
     { name: 'Search Database', icon: Search, path: '/dashboard/search', color: 'blue', gradient: 'from-blue-500 to-blue-600' },
-    { name: 'Saved Searches', icon: FileText, path: '/dashboard/saved-searches', color: 'purple', gradient: 'from-purple-500 to-purple-600' },
+    { name: 'Self Coaching Tips', icon: User, path: '/dashboard/resources/coaching-tips', color: 'purple', gradient: 'from-purple-500 to-purple-600' },
     { name: 'Free Resources', icon: Heart, path: '/dashboard/resources/free-content', color: 'pink', gradient: 'from-pink-500 to-pink-600' },
     { name: 'Request Demo', icon: Zap, path: '/request-demo', color: 'yellow', gradient: 'from-yellow-500 to-yellow-600' }
   ];
@@ -860,16 +920,10 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.name || 'User'}! 👋</h1>
-            <p className="text-blue-100 text-lg">Here's what's happening with your BD activities today.</p>
+            <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'User'} 👋</h1>
             <div className="flex items-center space-x-3 mt-4 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2 inline-block">
               <Calendar className="w-5 h-5" />
-              <span className="font-medium">{new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</span>
+                              <span className="font-medium">Current Plan: Free</span>
             </div>
             
             {/* Upgrade Banner - Only show if user hasn't paid */}
@@ -884,7 +938,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
                   <AlertCircle className="w-4 h-4 text-white" />
                   <div>
                     <h3 className="text-sm font-semibold text-white">Upgrade Your Plan</h3>
-                    <p className="text-xs text-blue-100">Get access to premium features and unlimited searches</p>
+                    <p className="text-xs text-blue-100">Get access to premium features</p>
                   </div>
                 </div>
                 <Link to="/dashboard/pricing">
@@ -926,15 +980,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
               </motion.div>
             )}
           </div>
-          <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
-            <Calendar className="w-5 h-5" />
-            <span className="font-medium">{new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}</span>
-          </div>
+
         </div>
       </motion.div>
 
@@ -975,7 +1021,6 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-gray-900">Quick Actions</h3>
-            <Plus className="w-5 h-5 text-gray-400" />
         </div>
           <div className="grid grid-cols-2 gap-4">
             {quickActions.map((action, index) => (
@@ -995,45 +1040,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
           </div>
         </motion.div>
 
-        {/* Enhanced Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Recent Activity</h3>
-          </div>
-          <div className="space-y-4">
-            {recentActivity.map((activity, index) => (
-              <motion.div 
-                key={index} 
-                className="flex items-start space-x-4 p-4 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                whileHover={{ x: 4 }}
-              >
-                <div className={`w-10 h-10 bg-gradient-to-br from-${activity.color}-100 to-${activity.color}-200 rounded-xl flex items-center justify-center flex-shrink-0`}>
-                  <activity.icon className={`w-5 h-5 text-${activity.color}-600`} />
-        </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.text}</p>
-                    {activity.status === 'completed' && (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    )}
-                    {activity.status === 'pending' && (
-                      <AlertCircle className="w-4 h-4 text-orange-500" />
-                    )}
-          </div>
-                  <p className="text-xs text-gray-500 flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {activity.time}
-                  </p>
-        </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+
       </div>
     </div>
   );
@@ -1063,19 +1070,33 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [currentSearchQuery, setCurrentSearchQuery] = useState('');
   const [isGlobalSearch, setIsGlobalSearch] = useState(false);
   const [groupedResults, setGroupedResults] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(25);
+  const [daysRemaining, setDaysRemaining] = useState(3);
 
   // Load search results from global state, localStorage and location state on component mount
   useEffect(() => {
     const checkForStoredResults = () => {
-      if (globalSearchResults) {
+      console.log('SearchPage: Checking for stored results:', { globalSearchResults });
+      if (globalSearchResults && globalSearchResults.results && globalSearchResults.results.length > 0) {
         // GLOBAL SEARCH: hide form after results
+        console.log('SearchPage: Setting global search results:', globalSearchResults);
+        console.log('SearchPage: Results count:', globalSearchResults.results?.length);
         setSearchResults(globalSearchResults.results);
         setCurrentSearchType(globalSearchResults.searchType || 'Company Name');
         setCurrentSearchQuery(globalSearchResults.searchQuery || '');
         setIsGlobalSearch(globalSearchResults.isGlobalSearch);
-        setGlobalSearchResults(null);
+        setCurrentPage(1); // Reset to first page
+        setError(null); // Clear any existing error
+        console.log('SearchPage: Results set successfully');
         return;
       }
+      
+      // Clear search results when navigating to search page without results
+      setSearchResults([]);
+      setCurrentSearchType('Company Name');
+      setCurrentSearchQuery('');
+      setIsGlobalSearch(false);
       // DRUG SEARCH: always show form
       const location = window.location;
       const state = window.history.state;
@@ -1106,8 +1127,14 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
   // Process search results to group by company
   useEffect(() => {
-    // Group ONLY for global search
-    if (searchResults.length > 0 && isGlobalSearch) {
+    console.log('Processing search results:', { searchResults: searchResults.length, isGlobalSearch, currentSearchType });
+    
+    // For Contact Name searches, don't group - show individual contacts
+    if (searchResults.length > 0 && isGlobalSearch && currentSearchType === 'Contact Name') {
+      console.log('Contact Name search - showing individual contacts');
+      setGroupedResults({}); // Don't group for contact searches
+    } else if (searchResults.length > 0 && isGlobalSearch) {
+      // Group ONLY for Company Name searches
       const grouped = searchResults.reduce((acc, item) => {
         if (!acc[item.companyName]) {
           acc[item.companyName] = {
@@ -1123,6 +1150,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         acc[item.companyName].contacts.push(item);
         return acc;
       }, {});
+      console.log('Grouped results:', grouped);
       setGroupedResults(grouped);
     } else {
       setGroupedResults({});
@@ -1242,6 +1270,30 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     });
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(searchResults.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentResults = searchResults.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Calculate days remaining based on registration date
+  useEffect(() => {
+    const registrationDate = localStorage.getItem('registrationDate');
+    if (registrationDate) {
+      const regDate = new Date(registrationDate);
+      const currentDate = new Date();
+      const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+      const remainingDays = Math.max(0, 3 - daysSinceRegistration);
+      setDaysRemaining(remainingDays);
+    } else {
+      setDaysRemaining(3);
+    }
+  }, []);
+
 
 
   const diseaseAreas = [
@@ -1304,16 +1356,33 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
   return (
     <div className="space-y-6">
+
+      
       {(() => {
-        console.log('Render condition:', { isGlobalSearch, currentSearchType, searchResultsLength: searchResults.length });
-        return !((isGlobalSearch || currentSearchType === 'Contact Name') && searchResults.length > 0);
+        console.log('SearchPage Render:', { 
+          isGlobalSearch, 
+          currentSearchType, 
+          searchResultsLength: searchResults.length,
+          hasResults: searchResults.length > 0
+        });
+        const shouldHideForm = searchResults.length > 0;
+        console.log('Should hide form:', shouldHideForm);
+        return !shouldHideForm;
       })() && (
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Search Criteria</h2>
           
           <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Top Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          
+          {/* Asset Profile Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <span className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3">
+                <span className="text-white font-bold text-sm">A</span>
+              </span>
+              Asset Profile
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             
             {/* Drug Name */}
             <div>
@@ -1441,15 +1510,29 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               <p className="text-xs text-gray-500 mt-1">Optional</p>
             </div>
           </div>
-
-          {/* Bottom Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          </div>
+          
+          {/* Partner Match Section */}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <span className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                <span className="text-white font-bold text-sm">P</span>
+              </span>
+              Partner Match
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Looking For */}
             <div>
               <label htmlFor="lookingFor" className="block text-sm font-semibold text-gray-900 mb-2 flex items-center">
                 Looking for <span className="text-red-500 ml-1">*</span>
-                <Info className="w-4 h-4 ml-2 text-gray-400" />
+                <div className="relative group">
+                  <Info className="w-4 h-4 ml-2 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                    Max. 1 Selection Allowed.
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
               </label>
               <div className="relative">
                 <select
@@ -1461,9 +1544,9 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   required
                 >
                   <option value="">Select Partner Type</option>
-                  <option value="Tier 1 - Mostly Large Pharma">Tier 1 - Mostly Large Pharma</option>
-                  <option value="Tier 2 - Mid Cap">Tier 2 - Mid Cap</option>
-                  <option value="Tier 3 - Small Cap">Tier 3 - Small Cap</option>
+                  <option value="Tier 1 - Large Pharma">Tier 1 - Large Pharma</option>
+                  <option value="Tier 2 - Mid-Size">Tier 2 - Mid-Size</option>
+                  <option value="Tier 3 - Small Biotech's">Tier 3 - Small Biotech's</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1478,7 +1561,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <div>
               <label htmlFor="region" className="block text-sm font-semibold text-gray-900 mb-2 flex items-center">
                 Region
-                <Info className="w-4 h-4 ml-2 text-gray-400" />
+                <div className="relative group">
+                  <Info className="w-4 h-4 ml-2 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                    Max. 1 Selection Allowed.
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
               </label>
               <div className="relative">
                 <select
@@ -1508,7 +1597,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <div>
               <label htmlFor="function" className="block text-sm font-semibold text-gray-900 mb-2 flex items-center">
                 Function
-                <Info className="w-4 h-4 ml-2 text-gray-400" />
+                <div className="relative group">
+                  <Info className="w-4 h-4 ml-2 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                    Max. 1 Selection Allowed.
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
               </label>
               <div className="relative">
                 <select
@@ -1531,6 +1626,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               </div>
               <p className="text-xs text-gray-500 mt-1">Contact Person Function</p>
             </div>
+          </div>
           </div>
 
           {/* Search Button */}
@@ -1573,11 +1669,33 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
       {searchResults.length > 0 && (
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+          {/* Search Results Summary */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-blue-200">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Search Summary</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <div className="text-sm font-medium text-gray-600 mb-1">Number of Unique Companies</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {(() => {
+                    const uniqueCompanies = new Set(searchResults.map(result => result.companyName));
+                    return uniqueCompanies.size;
+                  })()}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <div className="text-sm font-medium text-gray-600 mb-1">Number of Unique Contacts</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {searchResults.length}
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
               <p className="text-gray-600">
-                Showing 1 - {searchResults.length} of {searchResults.length} results
+                Showing {startIndex + 1} - {Math.min(endIndex, searchResults.length)} of {searchResults.length} results
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -1588,7 +1706,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   </div>
                   <div>
                     <div className="text-sm font-medium text-gray-900">Credits Left</div>
-                    <div className="text-lg font-bold text-blue-600">{userCredits}</div>
+                    <div className="text-lg font-bold text-blue-600">{userCredits} / {daysRemaining} days</div>
                   </div>
                 </div>
               </div>
@@ -1596,8 +1714,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           </div>
 
           <div className="w-full">
-            {isGlobalSearch ? (
-                // GLOBAL SEARCH: Simple grouped table
+            {isGlobalSearch && currentSearchType === 'Company Name' ? (
+                // GLOBAL SEARCH: Simple grouped table for Company Name searches
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -1639,7 +1757,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 </tbody>
               </table>
             ) : (
-              // DRUG SEARCH: Detailed contact table
+              // CONTACT SEARCH OR DRUG SEARCH: Detailed contact table
               <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -1650,7 +1768,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {searchResults.map((result) => (
+                {currentResults.map((result) => (
                     <Fragment key={result.id}>
                       <tr className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1764,6 +1882,47 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                               </table>
               )}
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+                <div className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const page = i + 1;
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           
 
         </div>
@@ -2304,31 +2463,75 @@ const CoachingTips = () => {
 };
 
 // Enhanced Free Content Component
-const FreeContent = ({ user }) => {
+const FreeContent = ({ user, userPaymentStatus }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewedContent, setViewedContent] = useState([]);
   const [selectedPDF, setSelectedPDF] = useState(null);
 
-  const freeContent = {
-    'Business Development': [
+  const bdInsights = {
+    'BD Insights': [
       {
         id: 1,
-        title: 'BD Conference Guide',
-        description: 'Comprehensive guide for business development conferences, networking strategies, and partnership opportunities.',
+        title: 'BD Conferences - Priority, Budgets and Smart ROI Tips',
+        description: 'Strategic insights from 15+ years of experience in Large Pharma to Small Biotechs.',
         type: 'PDF',
         size: '2.5 MB',
         views: 1856,
         rating: 4.9,
         featured: true,
         pdfUrl: '/pdf/BD Conferences, Priority & Budgets.pdf'
+      },
+      {
+        id: 2,
+        title: 'Biopharma Industry News and Resources',
+        description: 'Latest industry updates and strategic resources for business development.',
+        type: 'PDF',
+        size: '1.8 MB',
+        views: 1240,
+        rating: 4.7,
+        featured: false,
+        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      },
+      {
+        id: 3,
+        title: 'Big Pharma\'s BD Blueprint including Strategic Interest Areas',
+        description: 'Comprehensive blueprint for understanding large pharma business development strategies.',
+        type: 'PDF',
+        size: '3.2 MB',
+        views: 980,
+        rating: 4.8,
+        featured: false,
+        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      },
+      {
+        id: 4,
+        title: 'Winning BD Pitch Decks and Management Tips',
+        description: 'Proven strategies and templates for creating compelling BD presentations.',
+        type: 'PDF',
+        size: '2.1 MB',
+        views: 1560,
+        rating: 4.9,
+        featured: false,
+        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      },
+      {
+        id: 5,
+        title: 'Only Deal Comps - Excel with Two Tabs',
+        description: 'Comprehensive deal comparison data in Excel format for strategic analysis.',
+        type: 'Excel',
+        size: '1.5 MB',
+        views: 890,
+        rating: 4.6,
+        featured: false,
+        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
       }
     ]
   };
 
-  const categories = Object.keys(freeContent);
+  const categories = Object.keys(bdInsights);
   const filteredContent = selectedCategory === 'all' 
-    ? Object.values(freeContent).flat()
-    : freeContent[selectedCategory] || [];
+    ? Object.values(bdInsights).flat()
+    : bdInsights[selectedCategory] || [];
 
   const handleViewPDF = (content) => {
     if (!viewedContent.includes(content.id)) {
@@ -2346,16 +2549,49 @@ const FreeContent = ({ user }) => {
     return views.toString();
   };
 
+  // If free user, show only the upgrade content
+  if (!userPaymentStatus?.hasPaid) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Paid Members Access Only</h3>
+            <p className="text-gray-600 mb-6">
+              This content is exclusively available to paid members. Upgrade your plan to access our premium BD Insights library.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.history.back()}
+                className="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                onClick={() => window.location.href = '/dashboard/pricing'}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
+              >
+                Upgrade Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Free Content</h2>
-            <p className="text-gray-600">Access our library of free business development resources</p>
-      </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">BD Insights</h2>
+            <p className="text-gray-600">BD Insights from 15+ Years of Experience in Large Pharma to Small Biotechs</p>
+          </div>
           <div className="flex items-center space-x-2">
-            <Heart className="w-6 h-6 text-red-600" />
+            <TrendingUp className="w-6 h-6 text-purple-600" />
             <span className="text-sm font-medium text-gray-600">{filteredContent.length} resources</span>
           </div>
         </div>
@@ -2366,9 +2602,9 @@ const FreeContent = ({ user }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-600">Total Resources</p>
-                <p className="text-2xl font-bold text-red-900">{Object.values(freeContent).flat().length}</p>
+                <p className="text-2xl font-bold text-red-900">{Object.values(bdInsights).flat().length}</p>
               </div>
-              <Heart className="w-8 h-8 text-red-600" />
+              <TrendingUp className="w-8 h-8 text-red-600" />
             </div>
           </div>
           <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4">
@@ -2376,7 +2612,7 @@ const FreeContent = ({ user }) => {
               <div>
                 <p className="text-sm font-medium text-green-600">Total Views</p>
                 <p className="text-2xl font-bold text-green-900">
-                  {formatViews(Object.values(freeContent).flat().reduce((sum, c) => sum + c.views, 0))}
+                  {formatViews(Object.values(bdInsights).flat().reduce((sum, c) => sum + c.views, 0))}
                 </p>
               </div>
               <Eye className="w-8 h-8 text-green-600" />
@@ -2446,7 +2682,7 @@ const FreeContent = ({ user }) => {
                   className={`ml-4 p-3 rounded-lg transition-colors duration-200 ${
                     viewedContent.includes(content.id)
                       ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                      : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                      : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                   }`}
                 >
                   {viewedContent.includes(content.id) ? (
@@ -2470,53 +2706,76 @@ const FreeContent = ({ user }) => {
         />
       )}
 
+
+
     </div>
   );
 };
 
-// Enhanced Legal Disclaimer Component
+// Enhanced Terms and Legal Disclaimer Component
 const LegalDisclaimer = () => {
   const legalSections = [
     {
       id: 1,
-      title: 'Information Only - No Guarantees',
-      content: 'The information in the database (contact details, affiliations) is for general informational and business development purposes only, and accuracy, completeness, timeliness, or usefulness is not guaranteed.',
-      icon: '⚠️',
+      title: 'Terms of Use',
+      content: 'Last Updated: [Insert Date]. By accessing the BioPing website and Services, you agree to be bound by these Terms of Use. The Services are provided for business development, research, and investment diligence purposes.',
+      icon: '📋',
       priority: 'high'
     },
     {
       id: 2,
-      title: 'No Endorsement or Representation',
-      content: 'Inclusion of any individual or company does not constitute an endorsement or recommendation, and the platform does not represent or act on behalf of listed individuals or companies.',
-      icon: '📋',
-      priority: 'medium'
+      title: 'Privacy Policy',
+      content: 'We collect and process data as described in our Privacy Policy. For data requests, contact privacy@bioping.com. We comply with GDPR and CCPA requirements.',
+      icon: '🔒',
+      priority: 'high'
     },
     {
       id: 3,
-      title: 'Use at Your Own Risk',
-      content: 'Users are solely responsible for how they use the information, including outreach, communication, and follow-up, and the platform is not responsible for the outcome of contact attempts or partnerships.',
-      icon: '⚖️',
+      title: 'Data Disclaimer',
+      content: 'Data is compiled from public and proprietary sources. BioPing does not warrant the accuracy, completeness, or timeliness of any data provided through our Services.',
+      icon: '⚠️',
       priority: 'high'
     },
     {
       id: 4,
-      title: 'No Liability',
-      content: 'The platform shall not be held liable for any direct, indirect, incidental, or consequential damages arising from use of the database, including errors, omissions, inaccuracies, or actions taken based on the information.',
-      icon: '🛡️',
+      title: 'Permitted Use / License Restrictions',
+      content: 'You are granted a limited, non-exclusive, non-transferable license for internal business development, research, or investment diligence. Copying, scraping, reselling, or redistributing data without permission is prohibited.',
+      icon: '⚖️',
       priority: 'high'
     },
     {
       id: 5,
-      title: 'Compliance',
-      content: 'By accessing and using the database, users agree to comply with applicable data privacy laws (such as GDPR, CAN-SPAM) and ethical outreach practices, with the user solely responsible for compliance.',
-      icon: '📜',
+      title: 'No Guarantees or Endorsements',
+      content: 'BioPing does not guarantee contact success or deal outcomes. Inclusion in our database does not constitute an endorsement or recommendation.',
+      icon: '📋',
       priority: 'medium'
     },
     {
       id: 6,
+      title: 'Limitation of Liability',
+      content: 'BioPing and its affiliates shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from use of our Services.',
+      icon: '🛡️',
+      priority: 'high'
+    },
+    {
+      id: 7,
+      title: 'Refund & Cancellation Policy',
+      content: 'Fees are non-refundable. Cancellations are effective at the end of the current billing period. No refunds for partial months.',
+      icon: '💰',
+      priority: 'medium'
+    },
+    {
+      id: 8,
       title: 'Intellectual Property',
-      content: 'All content and materials on this platform are protected by intellectual property rights.',
+      content: 'All content, including but not limited to text, graphics, logos, and software, is the exclusive property of BioPing and is protected by copyright laws.',
       icon: '🔒',
+      priority: 'medium'
+    },
+    {
+      id: 9,
+      title: 'Jurisdiction & Governing Law',
+      content: 'These terms are governed by the laws of California, USA. Any disputes shall be resolved in the courts of San Francisco County, California.',
+      icon: '⚖️',
       priority: 'medium'
     }
   ];
@@ -2534,7 +2793,7 @@ const LegalDisclaimer = () => {
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Legal Disclaimer</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Terms and Legal Disclaimer</h2>
             <p className="text-gray-600">Important legal information about our services and data usage</p>
           </div>
           <div className="flex items-center space-x-2">
@@ -2565,19 +2824,13 @@ const LegalDisclaimer = () => {
 
         {/* Contact Information */}
         <div className="mt-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
-          <h3 className="font-bold text-gray-900 mb-2">Questions or Concerns?</h3>
+          <h3 className="font-bold text-gray-900 mb-2">Contact for Legal Inquiries</h3>
           <p className="text-gray-700 mb-3">
-            If you have any questions about these terms or our data usage practices, please contact us.
+            For legal inquiries or questions about these terms, please contact our legal team.
           </p>
           <div className="flex items-center space-x-4">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-            >
-              Contact Legal Team
-            </motion.button>
-            <span className="text-sm text-gray-600">or email: legal@bioping.com</span>
+            <span className="text-sm text-gray-600">Email: legal@bioping.com</span>
+            <span className="text-sm text-gray-600">Address: [Insert Business Address Here]</span>
           </div>
         </div>
       </div>
@@ -2615,42 +2868,21 @@ const Contact = () => {
       responseTime: 'Within 24 hours'
     },
     {
-      icon: '💬',
-      title: 'Live Chat',
-      description: 'Real-time assistance during business hours',
-      contact: 'Available 9 AM - 6 PM EST',
-      responseTime: 'Immediate'
-    },
-    {
       icon: '📞',
       title: 'Phone Support',
       description: 'Speak directly with our team',
-      contact: '+1 (555) 123-4567',
+      contact: '+1 650 455 5850',
       responseTime: 'During business hours'
     }
   ];
 
   const teamMembers = [
     {
-      name: 'Vik Vij',
+      name: 'Gaurav',
       role: 'Business Development Lead',
-      email: 'gvij@cdslifescigroup.com',
+      email: 'gauravvij1980@gmail.com',
       expertise: 'Partnership Strategy, Deal Structuring',
-      avatar: 'V'
-    },
-    {
-      name: 'Sarah Johnson',
-      role: 'Customer Success Manager',
-      email: 'sarah@bioping.com',
-      expertise: 'Platform Support, User Training',
-      avatar: 'S'
-    },
-    {
-      name: 'Mike Chen',
-      role: 'Technical Support',
-      email: 'mike@bioping.com',
-      expertise: 'Technical Issues, Data Queries',
-      avatar: 'M'
+      avatar: 'G'
     }
   ];
 
@@ -2789,7 +3021,7 @@ const Contact = () => {
 // Enhanced Pricing Page Component - BioPing Style
 const PricingPage = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [isAnnual, setIsAnnual] = useState(true);
+  const [isAnnual, setIsAnnual] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
@@ -2814,7 +3046,7 @@ const PricingPage = () => {
       ],
       icon: Gift,
       popular: false,
-      color: 'gray'
+      buttonStyle: "outline"
     },
     {
       id: 'basic',
@@ -2822,33 +3054,39 @@ const PricingPage = () => {
       description: "Ideal for growing businesses",
       credits: "50 credits per month",
       monthlyPrice: 500,
-      annualPrice: 4800, // Monthly and yearly both available
+      annualPrice: 4800,
       features: [
+        "Everything in Free, plus:",
         "1 Seat included",
         "Get 50 free contacts / month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources"
+        "Unlimited Access to Free Resources",
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Users,
       popular: false,
-      color: 'blue'
+      buttonText: "Choose plan",
+      buttonStyle: "primary"
     },
     {
       id: 'premium',
       name: "Premium Plan",
-      description: "For advanced business development",
+      description: "For advanced users and teams",
       credits: "100 credits per month",
       monthlyPrice: 600,
       annualPrice: 7200,
       features: [
+        "Everything in Basic, plus:",
         "1 Seat included",
         "Get 100 free contacts / month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources"
+        "Unlimited Access to Free Resources",
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
-      color: 'orange'
+      buttonText: "Choose plan",
+      buttonStyle: "primary"
     }
   ];
 
@@ -2950,24 +3188,24 @@ const PricingPage = () => {
       {/* Header */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Simple, Transparent <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Pricing</span>
+          <h1 className="text-5xl font-bold text-gray-900 mb-2">
+            Simple, Transparent <span className="gradient-text">Pricing</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            Choose the plan that best fits your business development needs. All plans include 
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
+            Choose the plan that best fits your business needs. All plans include 
             our core features with different usage limits and additional capabilities.
           </p>
 
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center space-x-4 mb-8 bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl shadow-lg border-2 border-blue-300">
+          <div className="flex items-center justify-center space-x-4 mb-8 bg-gradient-to-r from-primary-50 to-secondary-50 p-6 rounded-xl shadow-lg border-2 border-primary-300">
             <span className={`text-lg font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
               Pay Monthly
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className={`relative inline-flex h-12 w-24 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 border-2 ${
+              className={`relative inline-flex h-12 w-24 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-primary-300 focus:ring-offset-2 border-2 ${
                 isAnnual 
-                  ? 'bg-blue-600 border-blue-600 shadow-lg' 
+                  ? 'bg-primary-600 border-primary-600 shadow-lg' 
                   : 'bg-gray-200 border-gray-300 shadow-md'
               }`}
             >
@@ -3003,12 +3241,10 @@ const PricingPage = () => {
               </div>
             )}
             
-            <div className={`bg-white rounded-2xl p-8 h-full border-2 transition-all duration-300 hover:shadow-xl ${
-              plan.popular ? 'border-purple-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
-            }`}>
+            <div className={`card p-8 h-full bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 shadow-large flex flex-col`}>
               <div className="text-center mb-8">
-                <div className={`w-16 h-16 bg-gradient-to-br ${getColorClasses(plan.color)} rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg`}>
-                  <plan.icon className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <plan.icon className="w-8 h-8 text-primary-600" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   {plan.name}
@@ -3035,8 +3271,8 @@ const PricingPage = () => {
               <div className="space-y-4 mb-8">
                 {plan.features.map((feature, featureIndex) => (
                   <div key={featureIndex} className="flex items-start space-x-3">
-                    <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700">{feature}</span>
+                    <Check className="w-5 h-5 text-accent-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-700 text-base">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -3044,20 +3280,20 @@ const PricingPage = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => handleSelectPlan(plan)}
-                className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 ${
-                  userCurrentPlan === plan.id
-                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500'
-                    : plan.popular 
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700' 
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-300 mt-auto ${
+                  plan.id === 'free' || userCurrentPlan === plan.id
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
+                    : plan.buttonStyle === 'primary' 
+                      ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-soft hover:shadow-medium' 
+                      : 'border-2 border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300'
                 }`}
+                onClick={() => handleSelectPlan(plan)}
               >
-                {userCurrentPlan === plan.id 
+                {plan.id === 'free' 
                   ? 'Current Plan' 
-                  : plan.id === 'free' 
-                    ? 'Get Started' 
-                    : 'Choose Plan'
+                  : userCurrentPlan === plan.id 
+                    ? 'Current Plan' 
+                    : plan.buttonText
                 }
               </motion.button>
             </div>
@@ -3065,27 +3301,7 @@ const PricingPage = () => {
         ))}
       </div>
 
-      {/* Features Section */}
-      <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">All Plans Include</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              className="text-center"
-            >
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                <feature.icon className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
-              <p className="text-gray-600 text-sm">{feature.description}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+
 
       {/* FAQ Section */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
@@ -3093,19 +3309,15 @@ const PricingPage = () => {
         <div className="space-y-6">
           <div className="border-b border-gray-200 pb-6">
             <h3 className="font-semibold text-gray-900 mb-2">Can I change my plan anytime?</h3>
-            <p className="text-gray-600">Yes, you can upgrade or downgrade your plan at any time. Changes will be prorated based on your current billing cycle.</p>
+            <p className="text-gray-600">Yes, you can upgrade or downgrade your plan at any time. New plan starts and new charges activated for next 30 days.</p>
           </div>
           <div className="border-b border-gray-200 pb-6">
             <h3 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
-            <p className="text-gray-600">We accept all major credit cards, PayPal, and bank transfers for annual plans. All payments are processed securely.</p>
-          </div>
-          <div className="border-b border-gray-200 pb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Is there a free trial available?</h3>
-            <p className="text-gray-600">Yes, we offer a 14-day free trial for all plans. No credit card required to start your trial.</p>
+            <p className="text-gray-600">We accept all major credit and debit cards and bank payments.</p>
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">What kind of support do you provide?</h3>
-            <p className="text-gray-600">All plans include email support. Professional and Enterprise plans include priority support and dedicated account managers.</p>
+            <p className="text-gray-600">All plans include email and phone support during PST time hours in USA. Basic and Premium Plans have enhanced customer and BD support.</p>
           </div>
         </div>
       </div>
@@ -3114,7 +3326,7 @@ const PricingPage = () => {
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center">
         <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
         <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-          Join thousands of business development professionals who trust BioPing to find their next partnership opportunities.
+          Join several business development professionals who trust BioPing to find their next partnership opportunities.
         </p>
         <motion.button
           whileHover={{ scale: 1.05 }}

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MantineProvider } from '@mantine/core';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import CookieConsent from './components/CookieConsent';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Search from './pages/Search';
@@ -14,6 +15,7 @@ import ContactUs from './pages/ContactUs';
 import Product from './pages/Product';
 import OurValue from './pages/OurValue';
 import Resources from './pages/Resources';
+import HowItWorks from './pages/HowItWorks';
 import RequestDemo from './pages/RequestDemo';
 import ContactSales from './pages/ContactSales';
 import AdminPanel from './pages/AdminPanel';
@@ -23,12 +25,15 @@ import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import BDTrackerPage from './pages/BDTrackerPage';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
+import CookiePolicy from './pages/CookiePolicy';
+import ScrollToTop from './components/ScrollToTop';
 import './App.css';
 
 function App() {
   return (
     <MantineProvider>
       <Router>
+        <ScrollToTop />
         <div className="App min-h-screen bg-gray-50">
         <Routes>
           {/* Public Routes */}
@@ -39,6 +44,7 @@ function App() {
                 <Home />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/login" element={<Login />} />
@@ -50,6 +56,7 @@ function App() {
                 <About />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/pricing" element={
@@ -59,6 +66,7 @@ function App() {
                 <Pricing />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/contact-us" element={
@@ -68,6 +76,7 @@ function App() {
                 <ContactUs />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/product" element={
@@ -77,6 +86,7 @@ function App() {
                 <Product />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/our-value" element={
@@ -86,6 +96,7 @@ function App() {
                 <OurValue />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/resources" element={
@@ -95,6 +106,17 @@ function App() {
                 <Resources />
               </main>
               <Footer />
+              <CookieConsent />
+            </>
+          } />
+          <Route path="/how-it-works" element={
+            <>
+              <Header />
+              <main className="pt-20">
+                <HowItWorks />
+              </main>
+              <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/request-demo" element={
@@ -104,6 +126,7 @@ function App() {
                 <RequestDemo />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/contact-sales" element={
@@ -113,10 +136,12 @@ function App() {
                 <ContactSales />
               </main>
               <Footer />
+              <CookieConsent />
             </>
           } />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
 
           {/* Dashboard Routes - Protected */}
           <Route path="/dashboard" element={<Dashboard />} />

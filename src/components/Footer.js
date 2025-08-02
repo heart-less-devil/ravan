@@ -39,14 +39,14 @@ const Footer = () => {
   };
 
   const socialLinks = [
-    { name: 'Twitter', icon: Twitter, href: '#', color: 'hover:text-blue-400' },
-    { name: 'LinkedIn', icon: Linkedin, href: '#', color: 'hover:text-blue-600' },
-    { name: 'GitHub', icon: Github, href: '#', color: 'hover:text-gray-400' },
+    // { name: 'Twitter', icon: Twitter, href: '#', color: 'hover:text-blue-400' },
+    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app', color: 'hover:text-blue-600' },
+    // { name: 'GitHub', icon: Github, href: '#', color: 'hover:text-gray-400' },
   ];
 
   const contactInfo = [
-    { icon: Mail, text: 'hello@bioping.com', href: 'mailto:hello@bioping.com' },
-    { icon: Phone, text: '+1 (555) 123-4567', href: 'tel:+15551234567' },
+    { icon: Mail, text: 'gauravvij1980@gmail.com', href: 'mailto:gauravvij1980@gmail.com' },
+    { icon: Phone, text: '+1 650 455 5850', href: 'tel:+16504555850' },
     { icon: MapPin, text: 'San Francisco, CA', href: '#' },
   ];
 
@@ -136,7 +136,7 @@ const Footer = () => {
                   <li><Link to="/" className="text-white hover:text-orange-400 transition-colors">Home</Link></li>
                   <li><Link to="/about" className="text-white hover:text-orange-400 transition-colors">Company</Link></li>
                   <li><Link to="/product" className="text-white hover:text-orange-400 transition-colors">Product</Link></li>
-                  <li><Link to="/product" className="text-white hover:text-orange-400 transition-colors">How it works</Link></li>
+                  <li><Link to="/how-it-works" className="text-white hover:text-orange-400 transition-colors">How it works</Link></li>
                   <li><Link to="/our-value" className="text-white hover:text-orange-400 transition-colors">Our Value</Link></li>
                   <li><Link to="/privacy" className="text-white hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
                   <li><Link to="/terms" className="text-white hover:text-orange-400 transition-colors">Terms and Conditions</Link></li>
@@ -145,16 +145,17 @@ const Footer = () => {
 
               {/* Free Resources */}
               <div>
-                <h3 className="text-orange-400 font-semibold text-lg mb-4">Free Resources</h3>
+                <h3 className="text-orange-400 font-semibold text-lg mb-4">BD Insights (Access to Paid Members)
+                </h3>
                 <ul className="space-y-2">
-                  <li className="text-white">BD Conference Planner - priorities, budgets, and timing</li>
-                  <li className="text-white">BD News & Resource Toolkit</li>
-                  <li className="text-white">BD Process Flow & Best Practices</li>
-                  <li className="text-white">Big Pharma BD Playbook</li>
-                  <li className="text-white">Deal Comps & Benchmarking Data</li>
-                  <li className="text-white">Curated Investor List (200+ VCs)</li>
-                  <li className="text-white">Winning BD Decks + Email & Template Toolkit</li>
-                  <li className="text-white">Fresh content added from time to time</li>
+                  <li className="text-white">BD Conferences – Priority, Budgets and Smart ROI Tips</li>
+                  <li className="text-white">Biopharma Industry News and Resources (Free and Paid)</li>
+                  <li className="text-white">Biopharma Industry News and Resources (Free and Paid)</li>
+                  <li className="text-white">Big Pharma’s BD Blueprint including Strategic Interest Areas</li>
+                  <li className="text-white">Winning BD Pitch Decks</li>
+                  <li className="text-white">BD Process Overview and Management Tips</li>
+                  <li className="text-white">Deal Comps</li>
+                  <li className="text-white">200+ VCs Curated List with contacts</li>
                   </ul>
                 </div>
             </div>
@@ -193,6 +194,8 @@ const Footer = () => {
                   <motion.a
                     key={social.name}
                     href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl flex items-center justify-center text-gray-400 ${social.color} hover:scale-110 transition-all duration-200 border border-gray-600`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -216,13 +219,13 @@ const Footer = () => {
 
             {/* Legal Links */}
             <div className="flex items-center space-x-6 text-sm">
-              <Link to="/legal" className="text-gray-400 hover:text-white transition-colors duration-200">
+              <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-200">
                 Privacy Policy
               </Link>
-              <Link to="/legal" className="text-gray-400 hover:text-white transition-colors duration-200">
+              <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-200">
                 Terms of Service
               </Link>
-              <Link to="/legal" className="text-gray-400 hover:text-white transition-colors duration-200">
+              <Link to="/cookie-policy" className="text-gray-400 hover:text-white transition-colors duration-200">
                 Cookie Policy
               </Link>
             </div>

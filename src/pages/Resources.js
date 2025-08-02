@@ -31,7 +31,7 @@ const Resources = () => {
       </section>
 
       {/* Main Content */}
-      <section className="section">
+      <section className="section -mt-28">
         <div className="container-custom">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             {/* Left Side - Illustration */}
@@ -68,7 +68,7 @@ const Resources = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
-                  className="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                  className="flex items-center space-x-4 p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-large border-2 border-orange-300 hover:shadow-md transition-shadow"
                 >
                   <CheckCircle className="w-6 h-6 text-orange-500 flex-shrink-0" />
                   <span className="text-gray-800 font-medium">{resource}</span>
