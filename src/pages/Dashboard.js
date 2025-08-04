@@ -457,7 +457,7 @@ const Dashboard = () => {
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },
     { name: 'Pricing', path: '/dashboard/pricing', icon: DollarSign, section: 'RESOURCES' },
-                      { name: 'BD Insights', path: '/dashboard/resources/bd-insights', icon: TrendingUp, section: 'RESOURCES' },
+                      { name: 'Free Content', path: '/dashboard/resources/bd-insights', icon: Heart, section: 'RESOURCES' },
     { name: 'Legal Disclaimer', path: '/dashboard/legal', icon: Scale, section: 'RESOURCES' },
     { name: 'Contact Us', path: '/dashboard/contact', icon: User, section: 'RESOURCES' },
   ];
@@ -488,7 +488,7 @@ const Dashboard = () => {
       case '/dashboard/resources/quick-guide':
         return <QuickGuide />;
       case '/dashboard/resources/bd-insights':
-        return <BDInsights user={user} userPaymentStatus={userPaymentStatus} />;
+        return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/resources/free-content':
         return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/legal':
