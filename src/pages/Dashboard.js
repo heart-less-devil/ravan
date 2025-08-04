@@ -289,6 +289,15 @@ const Dashboard = () => {
     fetchUserData();
   }, [navigate]);
 
+  // Clear global search results when navigating to other pages
+  useEffect(() => {
+    const currentPath = location.pathname;
+    if (currentPath !== '/dashboard/search' && globalSearchResults) {
+      console.log('Clearing global search results - navigating away from search page');
+      setGlobalSearchResults(null);
+    }
+  }, [location.pathname, globalSearchResults]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -399,7 +408,8 @@ const Dashboard = () => {
       if (result.success) {
         // Check if no results found
         if (result.data.results.length === 0) {
-          setError(`Not in System`);
+          setError(`Not in the database. Try search UCB under company`);
+          setGlobalSearchResults(null); // Clear any previous results
           return;
         }
         
@@ -412,6 +422,8 @@ const Dashboard = () => {
         };
         
         console.log('Setting global search results:', globalResults);
+        console.log('Results count:', result.data.results.length);
+        console.log('First result:', result.data.results[0]);
         setGlobalSearchResults(globalResults);
         
         // Clear any existing error
@@ -445,7 +457,7 @@ const Dashboard = () => {
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },
     { name: 'Pricing', path: '/dashboard/pricing', icon: DollarSign, section: 'RESOURCES' },
-                      { name: 'BD Insights', path: '/dashboard/resources/free-content', icon: TrendingUp, section: 'RESOURCES' },
+                      { name: 'BD Insights', path: '/dashboard/resources/bd-insights', icon: TrendingUp, section: 'RESOURCES' },
     { name: 'Legal Disclaimer', path: '/dashboard/legal', icon: Scale, section: 'RESOURCES' },
     { name: 'Contact Us', path: '/dashboard/contact', icon: User, section: 'RESOURCES' },
   ];
@@ -477,8 +489,8 @@ const Dashboard = () => {
         return <QuickGuide />;
       case '/dashboard/resources/bd-insights':
         return <BDInsights user={user} userPaymentStatus={userPaymentStatus} />;
-                          case '/dashboard/resources/free-content':
-                      return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
+      case '/dashboard/resources/free-content':
+        return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/legal':
         return <LegalDisclaimer />;
       case '/dashboard/contact':
@@ -625,7 +637,11 @@ const Dashboard = () => {
                 <input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (error) setError(null); // Clear error when user starts typing
+                    // Don't clear global search results when typing
+                  }}
                   onKeyPress={handleSearchKeyPress}
                   placeholder="Type Keywords"
                   className="bg-white/80 backdrop-blur-sm border-2 border-gray-300 rounded-2xl pl-14 pr-6 py-3 text-base font-medium focus:ring-4 focus:ring-blue-500/50 focus:border-blue-600 focus:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300 w-64 shadow-lg"
@@ -643,6 +659,28 @@ const Dashboard = () => {
                 </button>
               </div>
             </div>
+            
+            {/* Global Search Error Display - Only show on search page */}
+            {error && location.pathname === '/dashboard/search' && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-full left-0 right-0 mt-2 bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-lg z-50"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-sm text-blue-700 font-semibold">{error}</span>
+                    <p className="text-xs text-blue-600 mt-1">Try searching for "UCB" to see available companies</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
             
             <div className="flex items-center space-x-4">
               {/* Enhanced Settings */}
@@ -904,7 +942,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
 
   const quickActions = [
     { name: 'Search Database', icon: Search, path: '/dashboard/search', color: 'blue', gradient: 'from-blue-500 to-blue-600' },
-    { name: 'Self Coaching Tips', icon: User, path: '/dashboard/resources/coaching-tips', color: 'purple', gradient: 'from-purple-500 to-purple-600' },
+    { name: 'Quick Guide', icon: FileText, path: '/dashboard/resources/quick-guide', color: 'purple', gradient: 'from-purple-500 to-purple-600' },
     { name: 'Free Resources', icon: Heart, path: '/dashboard/resources/free-content', color: 'pink', gradient: 'from-pink-500 to-pink-600' },
     { name: 'Request Demo', icon: Zap, path: '/request-demo', color: 'yellow', gradient: 'from-yellow-500 to-yellow-600' }
   ];
@@ -1078,10 +1116,15 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   useEffect(() => {
     const checkForStoredResults = () => {
       console.log('SearchPage: Checking for stored results:', { globalSearchResults });
+      console.log('SearchPage: globalSearchResults type:', typeof globalSearchResults);
+      console.log('SearchPage: globalSearchResults.results:', globalSearchResults?.results);
+      console.log('SearchPage: globalSearchResults.results length:', globalSearchResults?.results?.length);
+      
       if (globalSearchResults && globalSearchResults.results && globalSearchResults.results.length > 0) {
         // GLOBAL SEARCH: hide form after results
         console.log('SearchPage: Setting global search results:', globalSearchResults);
         console.log('SearchPage: Results count:', globalSearchResults.results?.length);
+        console.log('SearchPage: First result:', globalSearchResults.results[0]);
         setSearchResults(globalSearchResults.results);
         setCurrentSearchType(globalSearchResults.searchType || 'Company Name');
         setCurrentSearchQuery(globalSearchResults.searchQuery || '');
@@ -1652,16 +1695,29 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
       {/* Search Results */}
       {error && (
-        <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-2xl p-8 mb-6 shadow-lg">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 mb-6 shadow-lg">
+          <div className="flex items-center justify-center space-x-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="text-xl font-bold text-red-700 mb-2">No Match Found</h3>
-              <p className="text-red-600 font-medium">Please Refine Your Search Criterion</p>
+              <h3 className="text-2xl font-bold text-blue-700 mb-3">No Results Found</h3>
+              <p className="text-blue-600 font-semibold text-lg mb-4">{error}</p>
+              <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm">
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700">Quick Tip</span>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Try searching for <span className="font-semibold text-blue-600">"UCB"</span> in the Company Name field to see available companies in our database.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -2461,6 +2517,8 @@ const CoachingTips = () => {
     </div>
   );
 };
+
+
 
 // Enhanced Free Content Component
 const FreeContent = ({ user, userPaymentStatus }) => {

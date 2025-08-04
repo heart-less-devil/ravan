@@ -387,7 +387,7 @@ const Home = () => {
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-secondary-600 to-accent-600 rounded-xl flex items-center justify-center">
                       <Zap className="w-6 h-6 text-white" />
-                    </div>
+                    </div>    
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">BD at Speed</h3>
                       <p className="text-gray-600">Precision strategy and high-value contacts to move fast</p>

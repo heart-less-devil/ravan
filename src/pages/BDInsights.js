@@ -1,39 +1,67 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Lock, Star, Users, Target, Award, ArrowRight, Eye } from 'lucide-react';
+import { TrendingUp, Lock, Star, Users, Target, Award, ArrowRight, Eye, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import IframePDFViewer from '../components/IframePDFViewer';
 
 const BDInsights = ({ user, userPaymentStatus }) => {
   const [selectedPDF, setSelectedPDF] = useState(null);
+
   const insights = [
     {
-      title: "BD Strategy Playbook",
-      description: "Comprehensive guide for business development strategies in big pharma companies",
-      icon: TrendingUp,
-      color: "blue",
-      premium: true
+      id: 1,
+      title: 'BD Conferences - Priority, Budgets and Smart ROI Tips',
+      description: 'Strategic insights from 15+ years of experience in Large Pharma to Small Biotechs.',
+      type: 'PDF',
+      size: '2.5 MB',
+      views: 1856,
+      rating: 4.9,
+      featured: true,
+      pdfUrl: '/pdf/BD Conferences, Priority & Budgets.pdf'
     },
     {
-      title: "Pitch Deck Mastery",
-      description: "Templates and strategies for creating compelling business development presentations",
-      icon: Target,
-      color: "green",
-      premium: true
+      id: 2,
+      title: 'Biopharma Industry News and Resources',
+      description: 'Latest industry updates and strategic resources for business development.',
+      type: 'PDF',
+      size: '1.8 MB',
+      views: 1240,
+      rating: 4.7,
+      featured: false,
+      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
     },
     {
-      title: "Process & Best Practices",
-      description: "Step-by-step process and expert tips for successful business development",
-      icon: Award,
-      color: "purple",
-      premium: true
+      id: 3,
+      title: 'Big Pharma\'s BD Blueprint including Strategic Interest Areas',
+      description: 'Comprehensive blueprint for understanding large pharma business development strategies.',
+      type: 'PDF',
+      size: '3.2 MB',
+      views: 980,
+      rating: 4.8,
+      featured: false,
+      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
     },
     {
-      title: "Conference Strategy",
-      description: "Guide to key conferences, prioritization strategies, and budget planning",
-      icon: Users,
-      color: "orange",
-      premium: true
+      id: 4,
+      title: 'Winning BD Pitch Decks and Management Tips',
+      description: 'Proven strategies and templates for creating compelling BD presentations.',
+      type: 'PDF',
+      size: '2.1 MB',
+      views: 1560,
+      rating: 4.9,
+      featured: false,
+      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+    },
+    {
+      id: 5,
+      title: 'Only Deal Comps - Excel with Two Tabs',
+      description: 'Comprehensive deal comparison data in Excel format for strategic analysis.',
+      type: 'Excel',
+      size: '1.5 MB',
+      views: 890,
+      rating: 4.6,
+      featured: false,
+      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
     }
   ];
 
@@ -52,222 +80,222 @@ const BDInsights = ({ user, userPaymentStatus }) => {
     console.log('Viewing PDF:', pdfData.title);
   };
 
+  const formatViews = (views) => {
+    if (views >= 1000) {
+      return `${(views / 1000).toFixed(1)}k`;
+    }
+    return views.toString();
+  };
+
+  // Calculate total statistics
+  const totalResources = insights.length;
+  const totalViews = insights.reduce((sum, item) => sum + item.views, 0);
+  const userViews = 0; // This would come from user data
+
   // Check if user has paid access
-  if (!userPaymentStatus.hasPaid) {
+  if (!userPaymentStatus?.hasPaid) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center"
-        >
-          <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock className="w-10 h-10 text-white" />
-          </div>
-          
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Premium Content</h2>
-          <p className="text-gray-600 mb-6">
-            BD Insights is exclusively available for paid members. Upgrade to access exclusive market intelligence and strategic insights.
-          </p>
-          
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center space-x-3 text-sm text-gray-600">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span>Market trend analysis</span>
+      <div className="space-y-6">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg">
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-white" />
             </div>
-            <div className="flex items-center space-x-3 text-sm text-gray-600">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span>Deal flow patterns</span>
-            </div>
-            <div className="flex items-center space-x-3 text-sm text-gray-600">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span>Industry benchmarks</span>
-            </div>
-            <div className="flex items-center space-x-3 text-sm text-gray-600">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span>Network intelligence</span>
+            <div>
+              <h1 className="text-3xl font-bold">BD Insights</h1>
+              <p className="text-blue-100">From 15+ Years of Experience in Large Pharma to Small Biotechs</p>
             </div>
           </div>
-          
-          <Link
-            to="/dashboard/pricing"
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
-          >
-            <span>Upgrade Now</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </motion.div>
+        </div>
+
+        {/* Statistics Section */}
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-blue-600">{totalResources}</h3>
+              <p className="text-blue-700 font-medium">Total Resources</p>
+            </div>
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Eye className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-green-600">{formatViews(totalViews)}</h3>
+              <p className="text-green-700 font-medium">Total Views</p>
+            </div>
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-purple-600">{userViews}</h3>
+              <p className="text-purple-700 font-medium">Your Views</p>
+            </div>
+          </div>
+
+          {/* Premium Content Lock */}
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-10 h-10 text-white" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Premium Content</h2>
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+              BD Insights is exclusively available for paid members. Upgrade to access exclusive market intelligence and strategic insights from 15+ years of experience.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-w-4xl mx-auto">
+              <div className="flex items-center space-x-3 text-sm text-gray-600">
+                <Star className="w-4 h-4 text-yellow-500" />
+                <span>Market trend analysis</span>
+              </div>
+              <div className="flex items-center space-x-3 text-sm text-gray-600">
+                <Star className="w-4 h-4 text-yellow-500" />
+                <span>Deal flow patterns</span>
+              </div>
+              <div className="flex items-center space-x-3 text-sm text-gray-600">
+                <Star className="w-4 h-4 text-yellow-500" />
+                <span>Industry benchmarks</span>
+              </div>
+              <div className="flex items-center space-x-3 text-sm text-gray-600">
+                <Star className="w-4 h-4 text-yellow-500" />
+                <span>Network intelligence</span>
+              </div>
+            </div>
+            
+            <Link
+              to="/dashboard/pricing"
+              className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-lg"
+            >
+              <span>Upgrade Now</span>
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // Paid user view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <TrendingUp className="w-8 h-8 text-purple-600" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">BD Insights</h1>
-                  <p className="text-sm text-gray-500">Exclusive market intelligence for paid members</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Star className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm font-medium text-gray-600">Premium Access</span>
-            </div>
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg">
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+            <TrendingUp className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">BD Insights</h1>
+            <p className="text-blue-100">From 15+ Years of Experience in Large Pharma to Small Biotechs</p>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Statistics Section */}
+      <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-blue-600">{totalResources}</h3>
+            <p className="text-blue-700 font-medium">Total Resources</p>
+          </div>
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Eye className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-green-600">{formatViews(totalViews)}</h3>
+            <p className="text-green-700 font-medium">Total Views</p>
+          </div>
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-purple-600">{userViews}</h3>
+            <p className="text-purple-700 font-medium">Your Views</p>
+          </div>
+        </div>
+
+        {/* Resources Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {insights.map((insight, index) => (
             <motion.div
-              key={insight.title}
+              key={insight.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow duration-300"
+              className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
             >
-              <div className={`bg-gradient-to-r ${getColorClasses(insight.color)} p-6`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <insight.icon className="w-6 h-6 text-white" />
-                    <h3 className="text-lg font-bold text-white">{insight.title}</h3>
+              <div className={`bg-gradient-to-r ${getColorClasses(insight.featured ? 'purple' : 'blue')} p-6 text-white`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm font-medium">{insight.type}</span>
                   </div>
-                  {insight.premium && (
-                    <Star className="w-4 h-4 text-yellow-300" />
+                  {insight.featured && (
+                    <div className="bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold">
+                      FEATURED
+                    </div>
                   )}
                 </div>
+                <h3 className="text-lg font-bold mb-2">{insight.title}</h3>
+                <p className="text-blue-100 text-sm">{insight.description}</p>
               </div>
               
               <div className="p-6">
-                <p className="text-gray-700 mb-4">{insight.description}</p>
-                <button className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium">
-                  <span>View Details</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Eye className="w-4 h-4" />
+                    <span>{formatViews(insight.views)} views</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                    <span className="text-sm font-medium text-gray-700">{insight.rating}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    {insight.size}
+                  </div>
+                  <button
+                    onClick={() => handleViewPDF(insight)}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>View</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}
         </div>
-
-        {/* PDF Resources Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-8 bg-white rounded-xl shadow-lg border border-gray-200 p-6"
-        >
-          <h3 className="text-xl font-bold text-gray-900 mb-4">BD Resources & Guides</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">Big Pharma BD Playbook</h4>
-              <p className="text-blue-700 text-sm mb-3">
-                Comprehensive guide for business development strategies in big pharma companies.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleViewPDF({
-                  title: 'Big Pharma BD Playbook',
-                  pdfUrl: '/pdf/Big%20Pharma%20BD%20Playbook.pdf'
-                })}
-                className="inline-flex items-center space-x-2 text-blue-600 text-sm font-medium hover:text-blue-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span>View PDF</span>
-              </motion.button>
-            </div>
-            <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4">
-              <h4 className="font-semibold text-green-900 mb-2">Biopharma News & Resources</h4>
-              <p className="text-green-700 text-sm mb-3">
-                Latest news, trends, and resources for biopharma business development.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleViewPDF({
-                  title: 'Biopharma News & Resources',
-                  pdfUrl: '/pdf/Biopharma%20News%20%26%20Resources.pdf'
-                })}
-                className="inline-flex items-center space-x-2 text-green-600 text-sm font-medium hover:text-green-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span>View PDF</span>
-              </motion.button>
-            </div>
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4">
-              <h4 className="font-semibold text-purple-900 mb-2">Winning BD Pitch Deck</h4>
-              <p className="text-purple-700 text-sm mb-3">
-                Templates and strategies for creating compelling business development presentations.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleViewPDF({
-                  title: 'Winning BD Pitch Deck',
-                  pdfUrl: '/pdf/Winning%20BD%20Pitch%20Deck.pdf'
-                })}
-                className="inline-flex items-center space-x-2 text-purple-600 text-sm font-medium hover:text-purple-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span>View PDF</span>
-              </motion.button>
-            </div>
-            <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-4">
-              <h4 className="font-semibold text-orange-900 mb-2">BD Process and Tips</h4>
-              <p className="text-orange-700 text-sm mb-3">
-                Step-by-step process and expert tips for successful business development.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleViewPDF({
-                  title: 'BD Process and Tips',
-                  pdfUrl: '/pdf/BD%20Process%20and%20Tips.pdf'
-                })}
-                className="inline-flex items-center space-x-2 text-orange-600 text-sm font-medium hover:text-orange-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span>View PDF</span>
-              </motion.button>
-            </div>
-            <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-4">
-              <h4 className="font-semibold text-red-900 mb-2">BD Conferences, Priority & Budgets</h4>
-              <p className="text-red-700 text-sm mb-3">
-                Guide to key conferences, prioritization strategies, and budget planning for BD activities.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleViewPDF({
-                  title: 'BD Conferences, Priority & Budgets',
-                  pdfUrl: '/pdf/BD%20Conferences%2C%20Priority%20%26%20Budgets.pdf'
-                })}
-                className="inline-flex items-center space-x-2 text-red-600 text-sm font-medium hover:text-red-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span>View PDF</span>
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
       </div>
-      
+
       {/* PDF Viewer Modal */}
       {selectedPDF && (
-        <IframePDFViewer
-          pdfUrl={selectedPDF.pdfUrl}
-          title={selectedPDF.title}
-          onClose={() => setSelectedPDF(null)}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-4xl h-5/6 overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">{selectedPDF.title}</h3>
+              <button
+                onClick={() => setSelectedPDF(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="h-full">
+              <IframePDFViewer pdfUrl={selectedPDF.pdfUrl} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
