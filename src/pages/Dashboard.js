@@ -289,9 +289,19 @@ const Dashboard = () => {
     fetchUserData();
   }, [navigate]);
 
-  // Clear global search results when navigating to other pages
+  // Clear search query and global search results when navigating to other pages
   useEffect(() => {
     const currentPath = location.pathname;
+    
+    // Clear search query when navigating away from search page
+    if (currentPath !== '/dashboard/search') {
+      console.log('Clearing search query - navigating away from search page');
+      setSearchQuery('');
+      setSearchType('Company Name');
+      setError(null);
+    }
+    
+    // Clear global search results when navigating away from search page
     if (currentPath !== '/dashboard/search' && globalSearchResults) {
       console.log('Clearing global search results - navigating away from search page');
       setGlobalSearchResults(null);
@@ -457,7 +467,7 @@ const Dashboard = () => {
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },
     { name: 'Pricing', path: '/dashboard/pricing', icon: DollarSign, section: 'RESOURCES' },
-                      { name: 'Free Content', path: '/dashboard/resources/bd-insights', icon: Heart, section: 'RESOURCES' },
+                      { name: 'BD Insights', path: '/dashboard/resources/bd-insights', icon: TrendingUp, section: 'RESOURCES' },
     { name: 'Legal Disclaimer', path: '/dashboard/legal', icon: Scale, section: 'RESOURCES' },
     { name: 'Contact Us', path: '/dashboard/contact', icon: User, section: 'RESOURCES' },
   ];

@@ -69,66 +69,69 @@ const Footer = () => {
       <div className="container-custom py-20 relative z-10">
         {/* Top Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-16">
-          {/* Company Info & Newsletter */}
+          {/* Company Info */}
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-3 mb-8">
               <div className="relative">
                 <img 
                   src={require('../img/dfgjk.webp')} 
                   alt="BioPing Logo" 
-                  className="h-12 w-auto object-contain"
+                  className="h-32 w-auto object-contain"
                 />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full animate-pulse"></div>
               </div>
             </div>
-            
             <p className="text-gray-300 mb-8 leading-relaxed">
               Built to empower emerging biotechs with smarter BD solutions. 
               Connect with the right partners and accelerate your growth.
             </p>
+          </div>
 
-            {/* Newsletter Signup */}
-            <div className="bg-gradient-to-r from-primary-600/20 to-secondary-600/20 rounded-2xl p-6 border border-primary-500/20">
-              <h3 className="text-lg font-semibold mb-3 flex items-center">
-                <Sparkles className="w-5 h-5 mr-2 text-primary-400" />
-                Stay Updated
-              </h3>
-              <p className="text-gray-300 text-sm mb-4">
-                Get the latest biotech BD insights and updates
-              </p>
-              <form onSubmit={handleSubscribe} className="space-y-3">
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 top-2 p-2 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg hover:from-primary-700 hover:to-secondary-700 transition-all duration-200"
-                  >
-                    <Send className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-                {isSubscribed && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-accent-400 text-sm flex items-center"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Successfully subscribed!
-                  </motion.div>
-                )}
-              </form>
+          {/* Newsletter Signup - Middle */}
+          <div className="lg:col-span-1 flex justify-center">
+            <div>
+              <div className="bg-gradient-to-r from-primary-600/20 to-secondary-600/20 rounded-2xl p-6 border border-primary-500/20">
+                <h3 className="text-lg font-semibold mb-3 flex items-center">
+                  <Sparkles className="w-5 h-5 mr-2 text-primary-400" />
+                  Stay Updated
+                </h3>
+                <p className="text-gray-300 text-sm mb-4">
+                  Get the latest biotech BD insights and updates
+                </p>
+                <form onSubmit={handleSubscribe} className="space-y-3">
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                    />
+                    <button
+                      type="submit"
+                      className="absolute right-2 top-2 p-2 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg hover:from-primary-700 hover:to-secondary-700 transition-all duration-200"
+                    >
+                      <Send className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                  {isSubscribed && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-accent-400 text-sm flex items-center"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Successfully subscribed!
+                    </motion.div>
+                  )}
+                </form>
+              </div>
+
             </div>
           </div>
 
           {/* Quick Links */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="lg:col-span-1">
+            <div className="flex justify-end">
               {/* Useful Links */}
               <div>
                 <h3 className="text-orange-400 font-semibold text-lg mb-4">Useful Links</h3>
@@ -142,22 +145,6 @@ const Footer = () => {
                   <li><Link to="/terms" className="text-white hover:text-orange-400 transition-colors">Terms and Conditions</Link></li>
                 </ul>
               </div>
-
-              {/* Free Resources */}
-              <div>
-                <h3 className="text-orange-400 font-semibold text-lg mb-4">BD Insights (Access to Paid Members)
-                </h3>
-                <ul className="space-y-2">
-                  <li className="text-white">BD Conferences – Priority, Budgets and Smart ROI Tips</li>
-                  <li className="text-white">Biopharma Industry News and Resources (Free and Paid)</li>
-                  <li className="text-white">Biopharma Industry News and Resources (Free and Paid)</li>
-                  <li className="text-white">Big Pharma’s BD Blueprint including Strategic Interest Areas</li>
-                  <li className="text-white">Winning BD Pitch Decks</li>
-                  <li className="text-white">BD Process Overview and Management Tips</li>
-                  <li className="text-white">Deal Comps</li>
-                  <li className="text-white">200+ VCs Curated List with contacts</li>
-                  </ul>
-                </div>
             </div>
           </div>
         </div>
@@ -212,22 +199,27 @@ const Footer = () => {
       {/* Bottom Bar */}
       <div className="border-t border-gray-700 bg-gray-900/50 backdrop-blur-sm">
         <div className="container-custom py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-gray-400 text-sm">
-              © {currentYear} BioPing. All Rights Reserved
-            </div>
+          <div className="flex flex-col items-center space-y-4">
+            <p className="text-gray-400 text-sm text-center">
+              Built to empower emerging biotechs with smarter BD solutions.
+            </p>
+            <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 w-full">
+              <div className="text-gray-400 text-sm">
+                © {currentYear} BioPing. All Rights Reserved
+              </div>
 
-            {/* Legal Links */}
-            <div className="flex items-center space-x-6 text-sm">
-              <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-200">
-                Privacy Policy
-              </Link>
-              <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-200">
-                Terms of Service
-              </Link>
-              <Link to="/cookie-policy" className="text-gray-400 hover:text-white transition-colors duration-200">
-                Cookie Policy
-              </Link>
+              {/* Legal Links */}
+              <div className="flex items-center space-x-6 text-sm">
+                <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  Privacy Policy
+                </Link>
+                <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  Terms of Service
+                </Link>
+                <Link to="/cookie-policy" className="text-gray-400 hover:text-white transition-colors duration-200">
+                  Cookie Policy
+                </Link>
+              </div>
             </div>
           </div>
         </div>
