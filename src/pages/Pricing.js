@@ -5,7 +5,7 @@ import StripePayment from '../components/StripePayment';
 import { API_BASE_URL } from '../config';
 
 const Pricing = () => {
-  const [isAnnual, setIsAnnual] = useState(true);
+  const [isAnnual, setIsAnnual] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');

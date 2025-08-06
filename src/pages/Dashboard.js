@@ -88,6 +88,7 @@ const Dashboard = () => {
   const [userPaymentStatus, setUserPaymentStatus] = useState({ hasPaid: false, currentPlan: 'free' });
   const [error, setError] = useState(null);
   const [daysRemaining, setDaysRemaining] = useState(3);
+  const [showError, setShowError] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -418,8 +419,17 @@ const Dashboard = () => {
       if (result.success) {
         // Check if no results found
         if (result.data.results.length === 0) {
-          setError(`Not in the database. Try search UCB under company`);
+          setError(`Not in System…..`);
+          setShowError(true);
           setGlobalSearchResults(null); // Clear any previous results
+          // Still redirect to search page to show the error message
+          navigate('/dashboard/search');
+          
+          // Auto hide after 4 seconds
+          setTimeout(() => {
+            setShowError(false);
+          }, 4000);
+          
           return;
         }
         
@@ -638,7 +648,7 @@ const Dashboard = () => {
               <select 
                 value={searchType}
                 onChange={(e) => setSearchType(e.target.value)}
-                className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-40"
+                className="bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-3 text-base font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 w-80"
               >
                 <option value="Company Name">Company Name</option>
                 <option value="Contact Name">Contact Name</option>
@@ -654,7 +664,7 @@ const Dashboard = () => {
                   }}
                   onKeyPress={handleSearchKeyPress}
                   placeholder="Type Keywords"
-                  className="bg-white/80 backdrop-blur-sm border-2 border-gray-300 rounded-2xl pl-14 pr-6 py-3 text-base font-medium focus:ring-4 focus:ring-blue-500/50 focus:border-blue-600 focus:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300 w-64 shadow-lg"
+                  className="bg-white/80 backdrop-blur-sm border-2 border-gray-300 rounded-2xl pl-14 pr-6 py-3 text-base font-medium focus:ring-4 focus:ring-blue-500/50 focus:border-blue-600 focus:shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_rgba(0,0,0,0.3)] transition-all duration-300 w-80 shadow-lg"
                 />
                 <button
                   onClick={handleSearch}
@@ -671,22 +681,21 @@ const Dashboard = () => {
             </div>
             
             {/* Global Search Error Display - Only show on search page */}
-            {error && location.pathname === '/dashboard/search' && (
+            {error && showError && location.pathname === '/dashboard/search' && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="absolute top-full left-0 right-0 mt-2 bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-lg z-50"
+                className="absolute top-full left-0 right-0 mt-2 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg z-50"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                   <div>
-                    <span className="text-sm text-blue-700 font-semibold">{error}</span>
-                    <p className="text-xs text-blue-600 mt-1">Try searching for "UCB" to see available companies</p>
+                    <span className="text-sm text-red-700 font-semibold">{error}</span>
                   </div>
                 </div>
               </motion.div>

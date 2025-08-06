@@ -92,93 +92,9 @@ const BDInsights = ({ user, userPaymentStatus }) => {
   const totalViews = insights.reduce((sum, item) => sum + item.views, 0);
   const userViews = 0; // This would come from user data
 
-  // Check if user has paid access
-  if (!userPaymentStatus?.hasPaid) {
-    return (
-      <div className="space-y-6">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">BD Insights</h1>
-              <p className="text-blue-100">From 15+ Years of Experience in Large Pharma to Small Biotechs</p>
-            </div>
-          </div>
-        </div>
+  // Check if user has paid access or is universalx0242@gmail.com
+  const hasAccess = userPaymentStatus?.hasPaid || user?.email === 'universalx0242@gmail.com';
 
-        {/* Statistics Section */}
-        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-blue-600">{totalResources}</h3>
-              <p className="text-blue-700 font-medium">Total Resources</p>
-            </div>
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Eye className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-green-600">{formatViews(totalViews)}</h3>
-              <p className="text-green-700 font-medium">Total Views</p>
-            </div>
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200 text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-purple-600">{userViews}</h3>
-              <p className="text-purple-700 font-medium">Your Views</p>
-            </div>
-          </div>
-
-          {/* Premium Content Lock */}
-          <div className="text-center">
-            <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Lock className="w-10 h-10 text-white" />
-            </div>
-            
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Premium Content</h2>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              BD Insights is exclusively available for paid members. Upgrade to access exclusive market intelligence and strategic insights from 15+ years of experience.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-w-4xl mx-auto">
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Star className="w-4 h-4 text-yellow-500" />
-                <span>Market trend analysis</span>
-              </div>
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Star className="w-4 h-4 text-yellow-500" />
-                <span>Deal flow patterns</span>
-              </div>
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Star className="w-4 h-4 text-yellow-500" />
-                <span>Industry benchmarks</span>
-              </div>
-              <div className="flex items-center space-x-3 text-sm text-gray-600">
-                <Star className="w-4 h-4 text-yellow-500" />
-                <span>Network intelligence</span>
-              </div>
-            </div>
-            
-            <Link
-              to="/dashboard/pricing"
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-lg"
-            >
-              <span>Upgrade Now</span>
-              <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Paid user view
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -220,60 +136,91 @@ const BDInsights = ({ user, userPaymentStatus }) => {
           </div>
         </div>
 
-        {/* Resources Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {insights.map((insight, index) => (
-            <motion.div
-              key={insight.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
-            >
-              <div className={`bg-gradient-to-r ${getColorClasses(insight.featured ? 'purple' : 'blue')} p-6 text-white`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="w-5 h-5" />
-                    <span className="text-sm font-medium">{insight.type}</span>
-                  </div>
-                  {insight.featured && (
-                    <div className="bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold">
-                      FEATURED
+        {/* Lock Card for users without access */}
+        {!hasAccess && (
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Lock className="w-10 h-10 text-white" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Paid Members Access Only</h2>
+            <p className="text-gray-600 mb-6">
+              This content is exclusively available to paid members. Upgrade your plan to access our premium BD Insights library.
+            </p>
+            
+            <div className="flex flex-col space-y-3 max-w-xs mx-auto">
+              <Link
+                to="/dashboard"
+                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-all duration-200"
+              >
+                Go Back
+              </Link>
+              <Link
+                to="/dashboard/pricing"
+                className="bg-gradient-to-r from-purple-600 to-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-red-700 transition-all duration-200"
+              >
+                Upgrade Now
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Resources Grid - Only show for users with access */}
+        {hasAccess && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {insights.map((insight, index) => (
+              <motion.div
+                key={insight.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
+              >
+                <div className={`bg-gradient-to-r ${getColorClasses(insight.featured ? 'purple' : 'blue')} p-6 text-white`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-5 h-5" />
+                      <span className="text-sm font-medium">{insight.type}</span>
                     </div>
-                  )}
-                </div>
-                <h3 className="text-lg font-bold mb-2">{insight.title}</h3>
-                <p className="text-blue-100 text-sm">{insight.description}</p>
-              </div>
-              
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Eye className="w-4 h-4" />
-                    <span>{formatViews(insight.views)} views</span>
+                    {insight.featured && (
+                      <div className="bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold">
+                        FEATURED
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="text-sm font-medium text-gray-700">{insight.rating}</span>
-                  </div>
+                  <h3 className="text-lg font-bold mb-2">{insight.title}</h3>
+                  <p className="text-blue-100 text-sm">{insight.description}</p>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    {insight.size}
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Eye className="w-4 h-4" />
+                      <span>{formatViews(insight.views)} views</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                      <span className="text-sm font-medium text-gray-700">{insight.rating}</span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleViewPDF(insight)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>View</span>
-                  </button>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      {insight.size}
+                    </div>
+                    <button
+                      onClick={() => handleViewPDF(insight)}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>View</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* PDF Viewer Modal */}
