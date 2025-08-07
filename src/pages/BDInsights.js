@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Lock, Star, Users, Target, Award, ArrowRight, Eye, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import IframePDFViewer from '../components/IframePDFViewer';
+import SimplePDFViewer from '../components/SimplePDFViewer';
 
 const BDInsights = ({ user, userPaymentStatus }) => {
   const [selectedPDF, setSelectedPDF] = useState(null);
@@ -250,7 +250,11 @@ const BDInsights = ({ user, userPaymentStatus }) => {
               </button>
             </div>
             <div className="h-full">
-              <IframePDFViewer pdfUrl={selectedPDF.pdfUrl} />
+              <SimplePDFViewer 
+                pdfUrl={selectedPDF.pdfUrl} 
+                title={selectedPDF.title}
+                onClose={() => setSelectedPDF(null)}
+              />
             </div>
           </div>
         </div>
