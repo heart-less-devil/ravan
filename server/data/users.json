@@ -125,5 +125,57 @@
     "currentCredits": 5,
     "name": "aman k",
     "createdAt": "2025-08-01T22:32:38.187Z"
+  },
+  {
+    "id": 9,
+    "firstName": "Gaurav",
+    "lastName": "",
+    "email": "gaurav@bioping.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "Gaurav",
+    "role": "user",
+    "createdAt": "2025-07-24T00:38:54.025Z",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5
+  },
+  {
+    "id": 10,
+    "firstName": "Rahul",
+    "lastName": "",
+    "email": "rahul@bioping.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "Rahul",
+    "role": "user",
+    "createdAt": "2025-07-24T00:38:54.025Z",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5
+  },
+  {
+    "id": 11,
+    "firstName": "Priya",
+    "lastName": "",
+    "email": "priya@bioping.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "Priya",
+    "role": "user",
+    "createdAt": "2025-07-24T00:38:54.025Z",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5
+  },
+  {
+    "id": 12,
+    "firstName": "Vikram",
+    "lastName": "",
+    "email": "vikram@bioping.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "Vikram",
+    "role": "user",
+    "createdAt": "2025-07-24T00:38:54.025Z",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5
   }
 ]
