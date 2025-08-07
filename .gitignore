@@ -56,4 +56,7 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-.env 
+.env
+
+# Production config files with secrets
+server/production-config.js 
