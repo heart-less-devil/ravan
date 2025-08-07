@@ -11,7 +11,7 @@ After deploying to Render, set these environment variables in your service dashb
 - `PORT`: `10000`
 
 ### Stripe Configuration:
-- `STRIPE_SECRET_KEY`: `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`
+- `STRIPE_SECRET_KEY`: `your_stripe_secret_key_here`
 - `STRIPE_WEBHOOK_SECRET`: `whsec_your_webhook_secret_here`
 
 ### Email Configuration:
