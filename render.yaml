@@ -12,10 +12,12 @@ services:
       - key: MONGODB_URI
         value: mongodb+srv://universal:universal07@cluster0.f2z1iic.mongodb.net/bioping?retryWrites=true&w=majority&appName=Cluster0
       - key: STRIPE_SECRET_KEY
-        value: your_stripe_secret_key_here
+        value: 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
       - key: STRIPE_WEBHOOK_SECRET
-        value: your_stripe_webhook_secret_here
+        value: whsec_your_webhook_secret_here
       - key: EMAIL_USER
         value: universalx0242@gmail.com
       - key: EMAIL_PASS
-        value: your_gmail_app_password_here 
+        value: your_gmail_app_password_here
+      - key: PORT
+        value: "10000" 

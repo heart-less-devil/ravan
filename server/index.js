@@ -44,7 +44,12 @@ app.use(cors({
     'https://biopingweb.netlify.app',
     'https://*.netlify.app',
     'https://thebioping.com',
-    'https://www.thebioping.com'
+    'https://www.thebioping.com',
+    'https://biopingweb.netlify.app',
+    'https://ravan.netlify.app',
+    'https://*.netlify.app',
+    'https://*.render.com',
+    'https://*.onrender.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -60,10 +65,15 @@ app.use((req, res, next) => {
     'http://localhost:3002',
     'http://localhost:3005',
     'https://thebioping.com',
-    'https://www.thebioping.com'
+    'https://www.thebioping.com',
+    'https://biopingweb.netlify.app',
+    'https://ravan.netlify.app',
+    'https://*.netlify.app',
+    'https://*.render.com',
+    'https://*.onrender.com'
   ];
   
-  if (allowedOrigins.includes(origin)) {
+  if (allowedOrigins.includes(origin) || origin?.includes('netlify.app') || origin?.includes('render.com') || origin?.includes('onrender.com')) {
     res.header('Access-Control-Allow-Origin', origin);
   }
   
@@ -3782,8 +3792,15 @@ app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 Server URL: http://localhost:${PORT}`);
   console.log(`📧 Email server status: ${transporter.verify() ? 'Ready' : 'Not ready'}`);
   console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 MongoDB: Connected`);
+  console.log(`✅ Health check available at: http://localhost:${PORT}/api/health`);
+}).on('error', (err) => {
+  console.error('❌ Server failed to start:', err);
+  process.exit(1);
 }); 
 
 // Update user payment status

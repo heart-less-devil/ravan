@@ -76,13 +76,19 @@ const Login = () => {
     setError('');
 
     try {
-      // First test server connectivity
+      // First test server connectivity with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const healthCheck = await fetch(`${API_BASE_URL}/api/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!healthCheck.ok) {
         throw new Error('Server is not responding');
@@ -116,7 +122,9 @@ const Login = () => {
     } catch (err) {
       console.error('Login error:', err);
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        setError('Network error: Cannot connect to server. Please check if the server is running.');
+        setError('Network error: Cannot connect to server. Please check if the server is running. If this persists, please contact support.');
+      } else if (err.message.includes('Failed to fetch')) {
+        setError('Server is currently unavailable. Please try again in a few minutes.');
       } else {
         setError('Network error. Please try again.');
       }

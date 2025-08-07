@@ -1,6 +1,27 @@
-// API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || (process.env.NODE_ENV === 'development' ?  "http://localhost:3005" : 'https://bioping-backend.onrender.com');
-export const ADMIN_API_BASE_URL = process.env.REACT_APP_ADMIN_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3005' : 'https://bioping-backend.onrender.com');
+// API Configuration with fallback URLs
+const getApiUrl = () => {
+  // Development
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3005';
+  }
+  
+  // Custom environment variable
+  if (process.env.REACT_APP_API_BASE_URL) {
+    return process.env.REACT_APP_API_BASE_URL;
+  }
+  
+  // Production fallbacks - try multiple servers
+  const productionUrls = [
+    'https://bioping-backend.onrender.com',
+    'https://ravan-backend.onrender.com',
+    'https://bioping-server.onrender.com'
+  ];
+  
+  return productionUrls[0]; // Use first one as default
+};
+
+export const API_BASE_URL = getApiUrl();
+export const ADMIN_API_BASE_URL = getApiUrl();
 
 // Fallback URLs for different deployment scenarios
 const getBackendURL = () => {
