@@ -1,22 +1,22 @@
-// Production Configuration for GoDaddy VPS
+// Production configuration for deployment
+// This file should be used for setting environment variables in your deployment platform
+
 module.exports = {
-  NODE_ENV: 'production',
-  PORT: process.env.PORT || 3001,
+  // Database
+  MONGODB_URI: 'mongodb+srv://universal:universal07@cluster0.f2z1iic.mongodb.net/bioping?retryWrites=true&w=majority&appName=Cluster0',
   
-  // Database Configuration
-  MONGODB_URI: process.env.MONGODB_URI || 'your_mongodb_atlas_connection_string',
+  // JWT
+  JWT_SECRET: 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string',
   
-  // JWT Secret
-  JWT_SECRET: process.env.JWT_SECRET || 'your_jwt_secret_key_here',
+  // Stripe
+  STRIPE_SECRET_KEY: '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',
+  STRIPE_WEBHOOK_SECRET: 'whsec_your_webhook_secret_here',
   
-  // Email Configuration
-  EMAIL_USER: process.env.EMAIL_USER || 'your_email@gmail.com',
-  EMAIL_PASS: process.env.EMAIL_PASS || 'your_app_password',
+  // Email
+  EMAIL_USER: 'universalx0242@gmail.com',
+  EMAIL_PASS: 'your_gmail_app_password_here',
   
-  // Admin Credentials
-  ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@bioping.com',
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'your_admin_password',
-  
-  // CORS Configuration
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://yourdomain.com'
+  // Server
+  PORT: '10000',
+  NODE_ENV: 'production'
 }; 
