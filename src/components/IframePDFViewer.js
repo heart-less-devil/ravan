@@ -66,9 +66,16 @@ const IframePDFViewer = ({ pdfUrl, onClose, title }) => {
                 href={pdfUrl} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline text-sm"
+                className="text-blue-600 hover:text-blue-800 underline text-sm mr-4"
               >
                 Open PDF in new tab
+              </a>
+              <a 
+                href={pdfUrl} 
+                download
+                className="text-green-600 hover:text-green-800 underline text-sm"
+              >
+                Download PDF
               </a>
             </div>
           </div>

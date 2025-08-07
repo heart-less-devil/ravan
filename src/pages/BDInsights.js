@@ -28,7 +28,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 1240,
       rating: 4.7,
       featured: false,
-      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      pdfUrl: '/pdf/Biopharma News & Resources.pdf'
     },
     {
       id: 3,
@@ -39,7 +39,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 980,
       rating: 4.8,
       featured: false,
-      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      pdfUrl: '/pdf/Big Pharma BD Playbook.pdf'
     },
     {
       id: 4,
@@ -50,18 +50,29 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 1560,
       rating: 4.9,
       featured: false,
-      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      pdfUrl: '/pdf/Winning BD Pitch Deck.pdf'
     },
     {
       id: 5,
-      title: 'Only Deal Comps - Excel with Two Tabs',
-      description: 'Comprehensive deal comparison data in Excel format for strategic analysis.',
-      type: 'Excel',
+      title: 'BD Process and Tips',
+      description: 'Comprehensive BD process guide and strategic tips for success.',
+      type: 'PDF',
       size: '1.5 MB',
       views: 890,
       rating: 4.6,
       featured: false,
-      pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+      pdfUrl: '/pdf/BD Process and Tips.pdf'
+    },
+    {
+      id: 6,
+      title: 'BioPing Training Manual',
+      description: 'Complete training manual for BioPing platform and BD strategies.',
+      type: 'PDF',
+      size: '2.0 MB',
+      views: 1200,
+      rating: 4.8,
+      featured: true,
+      pdfUrl: '/pdf/BioPing Training Manual.pdf'
     }
   ];
 
