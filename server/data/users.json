@@ -3,8 +3,8 @@
     "id": 1,
     "firstName": "arman",
     "lastName": "singh",
-    "email": "amankk0007@gmail.com",
-    "password": "$2a$10$xc6pEReaEGn/GcCymLHvS.nNwwb/krn9kj6K6GLvlHkWBh8Xfmb9S",
+    "email": "amankk07@gmail.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
     "name": "arman singh",
     "role": "user",
     "createdAt": "2025-07-23T13:13:54.493Z",
@@ -13,6 +13,18 @@
   },
   {
     "id": 2,
+    "firstName": "arman",
+    "lastName": "singh",
+    "email": "amankk0007@gmail.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "arman singh",
+    "role": "user",
+    "createdAt": "2025-07-23T13:13:54.493Z",
+    "paymentCompleted": false,
+    "currentPlan": "free"
+  },
+  {
+    "id": 3,
     "firstName": "dsa",
     "lastName": "dsa",
     "email": "charusharma3261@gmail.com",
@@ -24,7 +36,7 @@
     "currentPlan": "free"
   },
   {
-    "id": 3,
+    "id": 4,
     "firstName": "aman",
     "lastName": "wildboy",
     "email": "audiostock9@gmail.com",
@@ -36,7 +48,7 @@
     "currentPlan": "free"
   },
   {
-    "id": 4,
+    "id": 5,
     "firstName": "universal0242",
     "lastName": "",
     "email": "universalx0242@gmail.com",
@@ -74,7 +86,7 @@
     ]
   },
   {
-    "id": 5,
+    "id": 6,
     "firstName": "admin",
     "lastName": "",
     "email": "admin@bioping.com",
@@ -87,7 +99,7 @@
     "currentCredits": 5
   },
   {
-    "id": 6,
+    "id": 7,
     "firstName": "demo",
     "lastName": "",
     "email": "demo@bioping.com",
@@ -100,7 +112,7 @@
     "currentCredits": 5
   },
   {
-    "id": 7,
+    "id": 8,
     "firstName": "test",
     "lastName": "",
     "email": "test@bioping.com",
@@ -113,7 +125,7 @@
     "currentCredits": 5
   },
   {
-    "id": 8,
+    "id": 9,
     "firstName": "aman",
     "lastName": "k",
     "email": "nishax03261@gmail.com",
@@ -127,7 +139,7 @@
     "createdAt": "2025-08-01T22:32:38.187Z"
   },
   {
-    "id": 9,
+    "id": 10,
     "firstName": "Gaurav",
     "lastName": "",
     "email": "gaurav@bioping.com",
@@ -140,7 +152,7 @@
     "currentCredits": 5
   },
   {
-    "id": 10,
+    "id": 11,
     "firstName": "Rahul",
     "lastName": "",
     "email": "rahul@bioping.com",
@@ -153,7 +165,7 @@
     "currentCredits": 5
   },
   {
-    "id": 11,
+    "id": 12,
     "firstName": "Priya",
     "lastName": "",
     "email": "priya@bioping.com",
@@ -166,7 +178,7 @@
     "currentCredits": 5
   },
   {
-    "id": 12,
+    "id": 13,
     "firstName": "Vikram",
     "lastName": "",
     "email": "vikram@bioping.com",
