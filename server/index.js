@@ -90,14 +90,39 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Serve static files (PDFs)
+app.use('/pdf', express.static(path.join(__dirname, '../public/pdf')));
+app.use('/static', express.static(path.join(__dirname, '../public')));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     server: 'BioPing Backend',
-    version: '1.0.0'
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    mongoDB: 'Connected',
+    pdfFiles: 'Available'
   });
+});
+
+// Test PDF endpoint
+app.get('/api/test-pdf', (req, res) => {
+  const pdfPath = path.join(__dirname, '../public/pdf/BioPing Training Manual.pdf');
+  if (fs.existsSync(pdfPath)) {
+    res.json({ 
+      status: 'PDF files available',
+      path: pdfPath,
+      exists: true
+    });
+  } else {
+    res.json({ 
+      status: 'PDF files not found',
+      path: pdfPath,
+      exists: false
+    });
+  }
 });
 
 // Test endpoint
@@ -199,7 +224,7 @@ const upload = multer({
 });
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
 // Email configuration with better Gmail setup
 let transporter = null;

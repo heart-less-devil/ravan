@@ -29,7 +29,7 @@ const connectDB = async () => {
         
         const newUser = new User({
           firstName: email.split('@')[0],
-          lastName: 'User', // Fixed: Added proper lastName
+          lastName: 'User',
           email: email,
           password: hashedPassword,
           company: 'BioPing',
@@ -47,6 +47,7 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
     console.log('🔄 Continuing with file-based storage...');
+    // Don't throw error, let the app continue with file-based storage
   }
 };
 
