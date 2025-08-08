@@ -94,6 +94,21 @@ app.use(express.json());
 app.use('/pdf', express.static(path.join(__dirname, '../public/pdf')));
 app.use('/static', express.static(path.join(__dirname, '../public')));
 
+// Add cache-busting middleware
+app.use((req, res, next) => {
+  // Force no-cache for all requests
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // Add version parameter to force refresh
+  if (req.query.v) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  }
+  
+  next();
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -677,6 +692,7 @@ app.post('/api/auth/create-account', [
   body('firstName').notEmpty().trim(),
   body('lastName').notEmpty().trim(),
   body('email').isEmail().normalizeEmail(),
+  body('company').notEmpty().trim(),
   body('password').isLength({ min: 8 })
 ], async (req, res) => {
   try {
@@ -685,7 +701,7 @@ app.post('/api/auth/create-account', [
       return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
     }
 
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, company, password } = req.body;
 
     console.log(`🔧 Create account attempt for: ${email}`);
 
@@ -718,7 +734,7 @@ app.post('/api/auth/create-account', [
       lastName,
       email,
       password: hashedPassword,
-      company: 'BioPing',
+      company,
       role: 'other',
       paymentCompleted: false,
       currentPlan: 'free',
@@ -4194,5 +4210,45 @@ app.post('/api/auth/signup', async (req, res) => {
     console.error('Error stack:', error.stack);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// Enhanced PDF serving middleware for Render/GoDaddy
+app.use('/pdf', (req, res, next) => {
+  // Set proper headers for PDF files
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  
+  // Handle PDF requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
+
+// Serve PDF files with proper headers
+app.get('/pdf/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const pdfPath = path.join(__dirname, '../public/pdf', filename);
+  
+  // Check if file exists
+  if (!fs.existsSync(pdfPath)) {
+    return res.status(404).json({ error: 'PDF not found' });
+  }
+  
+  // Set headers for PDF
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  
+  // Stream the PDF file
+  const stream = fs.createReadStream(pdfPath);
+  stream.pipe(res);
 });
 

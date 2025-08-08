@@ -2205,57 +2205,62 @@ const SavedSearches = () => {
 const Definitions = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedTerm, setExpandedTerm] = useState(null);
 
   const definitions = {
-    'Disease Area': [
+    'Drug Development': [
       {
-        term: 'Oncology',
-        definition: 'The study and treatment of cancer. Includes various types of cancer such as solid tumors, hematological malignancies, and rare cancers.',
-        examples: ['Solid tumors', 'Blood cancers', 'Rare cancers']
+        term: 'Modality of Drug',
+        definition: 'The type of therapeutic approach used to treat a disease (e.g., small molecule, antibody, gene therapy, cell therapy)',
+        examples: ['Small molecule', 'Antibody', 'Gene therapy', 'Cell therapy'],
+        details: 'Drug modality refers to the molecular structure and mechanism of action of a therapeutic compound.',
+        icon: '💊'
       },
       {
-        term: 'Neurology',
-        definition: 'The branch of medicine dealing with disorders of the nervous system, including the brain, spinal cord, and nerves.',
-        examples: ['Alzheimer\'s disease', 'Parkinson\'s disease', 'Multiple sclerosis']
-      },
-      {
-        term: 'Cardiovascular',
-        definition: 'Relating to the heart and blood vessels. Includes conditions affecting the circulatory system.',
-        examples: ['Heart failure', 'Hypertension', 'Arrhythmias']
+        term: 'Disease Area',
+        definition: 'The specific category of medical conditions a drug targets (e.g., oncology, neurology, autoimmune)',
+        examples: ['Oncology', 'Neurology', 'Autoimmune'],
+        details: 'Disease areas help categorize drugs by their therapeutic focus and target patient population.',
+        icon: '🩺'
       }
     ],
-    'Development Stage': [
+    'Medical Conditions': [
       {
-        term: 'Preclinical',
-        definition: 'Research and testing that occurs before human clinical trials, including laboratory and animal studies.',
-        examples: ['In vitro studies', 'Animal models', 'Safety testing']
-      },
-      {
-        term: 'Phase I',
-        definition: 'First human clinical trials focusing on safety, dosage, and side effects in a small group of healthy volunteers.',
-        examples: ['Safety assessment', 'Dose finding', 'Pharmacokinetics']
-      },
-      {
-        term: 'Phase II',
-        definition: 'Clinical trials to evaluate effectiveness and further assess safety in a larger group of patients.',
-        examples: ['Efficacy studies', 'Side effect monitoring', 'Dose optimization']
+        term: 'MSK Musculoskeletal disease',
+        definition: 'Musculoskeletal disease; includes conditions affecting bones, muscles, joints, ligaments, and tendons (e.g., arthritis, osteoporosis, back pain)',
+        examples: ['Arthritis', 'Osteoporosis', 'Back pain'],
+        details: 'MSK disorders are among the most common causes of disability and chronic pain worldwide.',
+        icon: '🦴'
       }
     ],
-    'Modality': [
+    'Partner Search Criteria': [
       {
-        term: 'Small Molecule',
-        definition: 'Low molecular weight organic compounds that can modulate biological processes, typically administered orally.',
-        examples: ['Tablets', 'Capsules', 'Oral solutions']
+        term: 'Large Pharma',
+        definition: 'Established, global pharmaceutical companies with broad pipelines, significant revenues, and commercial infrastructure, market cap generally >$10B (e.g., Pfizer, Novartis, Roche)',
+        examples: ['Pfizer', 'Novartis', 'Roche'],
+        details: 'Large pharma companies typically have extensive global operations, established commercial infrastructure, and diverse therapeutic portfolios.',
+        icon: '🏢'
       },
       {
-        term: 'Biologic',
-        definition: 'Large, complex molecules derived from living organisms, typically administered by injection.',
-        examples: ['Monoclonal antibodies', 'Proteins', 'Peptides']
+        term: 'Mid-Size Pharma',
+        definition: 'Pharmaceutical companies with moderate revenues and pipelines—larger than biotech startups but smaller than global pharma, market cap generally ~$2-$10B (e.g., Jazz, Incyte, Ipsen)',
+        examples: ['Jazz', 'Incyte', 'Ipsen'],
+        details: 'Mid-size pharma companies often focus on specific therapeutic areas and have more targeted commercial strategies.',
+        icon: '🏛️'
       },
       {
-        term: 'Cell Therapy',
-        definition: 'Treatment using cells to restore or improve biological function, often involving stem cells.',
-        examples: ['CAR-T cells', 'Stem cell therapy', 'Gene therapy']
+        term: 'Small Biotech',
+        definition: 'Companies focused on developing drugs using biological or genetic technologies—often early-stage and innovation-driven, mostly private and venture backed',
+        examples: ['Early-stage biotech', 'Venture-backed companies', 'Innovation-driven startups'],
+        details: 'Small biotech companies are typically focused on breakthrough technologies and often partner with larger companies for commercialization.',
+        icon: '🧬'
+      },
+      {
+        term: 'HQ',
+        definition: 'Headquarter location of the partner company (search criterion)',
+        examples: ['North America', 'Europe', 'Asia-Pacific'],
+        details: 'Headquarters location is an important factor in partnership decisions due to regulatory, commercial, and strategic considerations.',
+        icon: '📍'
       }
     ]
   };
@@ -2270,75 +2275,168 @@ const Definitions = () => {
     def.definition.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const toggleExpanded = (term) => {
+    setExpandedTerm(expandedTerm === term ? null : term);
+  };
+
   return (
-      <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Definitions</h2>
-            <p className="text-gray-600">Browse our comprehensive glossary of business development terms</p>
-                </div>
-          <div className="flex items-center space-x-2">
-            <BookOpen className="w-6 h-6 text-blue-600" />
-            <span className="text-sm font-medium text-gray-600">{searchFiltered.length} terms</span>
-                </div>
+    <div className="space-y-8">
+      {/* Enhanced Hero Section */}
+      <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-2xl overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
         </div>
-
-        {/* Search and Filter */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search definitions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Definitions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {searchFiltered.map((def, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-gray-50 rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all duration-200"
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent"
+              >
+                Terms & Abbreviations
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-blue-100 text-xl font-medium"
+              >
+                A quick guide to commonly used names and shortcuts
+              </motion.p>
+            </div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex items-center space-x-3"
             >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="font-bold text-gray-900 text-lg">{def.term}</h3>
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
-                </div>
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                <BookOpen className="w-6 h-6" />
               </div>
-              <p className="text-gray-600 mb-4 leading-relaxed">{def.definition}</p>
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Examples:</p>
-                <div className="flex flex-wrap gap-2">
+              <span className="text-2xl font-bold">{searchFiltered.length} terms</span>
+            </motion.div>
+          </div>
+
+          {/* Enhanced Search and Filter */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search definitions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-6 py-4 pl-12 border-0 rounded-2xl focus:ring-4 focus:ring-white focus:ring-opacity-30 bg-white/20 backdrop-blur-sm text-white placeholder-blue-100 text-lg transition-all duration-300"
+              />
+              <Search className="w-6 h-6 absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-200" />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-6 py-4 border-0 rounded-2xl focus:ring-4 focus:ring-white focus:ring-opacity-30 bg-white/20 backdrop-blur-sm text-white text-lg font-medium transition-all duration-300"
+            >
+              <option value="all" className="text-gray-800">All Categories</option>
+              {categories.map(category => (
+                <option key={category} value={category} className="text-gray-800">{category}</option>
+              ))}
+            </select>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Enhanced Definitions Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {searchFiltered.map((def, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: index * 0.1, duration: 0.5 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            className="group bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-500 overflow-hidden"
+          >
+            <div className="p-8">
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-3xl">{def.icon}</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-2xl mb-1">{def.term}</h3>
+                    <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => toggleExpanded(def.term)}
+                  className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {expandedTerm === def.term ? '−' : '+'}
+                </motion.button>
+              </div>
+              
+              <p className="text-gray-600 mb-6 leading-relaxed text-base">{def.definition}</p>
+              
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Examples:</p>
+                <div className="flex flex-wrap gap-3">
                   {def.examples.map((example, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                    <motion.span 
+                      key={idx}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 rounded-full text-sm font-medium border border-blue-200 hover:from-blue-200 hover:to-purple-200 transition-all duration-300"
+                    >
                       {example}
-                    </span>
+                    </motion.span>
                   ))}
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
+
+              {/* Enhanced Expandable Details */}
+              {expandedTerm === def.term && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="border-t border-gray-200 pt-6 mt-6"
+                >
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6">
+                    <p className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Additional Details:</p>
+                    <p className="text-gray-600 text-base leading-relaxed">{def.details}</p>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        ))}
       </div>
+
+      {/* Enhanced No Results Message */}
+      {searchFiltered.length === 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center py-16"
+        >
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+            <Search className="w-12 h-12 text-blue-500" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">No definitions found</h3>
+          <p className="text-gray-600 text-lg">Try adjusting your search terms or browse all categories</p>
+        </motion.div>
+      )}
     </div>
   );
 };
@@ -2567,7 +2665,7 @@ const FreeContent = ({ user, userPaymentStatus }) => {
         views: 1240,
         rating: 4.7,
         featured: false,
-        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+        pdfUrl: '/pdf/Biopharma News & Resources.pdf'
       },
       {
         id: 3,
@@ -2578,7 +2676,7 @@ const FreeContent = ({ user, userPaymentStatus }) => {
         views: 980,
         rating: 4.8,
         featured: false,
-        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+        pdfUrl: '/pdf/Big Pharma BD Playbook.pdf'
       },
       {
         id: 4,
@@ -2589,19 +2687,20 @@ const FreeContent = ({ user, userPaymentStatus }) => {
         views: 1560,
         rating: 4.9,
         featured: false,
-        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
+        pdfUrl: '/pdf/Winning BD Pitch Deck.pdf'
       },
       {
         id: 5,
-        title: 'Only Deal Comps - Excel with Two Tabs',
-        description: 'Comprehensive deal comparison data in Excel format for strategic analysis.',
-        type: 'Excel',
+        title: 'BD Process and Tips',
+        description: 'Comprehensive BD process guide and strategic tips for success.',
+        type: 'PDF',
         size: '1.5 MB',
         views: 890,
         rating: 4.6,
         featured: false,
-        pdfUrl: '/pdf/BD_Conference_Guide.pdf'
-      }
+        pdfUrl: '/pdf/BD Process and Tips.pdf'
+      },
+
     ]
   };
 

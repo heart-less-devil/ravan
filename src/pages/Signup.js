@@ -10,6 +10,7 @@ const Signup = () => {
     firstName: '',
     lastName: '',
     email: '',
+    company: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false
@@ -69,6 +70,11 @@ const Signup = () => {
       console.log('Invalid email format');
     }
 
+    if (!formData.company) {
+      newErrors.company = 'Company name is required';
+      console.log('Company name missing');
+    }
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
       console.log('Password missing');
@@ -87,8 +93,6 @@ const Signup = () => {
       newErrors.confirmPassword = 'Passwords do not match';
       console.log('Passwords do not match');
     }
-
-
 
     if (!formData.agreeToTerms) {
       newErrors.agreeToTerms = 'You must agree to the terms and conditions';
@@ -220,6 +224,7 @@ const Signup = () => {
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
+            company: formData.company,
             password: formData.password
           })
         });
@@ -491,6 +496,36 @@ const Signup = () => {
                         <div className="flex items-center mt-2 text-sm text-red-300">
                           <AlertCircle className="w-4 h-4 mr-1" />
                           {errors.email}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Enhanced Company Field */}
+                  <div className="mb-6">
+                    <label htmlFor="company" className="block text-sm font-medium text-white mb-3">
+                      Company Name <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Building2 className="h-5 w-5 text-gray-300" />
+                      </div>
+                      <input
+                        id="company"
+                        name="company"
+                        type="text"
+                        required
+                        value={formData.company}
+                        onChange={handleChange}
+                        className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                          errors.company ? 'border-red-400 focus:ring-red-500' : ''
+                        }`}
+                        placeholder="Enter your company name"
+                      />
+                      {errors.company && (
+                        <div className="flex items-center mt-2 text-sm text-red-300">
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          {errors.company}
                         </div>
                       )}
                     </div>

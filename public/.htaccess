@@ -1,18 +1,42 @@
-RewriteEngine On
-RewriteBase /
+# GoDaddy .htaccess file for PDF hosting
 
-# Handle React Router
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /index.html [QSA,L]
+# Enable CORS for PDF files
+<IfModule mod_headers.c>
+    <FilesMatch "\.pdf$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+        Header set Access-Control-Allow-Headers "Range"
+        Header set X-Frame-Options "SAMEORIGIN"
+        Header set Content-Type "application/pdf"
+        Header set Cache-Control "public, max-age=3600"
+    </FilesMatch>
+</IfModule>
+
+# Force no-cache for HTML, JS, CSS files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/html "access plus 0 seconds"
+    ExpiresByType text/css "access plus 0 seconds"
+    ExpiresByType application/javascript "access plus 0 seconds"
+    ExpiresByType application/pdf "access plus 1 hour"
+</IfModule>
+
+# Handle PDF requests
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Serve PDF files with proper headers
+    RewriteRule ^pdf/(.*\.pdf)$ /public/pdf/$1 [L]
+    
+    # Handle API routes
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^api/(.*)$ /server/index.js [L]
+</IfModule>
 
 # Security headers
-Header always set X-Content-Type-Options nosniff
-Header always set X-Frame-Options DENY
-Header always set X-XSS-Protection "1; mode=block"
-
-# Cache static assets
-<FilesMatch "\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
-    ExpiresActive On
-    ExpiresDefault "access plus 1 year"
-</FilesMatch> 
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule> 

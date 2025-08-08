@@ -1,13 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ArrowRight, CheckCircle, AlertCircle, Info, Download, Eye, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { FileText, ArrowRight, CheckCircle, AlertCircle, Info, Download, Eye, X, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 
 const QuickGuide = () => {
   const [showPdf, setShowPdf] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pdfUrl, setPdfUrl] = useState('/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0');
-  
+  const [pdfError, setPdfError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [pdfLoadAttempts, setPdfLoadAttempts] = useState(0);
+
+  // Try different PDF URLs for different hosting scenarios
+  const pdfUrls = [
+    '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    '/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://your-domain.netlify.app/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    '/pdf/BioPing Training Manual.pdf',
+    // Render/GoDaddy specific URLs
+    'https://your-render-domain.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://your-godaddy-domain.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    // Direct API routes
+    '/api/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    '/api/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0'
+  ];
+
+  // Handle PDF loading errors
+  const handlePdfError = () => {
+    console.log('PDF loading failed, trying alternative URL');
+    setPdfError(true);
+    
+    if (pdfLoadAttempts < pdfUrls.length - 1) {
+      setPdfLoadAttempts(prev => prev + 1);
+      setPdfUrl(pdfUrls[pdfLoadAttempts + 1]);
+    }
+  };
+
+  // Reset PDF state when toggling
+  const togglePdf = () => {
+    if (!showPdf) {
+      setPdfError(false);
+      setPdfLoadAttempts(0);
+      setPdfUrl(pdfUrls[0]);
+      setIsLoading(true);
+    }
+    setShowPdf(!showPdf);
+  };
+
   // PDF navigation functions
   const goToNextPage = () => {
     console.log('goToNextPage called');
@@ -15,7 +54,7 @@ const QuickGuide = () => {
     // Method 1: Change URL to next page
     setCurrentPage(prev => {
       const nextPage = prev + 1;
-      const newUrl = `/pdf/BioPing Training Manual.pdf#page=${nextPage}&toolbar=0&navpanes=0&scrollbar=0`;
+      const newUrl = `${pdfUrl.split('#')[0]}#page=${nextPage}&toolbar=0&navpanes=0&scrollbar=0`;
       setPdfUrl(newUrl);
       console.log('Changed to page:', nextPage);
       return nextPage;
@@ -39,7 +78,7 @@ const QuickGuide = () => {
     // Method 1: Change URL to previous page
     setCurrentPage(prev => {
       const prevPage = Math.max(1, prev - 1);
-      const newUrl = `/pdf/BioPing Training Manual.pdf#page=${prevPage}&toolbar=0&navpanes=0&scrollbar=0`;
+      const newUrl = `${pdfUrl.split('#')[0]}#page=${prevPage}&toolbar=0&navpanes=0&scrollbar=0`;
       setPdfUrl(newUrl);
       console.log('Changed to page:', prevPage);
       return prevPage;
@@ -82,6 +121,12 @@ const QuickGuide = () => {
     return false;
   };
 
+  // Handle iframe load
+  const handleIframeLoad = () => {
+    setIsLoading(false);
+    setPdfError(false);
+  };
+
   // Add global right-click protection when PDF is shown
   React.useEffect(() => {
     if (showPdf) {
@@ -115,7 +160,18 @@ const QuickGuide = () => {
       };
     }
   }, [showPdf]);
-  
+
+  // Auto-retry PDF loading after a delay
+  useEffect(() => {
+    if (pdfError && pdfLoadAttempts < pdfUrls.length - 1) {
+      const timer = setTimeout(() => {
+        setPdfUrl(pdfUrls[pdfLoadAttempts + 1]);
+        setPdfError(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [pdfError, pdfLoadAttempts]);
+
   return (
     <div 
       className="space-y-6 select-none" 
@@ -199,7 +255,7 @@ const QuickGuide = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowPdf(!showPdf)}
+                  onClick={togglePdf}
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center space-x-3 transition-all duration-300 shadow-lg"
                 >
                   <Eye className="w-5 h-5" />
@@ -332,51 +388,103 @@ const QuickGuide = () => {
                         </motion.button>
                       </div>
                       
-                                             <div className="relative w-full h-96">
-                         <div 
-                           className="w-full h-96 rounded-lg border border-gray-300 shadow-inner relative overflow-hidden"
-                           onContextMenu={handleContextMenu}
-                           style={{ 
-                             userSelect: 'none',
-                             WebkitUserSelect: 'none',
-                             MozUserSelect: 'none'
-                           }}
-                         >
-                           {/* Transparent overlay to block right-click */}
-                           <div 
-                             className="absolute inset-0 z-10"
-                             onContextMenu={handleContextMenu}
-                             onMouseDown={(e) => {
-                               // Allow mouse events to pass through
-                               e.stopPropagation();
-                             }}
-                             onMouseUp={(e) => {
-                               // Allow mouse events to pass through
-                               e.stopPropagation();
-                             }}
-                             onMouseMove={(e) => {
-                               // Allow mouse events to pass through
-                               e.stopPropagation();
-                             }}
-                             style={{ 
-                               background: 'transparent',
-                               pointerEvents: 'auto'
-                             }}
-                           />
-                           
-                           <iframe
-                             src={pdfUrl}
-                             className="w-full h-full border-0"
-                             onContextMenu={handleContextMenu}
-                             style={{ 
-                               userSelect: 'none',
-                               WebkitUserSelect: 'none',
-                               MozUserSelect: 'none'
-                             }}
-                             key={currentPage} // Force re-render when page changes
-                           />
-                         </div>
-                       </div>
+                      {/* Loading State */}
+                      {isLoading && (
+                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-30 rounded-lg">
+                          <div className="text-center">
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"
+                            />
+                            <p className="text-gray-600 font-medium">Loading PDF...</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Error State */}
+                      {pdfError && pdfLoadAttempts >= pdfUrls.length - 1 && (
+                        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-30 rounded-lg">
+                          <div className="text-center p-6">
+                            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">PDF Loading Failed</h3>
+                            <p className="text-gray-600 mb-4">The PDF could not be loaded. This might be due to hosting restrictions.</p>
+                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  setPdfError(false);
+                                  setPdfLoadAttempts(0);
+                                  setPdfUrl(pdfUrls[0]);
+                                  setIsLoading(true);
+                                }}
+                                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                              >
+                                <RefreshCw className="w-5 h-5" />
+                                <span>Retry</span>
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => window.open('/pdf/BioPing Training Manual.pdf', '_blank')}
+                                className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                              >
+                                <Download className="w-5 h-5" />
+                                <span>Download PDF</span>
+                              </motion.button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="relative w-full h-96">
+                        <div 
+                          className="w-full h-96 rounded-lg border border-gray-300 shadow-inner relative overflow-hidden"
+                          onContextMenu={handleContextMenu}
+                          style={{ 
+                            userSelect: 'none',
+                            WebkitUserSelect: 'none',
+                            MozUserSelect: 'none'
+                          }}
+                        >
+                          {/* Transparent overlay to block right-click */}
+                          <div 
+                            className="absolute inset-0 z-10"
+                            onContextMenu={handleContextMenu}
+                            onMouseDown={(e) => {
+                              // Allow mouse events to pass through
+                              e.stopPropagation();
+                            }}
+                            onMouseUp={(e) => {
+                              // Allow mouse events to pass through
+                              e.stopPropagation();
+                            }}
+                            onMouseMove={(e) => {
+                              // Allow mouse events to pass through
+                              e.stopPropagation();
+                            }}
+                            style={{ 
+                              background: 'transparent',
+                              pointerEvents: 'auto'
+                            }}
+                          />
+                          
+                          <iframe
+                            src={pdfUrl}
+                            className="w-full h-full border-0"
+                            onContextMenu={handleContextMenu}
+                            onLoad={handleIframeLoad}
+                            onError={handlePdfError}
+                            style={{ 
+                              userSelect: 'none',
+                              WebkitUserSelect: 'none',
+                              MozUserSelect: 'none'
+                            }}
+                            key={`${currentPage}-${pdfLoadAttempts}`} // Force re-render when page or URL changes
+                          />
+                        </div>
+                      </div>
                     </div>
                   </motion.div>
                 )}

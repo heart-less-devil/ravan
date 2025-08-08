@@ -63,17 +63,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       featured: false,
       pdfUrl: '/pdf/BD Process and Tips.pdf'
     },
-    {
-      id: 6,
-      title: 'BioPing Training Manual',
-      description: 'Complete training manual for BioPing platform and BD strategies.',
-      type: 'PDF',
-      size: '2.0 MB',
-      views: 1200,
-      rating: 4.8,
-      featured: true,
-      pdfUrl: '/pdf/BioPing Training Manual.pdf'
-    }
+
   ];
 
   const getColorClasses = (color) => {
