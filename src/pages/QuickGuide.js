@@ -13,16 +13,26 @@ const QuickGuide = () => {
 
   // Try different PDF URLs for different hosting scenarios
   const pdfUrls = [
+    // Direct file paths
     '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    'https://your-domain.netlify.app/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/pdf/BioPing Training Manual.pdf',
-    // Render/GoDaddy specific URLs
+    
+    // API routes
+    '/api/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    '/api/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    
+    // Full domain URLs (will be updated by script)
     'https://your-render-domain.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     'https://your-godaddy-domain.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    // Direct API routes
-    '/api/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    '/api/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0'
+    
+    // Alternative approaches
+    '/static/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    '/public/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    
+    // Simple URLs without parameters
+    '/pdf/BioPing Training Manual.pdf',
+    '/api/pdf/BioPing Training Manual.pdf'
   ];
 
   // Handle PDF loading errors
@@ -36,13 +46,33 @@ const QuickGuide = () => {
     }
   };
 
+  // Check PDF health
+  const checkPdfHealth = async () => {
+    try {
+      const response = await fetch('/api/pdf-health');
+      const data = await response.json();
+      console.log('PDF Health Check:', data);
+      return data;
+    } catch (error) {
+      console.error('PDF Health Check failed:', error);
+      return null;
+    }
+  };
+
   // Reset PDF state when toggling
-  const togglePdf = () => {
+  const togglePdf = async () => {
     if (!showPdf) {
       setPdfError(false);
       setPdfLoadAttempts(0);
       setPdfUrl(pdfUrls[0]);
       setIsLoading(true);
+      
+      // Check PDF health first
+      const health = await checkPdfHealth();
+      if (health) {
+        console.log('Available PDFs:', health.availablePdfs);
+        console.log('PDF exists:', health.pdfExists);
+      }
     }
     setShowPdf(!showPdf);
   };
@@ -409,6 +439,15 @@ const QuickGuide = () => {
                             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-gray-900 mb-2">PDF Loading Failed</h3>
                             <p className="text-gray-600 mb-4">The PDF could not be loaded. This might be due to hosting restrictions.</p>
+                            
+                            {/* Debug Info */}
+                            <div className="bg-gray-100 rounded-lg p-4 mb-4 text-left">
+                              <h4 className="font-semibold text-gray-800 mb-2">Debug Information:</h4>
+                              <p className="text-sm text-gray-600 mb-1">Current URL: {pdfUrl}</p>
+                              <p className="text-sm text-gray-600 mb-1">Attempt: {pdfLoadAttempts + 1}/{pdfUrls.length}</p>
+                              <p className="text-sm text-gray-600">Total URLs tried: {pdfLoadAttempts + 1}</p>
+                            </div>
+                            
                             <div className="flex flex-col sm:flex-row gap-3 justify-center">
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
@@ -432,6 +471,15 @@ const QuickGuide = () => {
                               >
                                 <Download className="w-5 h-5" />
                                 <span>Download PDF</span>
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => window.open('/api/pdf-health', '_blank')}
+                                className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
+                              >
+                                <Info className="w-5 h-5" />
+                                <span>Check Health</span>
                               </motion.button>
                             </div>
                           </div>

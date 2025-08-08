@@ -4231,14 +4231,15 @@ app.use('/pdf', (req, res, next) => {
   next();
 });
 
-// Serve PDF files with proper headers
+// Multiple PDF serving routes for different hosting scenarios
 app.get('/pdf/:filename', (req, res) => {
   const filename = req.params.filename;
   const pdfPath = path.join(__dirname, '../public/pdf', filename);
   
   // Check if file exists
   if (!fs.existsSync(pdfPath)) {
-    return res.status(404).json({ error: 'PDF not found' });
+    console.log(`PDF not found: ${pdfPath}`);
+    return res.status(404).json({ error: 'PDF not found', path: pdfPath });
   }
   
   // Set headers for PDF
@@ -4249,6 +4250,58 @@ app.get('/pdf/:filename', (req, res) => {
   
   // Stream the PDF file
   const stream = fs.createReadStream(pdfPath);
+  stream.on('error', (error) => {
+    console.error('PDF stream error:', error);
+    res.status(500).json({ error: 'PDF stream error' });
+  });
   stream.pipe(res);
+});
+
+// Alternative PDF route for static serving
+app.get('/static/pdf/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const pdfPath = path.join(__dirname, '../public/pdf', filename);
+  
+  if (!fs.existsSync(pdfPath)) {
+    console.log(`Static PDF not found: ${pdfPath}`);
+    return res.status(404).json({ error: 'PDF not found' });
+  }
+  
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  const stream = fs.createReadStream(pdfPath);
+  stream.pipe(res);
+});
+
+// API route for PDF serving
+app.get('/api/pdf/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const pdfPath = path.join(__dirname, '../public/pdf', filename);
+  
+  if (!fs.existsSync(pdfPath)) {
+    console.log(`API PDF not found: ${pdfPath}`);
+    return res.status(404).json({ error: 'PDF not found' });
+  }
+  
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  const stream = fs.createReadStream(pdfPath);
+  stream.pipe(res);
+});
+
+// PDF health check endpoint
+app.get('/api/pdf-health', (req, res) => {
+  const pdfPath = path.join(__dirname, '../public/pdf', 'BioPing Training Manual.pdf');
+  const exists = fs.existsSync(pdfPath);
+  
+  res.json({
+    pdfExists: exists,
+    pdfPath: pdfPath,
+    availablePdfs: fs.readdirSync(path.join(__dirname, '../public/pdf')).filter(file => file.endsWith('.pdf'))
+  });
 });
 
