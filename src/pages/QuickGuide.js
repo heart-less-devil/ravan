@@ -229,41 +229,13 @@ const QuickGuide = () => {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-base font-semibold">Comprehensive Guide</div>
-                <div className="text-blue-200 text-sm mt-1">Complete documentation</div>
-              </div>
-            </div>
-            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-                  <Eye className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-base font-semibold">View Only</div>
-                <div className="text-blue-200 text-sm mt-1">Secure access</div>
-              </div>
-            </div>
-            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/30 hover:bg-white/20 transition-all duration-300">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-                  <Eye className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-base font-semibold">Instant View</div>
-                <div className="text-blue-200 text-sm mt-1">Quick access</div>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
 
       {/* Main Content */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           
           {/* Professional PDF Display Section */}
           <div className="text-center mb-10">
@@ -275,7 +247,7 @@ const QuickGuide = () => {
           </div>
 
           {/* Professional PDF Viewer */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-10 shadow-2xl border border-gray-200 mb-8">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-10 shadow-2xl border border-gray-200 mb-8 max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Document Access</h3>
@@ -295,14 +267,14 @@ const QuickGuide = () => {
             </div>
             
             {/* PDF Preview with Curtain Effect */}
-            <div className="relative bg-gray-50 rounded-xl p-4 border border-gray-200 overflow-hidden">
+            <div className="relative bg-gray-50 rounded-xl p-6 border border-gray-200 overflow-hidden max-w-7xl mx-auto">
               <AnimatePresence>
                 {!showPdf ? (
                   <motion.div
                     initial={{ opacity: 1 }}
                     exit={{ opacity: 0, y: -30, scale: 0.95 }}
                     transition={{ duration: 0.8, ease: "easeInOut" }}
-                    className="w-full h-96 rounded-lg border border-gray-300 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center relative overflow-hidden"
+                    className="w-full h-[600px] rounded-lg border border-gray-300 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center relative overflow-hidden"
                   >
                     {/* Animated background elements */}
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-100/30 to-indigo-100/30 animate-pulse"></div>
@@ -344,7 +316,7 @@ const QuickGuide = () => {
                         <X className="w-5 h-5" />
                       </motion.button>
                     </div>
-                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 shadow-lg relative">
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-8 border-2 border-gray-200 shadow-lg relative w-full">
                       {/* Navigation Buttons */}
                       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20">
                         <motion.button
@@ -486,9 +458,9 @@ const QuickGuide = () => {
                         </div>
                       )}
                       
-                      <div className="relative w-full h-96">
+                      <div className="relative w-full h-[600px]">
                         <div 
-                          className="w-full h-96 rounded-lg border border-gray-300 shadow-inner relative overflow-hidden"
+                          className="w-full h-[600px] rounded-lg border border-gray-300 shadow-inner relative overflow-hidden"
                           onContextMenu={handleContextMenu}
                           style={{ 
                             userSelect: 'none',
@@ -540,32 +512,7 @@ const QuickGuide = () => {
             </div>
           </div>
 
-          {/* Features Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-200 text-center hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <Eye className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">View Online</h3>
-              <p className="text-gray-600">Read the manual directly in your browser</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 border border-blue-200 text-center hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <ChevronUp className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Navigation</h3>
-              <p className="text-gray-600">Use buttons to navigate through pages</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border border-purple-200 text-center hover:shadow-xl transition-all duration-300">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <FileText className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Complete Guide</h3>
-              <p className="text-gray-600">Comprehensive training documentation</p>
-            </div>
-          </div>
+
 
 
 

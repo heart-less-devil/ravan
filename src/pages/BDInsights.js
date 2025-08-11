@@ -90,7 +90,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
 
   // Calculate total statistics
   const totalResources = insights.length;
-  const totalViews = insights.reduce((sum, item) => sum + item.views, 0);
+  const totalViews = 2500; // Set to 2.5k
   const userViews = 0; // This would come from user data
 
   // Check if user has paid access or is universalx0242@gmail.com

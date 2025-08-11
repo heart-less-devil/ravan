@@ -57,7 +57,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white overflow-hidden">
+    <footer className="relative bg-white text-black overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       
@@ -80,7 +80,7 @@ const Footer = () => {
                 />
               </div>
             </div>
-            <p className="text-gray-300 mb-8 leading-relaxed">
+            <p className="text-black mb-8 leading-relaxed">
               Built to empower emerging biotechs with smarter BD solutions. 
               Connect with the right partners and accelerate your growth.
             </p>
@@ -89,12 +89,12 @@ const Footer = () => {
           {/* Newsletter Signup - Middle */}
           <div className="lg:col-span-1 flex justify-center">
             <div>
-              <div className="bg-gradient-to-r from-primary-600/20 to-secondary-600/20 rounded-2xl p-6 border border-primary-500/20">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
+              <div className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-6 border border-gray-300">
+                <h3 className="text-lg font-semibold mb-3 flex items-center text-black">
                   <Sparkles className="w-5 h-5 mr-2 text-primary-400" />
                   Stay Updated
                 </h3>
-                <p className="text-gray-300 text-sm mb-4">
+                <p className="text-black text-sm mb-4">
                   Get the latest biotech BD insights and updates
                 </p>
                 <form onSubmit={handleSubscribe} className="space-y-3">
@@ -104,7 +104,7 @@ const Footer = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email"
-                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-black placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
                     />
                     <button
                       type="submit"
@@ -117,7 +117,7 @@ const Footer = () => {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-accent-400 text-sm flex items-center"
+                      className="text-green-600 text-sm flex items-center"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Successfully subscribed!
@@ -136,13 +136,13 @@ const Footer = () => {
               <div>
                 <h3 className="text-orange-400 font-semibold text-lg mb-4">Useful Links</h3>
                 <ul className="space-y-2">
-                  <li><Link to="/" className="text-white hover:text-orange-400 transition-colors">Home</Link></li>
-                  <li><Link to="/about" className="text-white hover:text-orange-400 transition-colors">Company</Link></li>
-                  <li><Link to="/product" className="text-white hover:text-orange-400 transition-colors">Product</Link></li>
-                  <li><Link to="/how-it-works" className="text-white hover:text-orange-400 transition-colors">How it works</Link></li>
-                  <li><Link to="/our-value" className="text-white hover:text-orange-400 transition-colors">Our Value</Link></li>
-                  <li><Link to="/privacy" className="text-white hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
-                  <li><Link to="/terms" className="text-white hover:text-orange-400 transition-colors">Terms and Conditions</Link></li>
+                  <li><Link to="/" className="text-black hover:text-orange-400 transition-colors">Home</Link></li>
+                  <li><Link to="/about" className="text-black hover:text-orange-400 transition-colors">Company</Link></li>
+                  <li><Link to="/product" className="text-black hover:text-orange-400 transition-colors">Product</Link></li>
+                  <li><Link to="/how-it-works" className="text-black hover:text-orange-400 transition-colors">How it works</Link></li>
+                  <li><Link to="/our-value" className="text-black hover:text-orange-400 transition-colors">Our Value</Link></li>
+                  <li><Link to="/privacy" className="text-black hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
+                  <li><Link to="/terms" className="text-black hover:text-orange-400 transition-colors">Terms and Conditions</Link></li>
                 </ul>
               </div>
             </div>
@@ -152,17 +152,17 @@ const Footer = () => {
 
 
         {/* Contact & Social */}
-        <div className="border-t border-gray-700 pt-12">
+        <div className="border-t border-gray-300 pt-12">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Contact Info */}
             <div>
-              <h3 className="text-lg font-semibold mb-6 text-white">Get in Touch</h3>
+              <h3 className="text-lg font-semibold mb-6 text-black">Get in Touch</h3>
               <div className="space-y-4">
                 {contactInfo.map((contact, index) => (
                   <motion.a
                     key={index}
                     href={contact.href}
-                    className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 group"
+                    className="flex items-center space-x-3 text-black hover:text-gray-700 transition-colors duration-200 group"
                     whileHover={{ x: 5 }}
                     transition={{ duration: 0.2 }}
                   >
@@ -175,7 +175,7 @@ const Footer = () => {
 
             {/* Social Links */}
             <div>
-              <h3 className="text-lg font-semibold mb-6 text-white">Follow Us</h3>
+              <h3 className="text-lg font-semibold mb-6 text-black">Follow Us</h3>
               <div className="flex space-x-4">
                 {socialLinks.map((social) => (
                   <motion.a
@@ -183,7 +183,7 @@ const Footer = () => {
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-700 rounded-xl flex items-center justify-center text-gray-400 ${social.color} hover:scale-110 transition-all duration-200 border border-gray-600`}
+                    className={`w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center text-gray-600 ${social.color} hover:scale-110 transition-all duration-200 border border-gray-300`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -197,26 +197,26 @@ const Footer = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-700 bg-gray-900/50 backdrop-blur-sm">
+      <div className="border-t border-gray-300 bg-gray-50">
         <div className="container-custom py-6">
           <div className="flex flex-col items-center space-y-4">
-            <p className="text-gray-400 text-sm text-center">
+            <p className="text-black text-sm text-center">
               Built to empower emerging biotechs with smarter BD solutions.
             </p>
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 w-full">
-              <div className="text-gray-400 text-sm">
+              <div className="text-black text-sm">
                 © {currentYear} BioPing. All Rights Reserved
               </div>
 
               {/* Legal Links */}
               <div className="flex items-center space-x-6 text-sm">
-                <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors duration-200">
+                <Link to="/privacy" className="text-black hover:text-gray-700 transition-colors duration-200">
                   Privacy Policy
                 </Link>
-                <Link to="/terms" className="text-gray-400 hover:text-white transition-colors duration-200">
+                <Link to="/terms" className="text-black hover:text-gray-700 transition-colors duration-200">
                   Terms of Service
                 </Link>
-                <Link to="/cookie-policy" className="text-gray-400 hover:text-white transition-colors duration-200">
+                <Link to="/cookie-policy" className="text-black hover:text-gray-700 transition-colors duration-200">
                   Cookie Policy
                 </Link>
               </div>

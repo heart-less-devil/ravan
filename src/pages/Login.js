@@ -256,21 +256,21 @@ const Login = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '6s' }}></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '6s' }}></div>
       </div>
       
       {/* Floating Particles */}
       <div className="absolute inset-0">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(150)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-white/30 rounded-full"
+            className="absolute w-2 h-2 bg-black/30 rounded-full"
             animate={{
               x: [0, 100, 0],
               y: [0, -100, 0],
@@ -310,9 +310,9 @@ const Login = () => {
                   >
                     <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity duration-300">
                       <img 
-                        src="/dfgjk.webp" 
+                        src="/image.webp" 
                         alt="BioPing Logo" 
-                        className="w-48 h-48 object-contain"
+                        className="w-80 h-80 object-contain"
                         onError={(e) => {
                           console.log('Logo failed to load:', e.target.src);
                           e.target.style.display = 'none';
@@ -339,7 +339,7 @@ const Login = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="text-4xl font-bold text-white mb-3"
+                    className="text-4xl font-bold text-black mb-3"
                   >
                     Welcome Back
                   </motion.h2>
@@ -347,7 +347,7 @@ const Login = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.4 }}
-                    className="text-gray-300 text-lg"
+                    className="text-black text-lg"
                   >
                     Sign in to your BioPing account
                   </motion.p>
@@ -359,7 +359,7 @@ const Login = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.5 }}
                   onSubmit={handleSubmit}
-                  className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl"
+                  className="bg-white/10 backdrop-blur-xl border border-black rounded-3xl p-8 shadow-2xl focus-within:border-purple-500 focus-within:shadow-purple-500/25 transition-all duration-300"
                 >
                   {error && (
                     <motion.div
@@ -389,12 +389,12 @@ const Login = () => {
                   <div className="space-y-6">
                     {/* Enhanced Email Field */}
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-white mb-3">
+                      <label htmlFor="email" className="block text-sm font-medium text-black mb-3">
                         Email Address
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Mail className="h-5 w-5 text-gray-300" />
+                          <Mail className="h-5 w-5 text-black" />
                         </div>
                         <input
                           id="email"
@@ -403,7 +403,7 @@ const Login = () => {
                           required
                           value={formData.email}
                           onChange={handleChange}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                          className="w-full bg-white/10 border border-black rounded-xl px-4 py-4 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300"
                           placeholder="Enter your email"
                         />
                       </div>
@@ -411,12 +411,12 @@ const Login = () => {
 
                     {/* Enhanced Password Field */}
                     <div>
-                      <label htmlFor="password" className="block text-sm font-medium text-white mb-3">
+                      <label htmlFor="password" className="block text-sm font-medium text-black mb-3">
                         Password
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-gray-300" />
+                          <Lock className="h-5 w-5 text-black" />
                         </div>
                         <input
                           id="password"
@@ -425,18 +425,18 @@ const Login = () => {
                           required
                           value={formData.password}
                           onChange={handleChange}
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300"
+                          className="w-full bg-white/10 border border-black rounded-xl px-4 py-4 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300"
                           placeholder="Enter your password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-white transition-colors duration-200"
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
                         >
                           {showPassword ? (
-                            <EyeOff className="h-5 w-5 text-gray-300" />
+                            <EyeOff className="h-5 w-5 text-black" />
                           ) : (
-                            <Eye className="h-5 w-5 text-gray-300" />
+                            <Eye className="h-5 w-5 text-black" />
                           )}
                         </button>
                       </div>
@@ -444,7 +444,7 @@ const Login = () => {
                         <button
                           type="button"
                           onClick={() => setShowForgotPassword(true)}
-                          className="text-sm text-purple-300 hover:text-purple-200 transition-colors duration-200 cursor-pointer"
+                          className="text-sm text-black hover:text-gray-700 transition-colors duration-200 cursor-pointer"
                         >
                           Forgot Password?
                         </button>
@@ -478,9 +478,9 @@ const Login = () => {
                   transition={{ duration: 0.6, delay: 0.6 }}
                   className="text-center mt-8"
                 >
-                  <p className="text-sm text-gray-300">
+                  <p className="text-sm text-black">
                     Don't have an account?{' '}
-                    <Link to="/signup" className="font-medium text-purple-400 hover:text-purple-300 transition-colors duration-200 cursor-pointer">
+                    <Link to="/signup" className="font-medium text-black hover:text-gray-700 transition-colors duration-200 cursor-pointer">
                       Sign up
                     </Link>
                   </p>
@@ -502,10 +502,10 @@ const Login = () => {
                   transition={{ duration: 0.6, delay: 0.4 }}
                   className="mb-8"
                 >
-                  <h3 className="text-3xl font-bold text-white mb-6">
+                  <h3 className="text-3xl font-bold text-black mb-6">
                     Unlock Your BD Potential
                   </h3>
-                  <p className="text-gray-300 text-lg leading-relaxed">
+                  <p className="text-black text-lg leading-relaxed">
                     Access the most comprehensive database of biotech and pharma contacts. 
                     Connect with decision-makers and accelerate your business development.
                   </p>
@@ -524,8 +524,8 @@ const Login = () => {
                         <benefit.icon className="w-7 h-7 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-white text-lg mb-2">{benefit.title}</h4>
-                        <p className="text-gray-300 leading-relaxed">{benefit.description}</p>
+                        <h4 className="font-semibold text-black text-lg mb-2">{benefit.title}</h4>
+                        <p className="text-black leading-relaxed">{benefit.description}</p>
                       </div>
                     </motion.div>
                   ))}
@@ -540,16 +540,16 @@ const Login = () => {
                 >
                   <div className="grid grid-cols-3 gap-6 text-center">
                     <div>
-                      <div className="text-3xl font-bold text-white">500+</div>
-                      <div className="text-gray-300 text-sm">Pharma & Biotech's</div>
+                      <div className="text-3xl font-bold text-black">500+</div>
+                      <div className="text-black text-sm">Pharma & Biotech's</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-white">5000+</div>
-                      <div className="text-gray-300 text-sm">BD and Other Contacts</div>
+                      <div className="text-3xl font-bold text-black">5000+</div>
+                      <div className="text-black text-sm">BD and Other Contacts</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-white">200+</div>
-                      <div className="text-gray-300 text-sm">Investors</div>
+                      <div className="text-3xl font-bold text-black">200+</div>
+                      <div className="text-black text-sm">Investors</div>
                     </div>
                   </div>
                 </motion.div>
@@ -637,7 +637,7 @@ const Login = () => {
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+                      className="w-full bg-white/10 border border-black rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:shadow-lg focus:shadow-red-500/25 transition-all duration-300"
                       placeholder="Enter your email"
                     />
                   </div>
@@ -676,7 +676,7 @@ const Login = () => {
                     type="text"
                     value={verificationCode}
                     onChange={handleCodeChange}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 text-center text-2xl tracking-widest"
+                    className="w-full bg-white/10 border border-black rounded-xl px-4 py-4 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:shadow-lg focus:shadow-red-500/25 transition-all duration-300 text-center text-2xl tracking-widest"
                     placeholder="000000"
                     maxLength="6"
                   />
@@ -695,7 +695,7 @@ const Login = () => {
                       type={showNewPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+                      className="w-full bg-white/10 border border-black rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:shadow-lg focus:shadow-red-500/25 transition-all duration-300"
                       placeholder="Enter new password"
                     />
                     <button
@@ -725,7 +725,7 @@ const Login = () => {
                       type={showConfirmNewPassword ? 'text' : 'password'}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
+                      className="w-full bg-white/10 border border-black rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:shadow-lg focus:shadow-red-500/25 transition-all duration-300"
                       placeholder="Confirm new password"
                     />
                     <button

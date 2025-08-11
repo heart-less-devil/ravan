@@ -294,21 +294,21 @@ const Signup = () => {
   const strength = passwordStrength();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
+    <div className="min-h-screen bg-white relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '6s' }}></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-gray-200/50 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '6s' }}></div>
       </div>
       
       {/* Floating Particles */}
       <div className="absolute inset-0">
-        {[...Array(25)].map((_, i) => (
+        {[...Array(150)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 bg-white/40 rounded-full"
+            className="absolute w-2 h-2 bg-black/30 rounded-full"
             animate={{
               x: [0, 150, 0],
               y: [0, -150, 0],
@@ -338,7 +338,7 @@ const Signup = () => {
               transition={{ duration: 0.6 }}
               className="flex justify-center lg:justify-end"
             >
-              <div className="w-full max-w-md">
+              <div className="w-full max-w-xl">
                 {/* Enhanced Header */}
                 <div className="text-center mb-8">
                   <motion.div
@@ -349,9 +349,9 @@ const Signup = () => {
                   >
                     <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity duration-300">
                       <img 
-                        src="/dfgjk.webp" 
+                        src="/image.webp" 
                         alt="BioPing Logo" 
-                        className="w-48 h-48 object-contain"
+                        className="w-80 h-80 object-contain"
                         onError={(e) => {
                           console.log('Logo failed to load:', e.target.src);
                           e.target.style.display = 'none';
@@ -378,7 +378,7 @@ const Signup = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="text-4xl font-bold text-white mb-3"
+                    className="text-4xl font-bold text-black mb-3"
                   >
                     {isVerificationSent ? 'Verify Your Email' : 'Join BioPing'}
                   </motion.h2>
@@ -386,16 +386,16 @@ const Signup = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.4 }}
-                    className="text-gray-300 text-lg"
+                    className="text-black text-lg"
                   >
                     {isVerificationSent ? (
                       <>
-                        We've sent a verification code to <span className="font-medium text-purple-300">{formData.email}</span>
+                        We've sent a verification code to <span className="font-medium text-black">{formData.email}</span>
                       </>
                     ) : (
                       <>
                         Already have an account?{' '}
-                        <Link to="/login" className="font-medium text-purple-400 hover:text-purple-300 transition-colors duration-200">
+                        <Link to="/login" className="font-medium text-black hover:text-gray-700 transition-colors duration-200">
                           Sign in
                         </Link>
                       </>
@@ -409,17 +409,17 @@ const Signup = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.5 }}
                   onSubmit={handleSubmit}
-                  className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl"
+                  className="bg-white/10 backdrop-blur-xl border border-black rounded-3xl p-12 shadow-2xl focus-within:border-purple-500 focus-within:shadow-purple-500/25 transition-all duration-300"
                 >
                   {/* Enhanced Name Fields */}
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-white mb-3">
+                      <label htmlFor="firstName" className="block text-sm font-medium text-black mb-3">
                         First name <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-gray-300" />
+                          <User className="h-5 w-5 text-black" />
                         </div>
                         <input
                           id="firstName"
@@ -428,7 +428,7 @@ const Signup = () => {
                           required
                           value={formData.firstName}
                           onChange={handleChange}
-                          className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                          className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
                             errors.firstName ? 'border-red-400 focus:ring-red-500' : ''
                           }`}
                           placeholder="First name"
@@ -442,12 +442,12 @@ const Signup = () => {
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-white mb-3">
+                      <label htmlFor="lastName" className="block text-sm font-medium text-black mb-3">
                         Last name <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-gray-300" />
+                          <User className="h-5 w-5 text-black" />
                         </div>
                         <input
                           id="lastName"
@@ -456,7 +456,7 @@ const Signup = () => {
                           required
                           value={formData.lastName}
                           onChange={handleChange}
-                          className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                          className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
                             errors.lastName ? 'border-red-400 focus:ring-red-500' : ''
                           }`}
                           placeholder="Last name"
@@ -473,12 +473,12 @@ const Signup = () => {
 
                   {/* Enhanced Email Field */}
                   <div className="mb-6">
-                    <label htmlFor="email" className="block text-sm font-medium text-white mb-3">
+                    <label htmlFor="email" className="block text-sm font-medium text-black mb-3">
                       Email <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-gray-300" />
+                        <Mail className="h-5 w-5 text-black" />
                       </div>
                       <input
                         id="email"
@@ -487,7 +487,7 @@ const Signup = () => {
                         required
                         value={formData.email}
                         onChange={handleChange}
-                        className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
                           errors.email ? 'border-red-400 focus:ring-red-500' : ''
                         }`}
                         placeholder="Enter your email"
@@ -503,12 +503,12 @@ const Signup = () => {
 
                   {/* Enhanced Company Field */}
                   <div className="mb-6">
-                    <label htmlFor="company" className="block text-sm font-medium text-white mb-3">
+                    <label htmlFor="company" className="block text-sm font-medium text-black mb-3">
                       Company Name <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Building2 className="h-5 w-5 text-gray-300" />
+                        <Building2 className="h-5 w-5 text-black" />
                       </div>
                       <input
                         id="company"
@@ -517,7 +517,7 @@ const Signup = () => {
                         required
                         value={formData.company}
                         onChange={handleChange}
-                        className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
                           errors.company ? 'border-red-400 focus:ring-red-500' : ''
                         }`}
                         placeholder="Enter your company name"
@@ -533,12 +533,12 @@ const Signup = () => {
 
                   {/* Enhanced Password Field */}
                   <div className="mb-6">
-                    <label htmlFor="password" className="block text-sm font-medium text-white mb-3">
+                    <label htmlFor="password" className="block text-sm font-medium text-black mb-3">
                       Password <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-gray-300" />
+                        <Lock className="h-5 w-5 text-black" />
                       </div>
                       <input
                         id="password"
@@ -547,7 +547,7 @@ const Signup = () => {
                         required
                         value={formData.password}
                         onChange={handleChange}
-                        className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
                           errors.password ? 'border-red-400 focus:ring-red-500' : ''
                         }`}
                         placeholder="Create a password"
@@ -555,12 +555,12 @@ const Signup = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-white transition-colors duration-200"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
                       >
                         {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-300" />
+                          <EyeOff className="h-5 w-5 text-black" />
                         ) : (
-                          <Eye className="h-5 w-5 text-gray-300" />
+                          <Eye className="h-5 w-5 text-black" />
                         )}
                       </button>
                       {errors.password && (
@@ -575,12 +575,12 @@ const Signup = () => {
                     {formData.password && (
                       <div className="mt-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-300">Password strength:</span>
+                          <span className="text-sm text-black">Password strength:</span>
                           <span className={`text-sm font-medium ${
                             strength.color === 'red' ? 'text-red-400' :
                             strength.color === 'yellow' ? 'text-yellow-400' :
                             strength.color === 'green' ? 'text-green-400' :
-                            'text-gray-400'
+                            'text-black'
                           }`}>
                             {strength.text}
                           </span>
@@ -602,12 +602,12 @@ const Signup = () => {
 
                   {/* Enhanced Confirm Password Field */}
                   <div className="mb-6">
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-3">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-black mb-3">
                       Confirm Password <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-gray-300" />
+                        <Lock className="h-5 w-5 text-black" />
                       </div>
                       <input
                         id="confirmPassword"
@@ -616,7 +616,7 @@ const Signup = () => {
                         required
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className={`w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 pl-12 pr-12 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 ${
+                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
                           errors.confirmPassword ? 'border-red-400 focus:ring-red-500' : ''
                         }`}
                         placeholder="Confirm your password"
@@ -624,12 +624,12 @@ const Signup = () => {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-white transition-colors duration-200"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
                       >
                         {showConfirmPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-300" />
+                          <EyeOff className="h-5 w-5 text-black" />
                         ) : (
-                          <Eye className="h-5 w-5 text-gray-300" />
+                          <Eye className="h-5 w-5 text-black" />
                         )}
                       </button>
                       {errors.confirmPassword && (
@@ -659,9 +659,9 @@ const Signup = () => {
                             handleChange(e);
                           }
                         }}
-                        className="mt-1 w-4 h-4 text-purple-600 bg-white/10 border-white/20 rounded focus:ring-purple-500 focus:ring-2"
+                        className="mt-1 w-4 h-4 text-purple-600 bg-white/10 border-black rounded focus:ring-purple-500 focus:ring-2"
                       />
-                      <div className="text-sm text-gray-300">
+                      <div className="text-sm text-black">
                         I agree to the{' '}
                         <button
                           type="button"
@@ -669,7 +669,7 @@ const Signup = () => {
                             setActiveTab('terms');
                             setShowTermsModal(true);
                           }}
-                          className="text-purple-400 hover:text-purple-300 underline"
+                          className="text-black hover:text-gray-700 underline"
                         >
                           Terms of Service
                         </button>{' '}
@@ -680,7 +680,7 @@ const Signup = () => {
                             setActiveTab('privacy');
                             setShowTermsModal(true);
                           }}
-                          className="text-purple-400 hover:text-purple-300 underline"
+                          className="text-black hover:text-gray-700 underline"
                         >
                           Privacy Policy
                         </button>
@@ -730,10 +730,10 @@ const Signup = () => {
                   transition={{ duration: 0.6, delay: 0.4 }}
                   className="mb-8"
                 >
-                  <h3 className="text-3xl font-bold text-white mb-6">
+                  <h3 className="text-3xl font-bold text-black mb-6">
                     Join the BioTech Revolution
                   </h3>
-                  <p className="text-gray-300 text-lg leading-relaxed">
+                  <p className="text-black text-lg leading-relaxed">
                     Connect with the most innovative biotech companies and accelerate your business development with our comprehensive database.
                   </p>
                 </motion.div>
@@ -749,8 +749,8 @@ const Signup = () => {
                       <Users className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white text-lg mb-2">Verified Contacts</h4>
-                      <p className="text-gray-300 leading-relaxed">Access to validated BD contacts and decision-makers from top biotech companies</p>
+                      <h4 className="font-semibold text-black text-lg mb-2">Verified Contacts</h4>
+                      <p className="text-black leading-relaxed">Access to validated BD contacts and decision-makers from top biotech companies</p>
                     </div>
                   </motion.div>
 
@@ -764,8 +764,8 @@ const Signup = () => {
                       <Shield className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white text-lg mb-2">Secure Platform</h4>
-                      <p className="text-gray-300 leading-relaxed">Enterprise-grade security for your business data and communications</p>
+                      <h4 className="font-semibold text-black text-lg mb-2">Secure Platform</h4>
+                      <p className="text-black leading-relaxed">Enterprise-grade security for your business data and communications</p>
                     </div>
                   </motion.div>
 
@@ -779,8 +779,8 @@ const Signup = () => {
                       <BarChart3 className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white text-lg mb-2">Advanced Analytics</h4>
-                      <p className="text-gray-300 leading-relaxed">Get insights and analytics to optimize your BD strategy</p>
+                      <h4 className="font-semibold text-black text-lg mb-2">Advanced Analytics</h4>
+                      <p className="text-black leading-relaxed">Get insights and analytics to optimize your BD strategy</p>
                     </div>
                   </motion.div>
                 </div>
@@ -794,17 +794,17 @@ const Signup = () => {
                 >
                   <div className="grid grid-cols-3 gap-6 text-center">
                     <div>
-                      <div className="text-3xl font-bold text-white">500+</div>
-                      <div className="text-gray-300 text-sm">Pharma & Biotech's
+                      <div className="text-3xl font-bold text-black">500+</div>
+                      <div className="text-black text-sm">Pharma & Biotech's
                       </div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-white">5000+</div>
-                      <div className="text-gray-300 text-sm">BD and Other Contacts</div>
+                      <div className="text-3xl font-bold text-black">5000+</div>
+                      <div className="text-black text-sm">BD and Other Contacts</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-white">200+</div>
-                      <div className="text-gray-300 text-sm">Investors</div>
+                      <div className="text-3xl font-bold text-black">200+</div>
+                      <div className="text-black text-sm">Investors</div>
                     </div>
                   </div>
                 </motion.div>

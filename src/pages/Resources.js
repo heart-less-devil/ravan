@@ -106,98 +106,116 @@ const Resources = () => {
       {/* Main Content */}
       <section className="section -mt-28">
         <div className="container-custom">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-            {/* Left Side - Illustration */}
+          <div className="flex justify-center items-center">
+            {/* Centered Resources Card */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="relative"
+              className="relative max-w-4xl"
             >
-              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-8 shadow-lg border border-blue-200">
+              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-16 shadow-lg border border-blue-200 mb-8">
                 <div className="text-center">
-                  <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full mx-auto mb-6 flex items-center justify-center">
-                    <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-48 h-48 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full mx-auto mb-8 flex items-center justify-center">
+                    <svg className="w-24 h-24 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">Resources</h3>
-                  <p className="text-gray-600">Access our comprehensive collection of BD resources and tools</p>
+                  <h3 className="text-3xl font-bold text-gray-800 mb-3">Resources</h3>
+                  <p className="text-gray-600 text-xl">Access our comprehensive collection of BD resources and tools</p>
                 </div>
+              </div>
+              
+              {/* Original Resources List */}
+              <div className="space-y-4">
+                {resources.map((resource, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
+                    className="flex items-center space-x-4 p-8 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-large border-2 border-orange-300 hover:shadow-md transition-shadow"
+                  >
+                    <CheckCircle className="w-8 h-8 text-orange-500 flex-shrink-0" />
+                    <span className="text-gray-800 font-medium text-xl">{resource}</span>
+                  </motion.div>
+                ))}
               </div>
             </motion.div>
 
-            {/* Right Side - Resources List */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="space-y-6"
-            >
-              <h2 className="text-2xl font-bold text-gray-900 mb-8">Free Resources</h2>
-              
-              {/* PDF Resource Cards */}
-              {pdfResources.map((pdf, index) => (
-                <motion.div
-                  key={pdf.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
-                  className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
-                >
-                  <div className={`bg-gradient-to-r ${getColorClasses('blue')} p-6 text-white`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-5 h-5" />
-                        <span className="text-sm font-medium">{pdf.type}</span>
+            {/* Right Side - Resources List - HIDDEN */}
+            {false && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="space-y-6"
+              >
+                <h2 className="text-2xl font-bold text-gray-900 mb-8">Free Resources</h2>
+                
+                {/* PDF Resource Cards */}
+                {pdfResources.map((pdf, index) => (
+                  <motion.div
+                    key={pdf.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 + index * 0.1 }}
+                    className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className={`bg-gradient-to-r ${getColorClasses('blue')} p-6 text-white`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-5 h-5" />
+                          <span className="text-sm font-medium">{pdf.type}</span>
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="text-lg font-bold mb-2">{pdf.title}</h3>
-                    <p className="text-blue-100 text-sm">{pdf.description}</p>
-                  </div>
-                  
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Eye className="w-4 h-4" />
-                        <span>{formatViews(pdf.views)} views</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="text-sm font-medium text-gray-700">{pdf.rating}</span>
-                      </div>
+                      <h3 className="text-lg font-bold mb-2">{pdf.title}</h3>
+                      <p className="text-blue-100 text-sm">{pdf.description}</p>
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-500">
-                        {pdf.size}
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2 text-sm text-gray-600">
+                          <Eye className="w-4 h-4" />
+                          <span>{formatViews(pdf.views)} views</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          <span className="text-sm font-medium text-gray-700">{pdf.rating}</span>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleViewPDF(pdf)}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>View</span>
-                      </button>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
+                          {pdf.size}
+                        </div>
+                        <button
+                          onClick={() => handleViewPDF(pdf)}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>View</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ))}
 
-              {/* Original Resources List */}
-              {resources.map((resource, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.7 + index * 0.1 }}
-                  className="flex items-center space-x-4 p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-large border-2 border-orange-300 hover:shadow-md transition-shadow"
-                >
-                  <CheckCircle className="w-6 h-6 text-orange-500 flex-shrink-0" />
-                  <span className="text-gray-800 font-medium">{resource}</span>
-                </motion.div>
-              ))}
-            </motion.div>
+                {/* Original Resources List */}
+                {resources.map((resource, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.7 + index * 0.1 }}
+                    className="flex items-center space-x-4 p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-large border-2 border-orange-300 hover:shadow-md transition-shadow"
+                  >
+                    <CheckCircle className="w-6 h-6 text-orange-500 flex-shrink-0" />
+                    <span className="text-gray-800 font-medium">{resource}</span>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
           </div>
         </div>
       </section>

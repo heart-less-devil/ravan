@@ -576,13 +576,18 @@ const BDTrackerPanel = () => {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="pl-12 pr-8 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 appearance-none"
+                  className="pl-12 pr-10 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 appearance-none"
                 >
                   <option value="all">All Entries</option>
                   <option value="with-cda">With CDA</option>
                   <option value="without-cda">Without CDA</option>
                   <option value="pending">Pending Feedback</option>
                 </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -668,12 +673,17 @@ const BDTrackerPanel = () => {
                     <select
                       value={formData[column.key]}
                       onChange={(e) => handleInputChange(column.key, e.target.value)}
-                      className="relative w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 shadow-lg"
+                      className="relative w-full px-4 py-3 pr-10 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-300 shadow-lg appearance-none"
                     >
                       <option value="">Select...</option>
                       <option value="Yes">✅ Yes</option>
                       <option value="No">❌ No</option>
                     </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
                 ) : (
                   <div className="relative">

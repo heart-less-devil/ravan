@@ -943,6 +943,7 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        company: user.company,
         createdAt: user.createdAt,
         // Payment info will be handled by frontend localStorage
         hasPaymentInfo: true // Indicates user can have payment data
@@ -3259,6 +3260,7 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        company: user.company,
         createdAt: user.createdAt,
         // Payment info will be handled by frontend localStorage
         hasPaymentInfo: true // Indicates user can have payment data

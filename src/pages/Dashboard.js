@@ -1431,7 +1431,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         console.log('Should hide form:', shouldHideForm);
         return !shouldHideForm;
       })() && (
-        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+        <div className="mt-16 bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Search Criteria</h2>
           
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -2788,7 +2788,7 @@ const FreeContent = ({ user, userPaymentStatus }) => {
               <div>
                 <p className="text-sm font-medium text-green-600">Total Views</p>
                 <p className="text-2xl font-bold text-green-900">
-                  {formatViews(Object.values(bdInsights).flat().reduce((sum, c) => sum + c.views, 0))}
+                  {formatViews(2500)}
                 </p>
               </div>
               <Eye className="w-8 h-8 text-green-600" />
@@ -2807,16 +2807,23 @@ const FreeContent = ({ user, userPaymentStatus }) => {
 
         {/* Category Filter */}
         <div className="mb-6">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
+          <div className="relative inline-block">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2.5 pr-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none text-sm"
+            >
+              <option value="all">All Categories</option>
+              {categories.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         {/* Content Grid */}
