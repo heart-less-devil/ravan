@@ -94,7 +94,7 @@ app.use(express.json());
 app.use('/pdf', express.static(path.join(__dirname, '../public/pdf'), {
   setHeaders: (res, path) => {
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range');
@@ -106,7 +106,7 @@ app.use('/static', express.static(path.join(__dirname, '../public'), {
   setHeaders: (res, path) => {
     if (path.endsWith('.pdf')) {
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
       res.setHeader('Access-Control-Allow-Origin', '*');
     }
   }
@@ -160,14 +160,23 @@ app.get('/api/test-pdf', (req, res) => {
 
 // Test endpoint
 app.get('/api/test', (req, res) => {
+  const pdfDir = path.join(__dirname, '../public/pdf');
+  const pdfFiles = fs.existsSync(pdfDir) ? fs.readdirSync(pdfDir).filter(file => file.endsWith('.pdf')) : [];
+  
   res.json({ 
     message: 'Server is running!',
+    timestamp: new Date().toISOString(),
+    pdfDir: pdfDir,
+    pdfDirExists: fs.existsSync(pdfDir),
+    pdfFiles: pdfFiles,
     endpoints: [
       '/api/health',
       '/api/auth/login',
       '/api/auth/signup',
       '/api/create-payment-intent',
-      '/api/auth/subscription-status'
+      '/api/auth/subscription-status',
+      '/api/test-pdf',
+      '/api/pdf-health'
     ]
   });
 });
