@@ -298,10 +298,11 @@ const BDTracker = () => {
     { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },
     { key: 'contactFunction', label: 'Contact Function', icon: User },
     { key: 'contactPerson', label: 'Contact Person', icon: User },
-    { key: 'cda', label: 'CDA (Yes or No)', icon: CheckCircle },
+    { key: 'cda', label: 'CDA', icon: CheckCircle },
     { key: 'feedback', label: 'Feedback', icon: MessageSquare },
     { key: 'nextSteps', label: 'Next Steps', icon: ArrowRight },
-    { key: 'timelines', label: 'Timelines to Remember', icon: Clock },
+    { key: 'priority', label: 'Priority', icon: AlertCircle },
+    { key: 'timelines', label: 'Timelines', icon: Clock },
     { key: 'reminders', label: 'Reminders', icon: Bell }
   ];
 
@@ -527,19 +528,19 @@ const BDTracker = () => {
                         column.key === 'cda' ? (
                           <div className="relative">
                             <select
-                              value={formData[column.key]}
+                              value={formData[column.key] || ''}
                               onChange={(e) => handleInputChange(column.key, e.target.value)}
-                              className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                             >
-                              <option value="">Select...</option>
+                              <option value="">Select CDA Status</option>
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>
                               <option value="Pending">Pending</option>
                               <option value="In Progress">In Progress</option>
                             </select>
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7" />
                               </svg>
                             </div>
                           </div>
@@ -548,26 +549,26 @@ const BDTracker = () => {
                             <select
                               value={formData[column.key] || ''}
                               onChange={(e) => handleInputChange(column.key, e.target.value)}
-                              className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                             >
-                              <option value="">Select Priority...</option>
+                              <option value="">Select Priority Level</option>
                               <option value="Low">Low</option>
                               <option value="Medium">Medium</option>
                               <option value="High">High</option>
                               <option value="Urgent">Urgent</option>
                             </select>
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <svg className="w-5 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7" />
                               </svg>
                             </div>
                           </div>
                         ) : (
                           <input
                             type="text"
-                            value={formData[column.key]}
+                            value={formData[column.key] || ''}
                             onChange={(e) => handleInputChange(column.key, e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
                         )
                       ) : (

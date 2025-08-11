@@ -48,4 +48,6 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Fixed BD Tracker edit functionality - Deep copy prevents data corruption
 
-# Updated sidebar navigation - "Search" changed to "Advanced Search" 
+# Updated sidebar navigation - "Search" changed to "Advanced Search"
+
+# Fixed BD Tracker table - Added Priority column, improved dropdown styling, fixed edit functionality 
