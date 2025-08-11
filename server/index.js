@@ -90,9 +90,27 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// Serve static files (PDFs)
-app.use('/pdf', express.static(path.join(__dirname, '../public/pdf')));
-app.use('/static', express.static(path.join(__dirname, '../public')));
+// Serve static files (PDFs) with enhanced configuration
+app.use('/pdf', express.static(path.join(__dirname, '../public/pdf'), {
+  setHeaders: (res, path) => {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
+}));
+
+app.use('/static', express.static(path.join(__dirname, '../public'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+  }
+}));
 
 // Add cache-busting middleware
 app.use((req, res, next) => {
@@ -4300,10 +4318,51 @@ app.get('/api/pdf-health', (req, res) => {
   const pdfPath = path.join(__dirname, '../public/pdf', 'BioPing Training Manual.pdf');
   const exists = fs.existsSync(pdfPath);
   
+  // Get file stats for debugging
+  let fileStats = null;
+  if (exists) {
+    try {
+      fileStats = fs.statSync(pdfPath);
+    } catch (error) {
+      console.error('Error getting file stats:', error);
+    }
+  }
+  
   res.json({
     pdfExists: exists,
     pdfPath: pdfPath,
-    availablePdfs: fs.readdirSync(path.join(__dirname, '../public/pdf')).filter(file => file.endsWith('.pdf'))
+    fileSize: fileStats ? fileStats.size : null,
+    availablePdfs: fs.readdirSync(path.join(__dirname, '../public/pdf')).filter(file => file.endsWith('.pdf')),
+    serverTime: new Date().toISOString(),
+    requestHeaders: req.headers,
+    serverInfo: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      arch: process.arch
+    }
   });
+});
+
+// Test PDF access endpoint
+app.get('/api/test-pdf', (req, res) => {
+  const pdfPath = path.join(__dirname, '../public/pdf', 'BioPing Training Manual.pdf');
+  
+  if (!fs.existsSync(pdfPath)) {
+    return res.status(404).json({ error: 'PDF not found', path: pdfPath });
+  }
+  
+  // Set headers for PDF
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  
+  // Stream the PDF file
+  const stream = fs.createReadStream(pdfPath);
+  stream.on('error', (error) => {
+    console.error('PDF stream error:', error);
+    res.status(500).json({ error: 'PDF stream error' });
+  });
+  stream.pipe(res);
 });
 
