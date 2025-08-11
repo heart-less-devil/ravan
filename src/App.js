@@ -23,6 +23,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminLogin from './pages/AdminLogin';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import BDTrackerPage from './pages/BDTrackerPage';
+import QuickGuide from './pages/QuickGuide';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import CookiePolicy from './pages/CookiePolicy';
@@ -172,7 +173,7 @@ function App() {
               <Route path="/dashboard/search" element={<Dashboard />} />
               <Route path="/dashboard/saved-searches" element={<Dashboard />} />
               <Route path="/dashboard/resources/definitions" element={<Dashboard />} />
-              <Route path="/dashboard/resources/quick-guide" element={<Dashboard />} />
+              <Route path="/dashboard/resources/quick-guide" element={<QuickGuide />} />
               <Route path="/dashboard/resources/bd-insights" element={<Dashboard />} />
               <Route path="/dashboard/resources/coaching-tips" element={<Dashboard />} />
               <Route path="/dashboard/resources/free-content" element={<Dashboard />} />
@@ -201,6 +202,12 @@ function App() {
                   <p>If you can see this, React routing is working.</p>
                 </div>
               } />
+              
+              {/* Test QuickGuide route */}
+              <Route path="/test-quick-guide" element={<QuickGuide />} />
+              
+              {/* Catch-all route for dashboard - redirect to main dashboard */}
+              <Route path="/dashboard/*" element={<Dashboard />} />
             </Routes>
           </div>
         </CacheBuster>

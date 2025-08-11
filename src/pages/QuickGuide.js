@@ -1,15 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ArrowRight, CheckCircle, AlertCircle, Info, Download, Eye, X, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
+import { FileText, AlertCircle, Info, Download, Eye, X, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 
 const QuickGuide = () => {
   const [showPdf, setShowPdf] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [pdfUrl, setPdfUrl] = useState('/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0');
+  const [pdfUrl, setPdfUrl] = useState('');
   const [pdfError, setPdfError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pdfLoadAttempts, setPdfLoadAttempts] = useState(0);
+  const [componentLoaded, setComponentLoaded] = useState(false);
+
+  // Get current domain and set appropriate PDF URL
+  useEffect(() => {
+    const currentDomain = window.location.hostname;
+    let initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
+    
+    // Set appropriate URL based on current domain
+    if (currentDomain.includes('thebioping.com')) {
+      initialUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0`;
+    } else if (currentDomain.includes('netlify.app')) {
+      initialUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0`;
+    } else if (currentDomain.includes('localhost')) {
+      initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
+    }
+    
+    setPdfUrl(initialUrl);
+    setComponentLoaded(true);
+    console.log('Current domain:', currentDomain, 'Setting PDF URL to:', initialUrl);
+    
+    // Test if the route is accessible
+    console.log('QuickGuide component loaded successfully');
+    console.log('Current URL path:', window.location.pathname);
+    console.log('Component state initialized');
+  }, []);
 
   // Try different PDF URLs for different hosting scenarios
   const pdfUrls = [
@@ -21,10 +45,13 @@ const QuickGuide = () => {
     // API routes
     '/api/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/api/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    '/api/test-pdf#toolbar=0&navpanes=0&scrollbar=0',
     
-    // Full domain URLs (will be updated by script)
-    'https://your-render-domain.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    'https://your-godaddy-domain.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    // Full domain URLs for live hosting
+    'https://thebioping.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://www.thebioping.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://biopingweb.netlify.app/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://ravan.netlify.app/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     
     // Alternative approaches
     '/static/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
@@ -43,6 +70,10 @@ const QuickGuide = () => {
     if (pdfLoadAttempts < pdfUrls.length - 1) {
       setPdfLoadAttempts(prev => prev + 1);
       setPdfUrl(pdfUrls[pdfLoadAttempts + 1]);
+      console.log('Trying URL:', pdfUrls[pdfLoadAttempts + 1]);
+    } else {
+      console.log('All PDF URLs failed. Current domain:', window.location.hostname);
+      console.log('Available URLs tried:', pdfUrls);
     }
   };
 
@@ -155,6 +186,7 @@ const QuickGuide = () => {
   const handleIframeLoad = () => {
     setIsLoading(false);
     setPdfError(false);
+    console.log('PDF iframe loaded successfully with URL:', pdfUrl);
   };
 
   // Add global right-click protection when PDF is shown
@@ -200,7 +232,20 @@ const QuickGuide = () => {
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [pdfError, pdfLoadAttempts]);
+  }, [pdfError, pdfLoadAttempts, pdfUrls]);
+
+  // Show loading state while component initializes
+  if (!componentLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Quick Guide...</h2>
+          <p className="text-gray-600">Please wait while we prepare the training manual</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -416,8 +461,11 @@ const QuickGuide = () => {
                             <div className="bg-gray-100 rounded-lg p-4 mb-4 text-left">
                               <h4 className="font-semibold text-gray-800 mb-2">Debug Information:</h4>
                               <p className="text-sm text-gray-600 mb-1">Current URL: {pdfUrl}</p>
+                              <p className="text-sm text-gray-600 mb-1">Current Domain: {window.location.hostname}</p>
                               <p className="text-sm text-gray-600 mb-1">Attempt: {pdfLoadAttempts + 1}/{pdfUrls.length}</p>
                               <p className="text-sm text-gray-600">Total URLs tried: {pdfLoadAttempts + 1}</p>
+                              <p className="text-sm text-gray-600">Protocol: {window.location.protocol}</p>
+                              <p className="text-sm text-gray-600">Full URL: {window.location.href}</p>
                             </div>
                             
                             <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -438,7 +486,18 @@ const QuickGuide = () => {
                               <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                onClick={() => window.open('/pdf/BioPing Training Manual.pdf', '_blank')}
+                                onClick={() => {
+                                  const currentDomain = window.location.hostname;
+                                  let downloadUrl = '/pdf/BioPing Training Manual.pdf';
+                                  
+                                  if (currentDomain.includes('thebioping.com')) {
+                                    downloadUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf`;
+                                  } else if (currentDomain.includes('netlify.app')) {
+                                    downloadUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf`;
+                                  }
+                                  
+                                  window.open(downloadUrl, '_blank');
+                                }}
                                 className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center space-x-2"
                               >
                                 <Download className="w-5 h-5" />
@@ -496,6 +555,7 @@ const QuickGuide = () => {
                             onContextMenu={handleContextMenu}
                             onLoad={handleIframeLoad}
                             onError={handlePdfError}
+                            title="BioPing Training Manual PDF Viewer"
                             style={{ 
                               userSelect: 'none',
                               WebkitUserSelect: 'none',
