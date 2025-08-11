@@ -60,4 +60,6 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Fixed update functionality - Added validation, debugging, and proper form reset
 
-# Fixed select dropdown styling - Better padding, colors, and text visibility 
+# Fixed select dropdown styling - Better padding, colors, and text visibility
+
+# Fixed backend ID format handling - Support for both id and _id formats 

@@ -3016,8 +3016,13 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
       console.log('BD Tracker PUT - MongoDB entry updated:', updatedEntry._id);
     } catch (dbError) {
       console.log('MongoDB update failed, using file-based storage...');
-      // Fallback to file-based storage
-      const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+      // Fallback to file-based storage - try both id and _id formats
+      let entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+      
+      if (entryIndex === -1) {
+        // Try MongoDB _id format
+        entryIndex = mockDB.bdTracker.findIndex(entry => entry._id === id && entry.userId === req.user.id);
+      }
       
       if (entryIndex === -1) {
         return res.status(404).json({
@@ -3078,8 +3083,13 @@ app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
       }
     } catch (dbError) {
       console.log('MongoDB delete failed, using file-based storage...');
-      // Fallback to file-based storage
-      const entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+      // Fallback to file-based storage - try both id and _id formats
+      let entryIndex = mockDB.bdTracker.findIndex(entry => entry.id === id && entry.userId === req.user.id);
+      
+      if (entryIndex === -1) {
+        // Try MongoDB _id format
+        entryIndex = mockDB.bdTracker.findIndex(entry => entry._id === id && entry.userId === req.user.id);
+      }
       
       if (entryIndex !== -1) {
         mockDB.bdTracker.splice(entryIndex, 1);
