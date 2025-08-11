@@ -62,4 +62,14 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Fixed select dropdown styling - Better padding, colors, and text visibility
 
-# Fixed backend ID format handling - Support for both id and _id formats 
+# Fixed backend ID format handling - Support for both id and _id formats
+
+# Fixed admin panel access - Multiple admin emails supported
+
+# Fixed admin panel routing - Added dashboard admin routes
+
+# Enhanced BD Tracker with mobile-responsive design - Phone/PC compatible layout
+
+# Enhanced mobile responsiveness - Added scroll hints and better mobile layout
+
+# Fixed BD Tracker edit functionality - Only one row edits at a time, fixed ID format handling 

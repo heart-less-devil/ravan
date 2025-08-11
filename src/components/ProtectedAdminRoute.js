@@ -18,8 +18,14 @@ const ProtectedAdminRoute = ({ children }) => {
   }
   
   
-  // Check if user is admin (universalx0242@gmail.com)
-  if (user.email !== 'universalx0242@gmail.com') {
+  // Check if user is admin (multiple admin emails)
+  const adminEmails = [
+    'universalx0242@gmail.com',
+    'admin@bioping.com',
+    'your-email@gmail.com' // Add your email here
+  ];
+  
+  if (!adminEmails.includes(user.email)) {
     console.log('ProtectedAdminRoute - Not admin, redirecting to login with admin message');
     // If not admin, redirect to login with admin message
     localStorage.removeItem('token');

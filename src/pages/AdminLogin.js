@@ -40,14 +40,20 @@ const AdminLogin = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Check if user is admin
-        if (data.user.email === 'universalx0242@gmail.com') {
+        // Check if user is admin (multiple admin emails)
+        const adminEmails = [
+          'universalx0242@gmail.com',
+          'admin@bioping.com',
+          'your-email@gmail.com' // Add your email here
+        ];
+        
+        if (adminEmails.includes(data.user.email)) {
           // Store token in localStorage
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
           
-          // Redirect to admin panel
-          navigate('/admin/panel');
+          // Redirect to admin panel (dashboard route)
+          navigate('/dashboard/admin-panel');
         } else {
           setError('Access denied. Admin credentials required.');
         }

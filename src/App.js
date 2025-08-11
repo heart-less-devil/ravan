@@ -196,6 +196,19 @@ function App() {
                 </ProtectedAdminRoute>
               } />
               
+              {/* Dashboard Admin Routes */}
+              <Route path="/dashboard/admin-login" element={<AdminLogin />} />
+              <Route path="/dashboard/admin-panel" element={
+                <ProtectedAdminRoute>
+                  <AdminPanel />
+                </ProtectedAdminRoute>
+              } />
+              <Route path="/dashboard/admin-users" element={
+                <ProtectedAdminRoute>
+                  <AdminUsers />
+                </ProtectedAdminRoute>
+              } />
+              
               {/* Test route to check if React is working */}
               <Route path="/test" element={
                 <div className="p-8">

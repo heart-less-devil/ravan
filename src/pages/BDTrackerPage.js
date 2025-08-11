@@ -129,6 +129,14 @@ const BDTrackerPage = () => {
   };
 
   const handleEdit = (entry) => {
+    console.log('Editing entry:', entry);
+    console.log('Entry ID:', entry.id);
+    console.log('Entry _id:', entry._id);
+    
+    // Use the correct ID format (either id or _id)
+    const entryId = entry.id || entry._id;
+    console.log('Using entry ID for editing:', entryId);
+    
     setFormData({
       projectName: entry.projectName || '',
       company: entry.company || '',
@@ -144,7 +152,7 @@ const BDTrackerPage = () => {
       timelines: entry.timelines || '',
       reminders: entry.reminders || ''
     });
-    setEditingId(entry.id);
+    setEditingId(entryId);
   };
 
   const handleCancelEdit = () => {
@@ -197,7 +205,7 @@ const BDTrackerPage = () => {
         console.log('Update successful:', data);
         
         setEntries(prev => prev.map(entry => 
-          entry.id === editingId ? { ...entry, ...formData } : entry
+          (entry.id === editingId || entry._id === editingId) ? { ...entry, ...formData } : entry
         ));
         setEditingId(null);
         setFormData({
@@ -232,7 +240,7 @@ const BDTrackerPage = () => {
     }
 
     console.log('Attempting to delete entry with ID:', id);
-    console.log('Entry to delete:', entries.find(entry => entry.id === id));
+    console.log('Entry to delete:', entries.find(entry => (entry.id === id || entry._id === id)));
 
     try {
       const token = localStorage.getItem('token');
@@ -249,7 +257,7 @@ const BDTrackerPage = () => {
       console.log('Delete response ok:', response.ok);
 
       if (response.ok) {
-        setEntries(prev => prev.filter(entry => entry.id !== id));
+        setEntries(prev => prev.filter(entry => (entry.id !== id && entry._id !== id)));
         console.log('Entry deleted successfully');
       } else {
         const errorData = await response.json();
@@ -572,7 +580,7 @@ const BDTrackerPage = () => {
               ) : (
                 filteredEntries.map((entry, index) => (
                   <tr
-                    key={entry.id}
+                    key={entry.id || entry._id}
                     className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}
                   >
                     {columns.map((column) => (
@@ -580,7 +588,7 @@ const BDTrackerPage = () => {
                         key={column.key}
                         className="border border-gray-200 px-4 py-3 text-sm text-gray-900"
                       >
-                        {editingId === entry.id ? (
+                        {editingId === (entry.id || entry._id) ? (
                           column.key === 'cda' ? (
                             <div className="relative">
                               <select
@@ -660,7 +668,7 @@ const BDTrackerPage = () => {
                     {/* Actions */}
                     <td className="border border-gray-200 px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {editingId === entry.id ? (
+                        {editingId === (entry.id || entry._id) ? (
                           <>
                             <button
                               onClick={handleSaveEdit}
@@ -687,7 +695,7 @@ const BDTrackerPage = () => {
                               <Edit3 className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(entry.id)}
+                              onClick={() => handleDelete(entry.id || entry._id)}
                               className="p-1 text-red-600 hover:text-red-700"
                               title="Delete"
                             >
