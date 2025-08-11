@@ -36,4 +36,6 @@ A comprehensive platform for business development professionals in the biotech a
 - Added fallback URL support for PDF loading
 - Improved error handling and debugging information
 
-# Force redeploy - PDF fixes applied 
+# Force redeploy - PDF fixes applied
+
+# Force Render redeploy - Server X-Frame-Options headers need deployment 
