@@ -18,7 +18,8 @@ const QuickGuide = () => {
     
     // Set appropriate URL based on current domain
     if (currentDomain.includes('thebioping.com')) {
-      initialUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0`;
+      // GoDaddy hosting - PDFs are on Render server
+      initialUrl = 'https://bioping-backend.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
     } else if (currentDomain.includes('netlify.app')) {
       initialUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0`;
     } else if (currentDomain.includes('localhost')) {
@@ -37,21 +38,20 @@ const QuickGuide = () => {
 
   // Try different PDF URLs for different hosting scenarios
   const pdfUrls = [
-    // Direct file paths
+    // Render server URLs (where PDFs actually are for GoDaddy hosting)
+    'https://bioping-backend.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://bioping-backend.onrender.com/api/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
+    'https://bioping-backend.onrender.com/api/test-pdf#toolbar=0&navpanes=0&scrollbar=0',
+    
+    // Direct file paths (for localhost)
     '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/pdf/BioPing Training Manual.pdf',
     
-    // API routes
+    // API routes (for localhost)
     '/api/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/api/pdf/BioPing%20Training%20Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     '/api/test-pdf#toolbar=0&navpanes=0&scrollbar=0',
-    
-    // Full domain URLs for live hosting
-    'https://thebioping.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    'https://www.thebioping.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    'https://biopingweb.netlify.app/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    'https://ravan.netlify.app/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
     
     // Alternative approaches
     '/static/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
@@ -491,7 +491,8 @@ const QuickGuide = () => {
                                   let downloadUrl = '/pdf/BioPing Training Manual.pdf';
                                   
                                   if (currentDomain.includes('thebioping.com')) {
-                                    downloadUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf`;
+                                    // GoDaddy hosting - PDFs are on Render server
+                                    downloadUrl = 'https://bioping-backend.onrender.com/pdf/BioPing Training Manual.pdf';
                                   } else if (currentDomain.includes('netlify.app')) {
                                     downloadUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf`;
                                   }
