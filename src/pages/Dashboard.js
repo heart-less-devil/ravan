@@ -472,7 +472,7 @@ const Dashboard = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Grid, section: 'MAIN' },
-    { name: 'Advance Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
+    { name: 'Advanced Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
     { name: 'BD Tracker', path: '/dashboard/bd-tracker', icon: TrendingUp, section: 'MY DEALS' },
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },

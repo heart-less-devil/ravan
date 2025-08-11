@@ -50,4 +50,8 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Updated sidebar navigation - "Search" changed to "Advanced Search"
 
-# Fixed BD Tracker table - Added Priority column, improved dropdown styling, fixed edit functionality 
+# Fixed BD Tracker table - Added Priority column, improved dropdown styling, fixed edit functionality
+
+# Fixed BDTrackerPage - Added Project Name column, updated validation and search logic
+
+# Fixed sidebar navigation - "Advance Search" corrected to "Advanced Search" 

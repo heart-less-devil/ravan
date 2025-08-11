@@ -82,13 +82,13 @@ const BDTrackerPage = () => {
   };
 
   const validateForm = () => {
-    return formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
+    return formData.projectName.trim() !== '' && formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert('Please fill in Company and Contact Person fields');
+      alert('Please fill in Project Name, Company, and Contact Person fields');
       return;
     }
 
@@ -223,6 +223,7 @@ const BDTrackerPage = () => {
 
   const filteredEntries = entries.filter(entry => {
     const matchesSearch = 
+      (entry.projectName && entry.projectName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.programPitched.toLowerCase().includes(searchTerm.toLowerCase());
@@ -246,6 +247,7 @@ const BDTrackerPage = () => {
   });
 
   const columns = [
+    { key: 'projectName', label: 'Project Name', icon: FileSpreadsheet },
     { key: 'company', label: 'Company', icon: Building },
     { key: 'programPitched', label: 'Program', icon: FileSpreadsheet },
     { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },
@@ -318,7 +320,7 @@ const BDTrackerPage = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search companies, contacts, or programs..."
+                  placeholder="Search project names, companies, contacts, or programs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
