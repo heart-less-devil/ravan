@@ -2895,14 +2895,16 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
   try {
     console.log('BD Tracker POST - User ID:', req.user.id);
     console.log('BD Tracker POST - User Email:', req.user.email);
+    console.log('BD Tracker POST - Request Body:', req.body);
     
-    const { company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
+    const { projectName, company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
 
     // Validate required fields
-    if (!company || !contactPerson) {
+    if (!projectName || !company || !contactPerson) {
+      console.log('BD Tracker POST - Validation failed:', { projectName, company, contactPerson });
       return res.status(400).json({
         success: false,
-        message: 'Company and Contact Person are required'
+        message: 'Project Name, Company, and Contact Person are required'
       });
     }
 
@@ -2912,6 +2914,7 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
     try {
       newEntry = new BDTracker({
         userId: req.user.id,
+        projectName,
         company,
         programPitched: programPitched || '',
         outreachDates: outreachDates || '',
@@ -2933,6 +2936,7 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
       // Fallback to file-based storage
       newEntry = {
         id: Date.now().toString(),
+        projectName,
         company,
         programPitched: programPitched || '',
         outreachDates: outreachDates || '',
@@ -2970,13 +2974,13 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
 app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
+    const { projectName, company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
 
     // Validate required fields
-    if (!company || !contactPerson) {
+    if (!projectName || !company || !contactPerson) {
       return res.status(400).json({
         success: false,
-        message: 'Company and Contact Person are required'
+        message: 'Project Name, Company, and Contact Person are required'
       });
     }
 
@@ -2987,6 +2991,7 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
       updatedEntry = await BDTracker.findOneAndUpdate(
         { _id: id, userId: req.user.id },
         {
+          projectName,
           company,
           programPitched: programPitched || '',
           outreachDates: outreachDates || '',
@@ -3023,6 +3028,7 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
 
       mockDB.bdTracker[entryIndex] = {
         ...mockDB.bdTracker[entryIndex],
+        projectName,
         company,
         programPitched: programPitched || '',
         outreachDates: outreachDates || '',

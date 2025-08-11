@@ -29,6 +29,7 @@ const BDTracker = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
+    projectName: '',
     company: '',
     programPitched: '',
     outreachDates: '',
@@ -38,7 +39,8 @@ const BDTracker = () => {
     feedback: '',
     nextSteps: '',
     timelines: '',
-    reminders: ''
+    reminders: '',
+    priority: 'medium'
   });
 
   // Load data from backend on component mount
@@ -74,13 +76,13 @@ const BDTracker = () => {
   };
 
   const validateForm = () => {
-    return formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
+    return formData.projectName.trim() !== '' && formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert('Please fill in Company and Contact Person fields');
+      alert('Please fill in Project Name, Company, and Contact Person fields');
       return;
     }
 
@@ -99,6 +101,7 @@ const BDTracker = () => {
         const data = await response.json();
         setEntries(prev => [data.data, ...prev]);
         setFormData({
+          projectName: '',
           company: '',
           programPitched: '',
           outreachDates: '',
@@ -108,7 +111,8 @@ const BDTracker = () => {
           feedback: '',
           nextSteps: '',
           timelines: '',
-          reminders: ''
+          reminders: '',
+          priority: 'medium'
         });
         setShowForm(false);
       } else {
@@ -123,12 +127,26 @@ const BDTracker = () => {
 
   const handleEdit = (entry) => {
     setEditingId(entry.id);
-    setFormData(entry);
+    // Create a deep copy to prevent data corruption
+    setFormData({
+      projectName: entry.projectName || '',
+      company: entry.company || '',
+      programPitched: entry.programPitched || '',
+      outreachDates: entry.outreachDates || '',
+      contactFunction: entry.contactFunction || '',
+      contactPerson: entry.contactPerson || '',
+      cda: entry.cda || '',
+      feedback: entry.feedback || '',
+      nextSteps: entry.nextSteps || '',
+      timelines: entry.timelines || '',
+      reminders: entry.reminders || '',
+      priority: entry.priority || 'medium'
+    });
   };
 
   const handleSaveEdit = async () => {
     if (!validateForm()) {
-      alert('Please fill in Company and Contact Person fields');
+      alert('Please fill in Project Name, Company, and Contact Person fields');
       return;
     }
 
@@ -150,6 +168,7 @@ const BDTracker = () => {
         ));
         setEditingId(null);
         setFormData({
+          projectName: '',
           company: '',
           programPitched: '',
           outreachDates: '',
@@ -159,7 +178,8 @@ const BDTracker = () => {
           feedback: '',
           nextSteps: '',
           timelines: '',
-          reminders: ''
+          reminders: '',
+          priority: 'medium'
         });
       } else {
         const errorData = await response.json();
@@ -198,6 +218,7 @@ const BDTracker = () => {
   const handleDownloadExcel = () => {
     // Create CSV content
     const headers = [
+      'Project Name',
       'Company',
       'Program Pitched',
       'Outreach Dates',
@@ -213,6 +234,7 @@ const BDTracker = () => {
     const csvContent = [
       headers.join(','),
       ...entries.map(entry => [
+        `"${entry.projectName}"`,
         `"${entry.company}"`,
         `"${entry.programPitched}"`,
         `"${entry.outreachDates}"`,
@@ -238,10 +260,28 @@ const BDTracker = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      projectName: '',
+      company: '',
+      programPitched: '',
+      outreachDates: '',
+      contactFunction: '',
+      contactPerson: '',
+      cda: '',
+      feedback: '',
+      nextSteps: '',
+      timelines: '',
+      reminders: '',
+      priority: 'medium'
+    });
+  };
+
   const filteredEntries = entries.filter(entry => {
-    const matchesSearch = entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         entry.programPitched.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = entry.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (filterStatus === 'all') return matchesSearch;
     if (filterStatus === 'with-cda' && entry.cda.toLowerCase() === 'yes') return matchesSearch;
@@ -252,6 +292,7 @@ const BDTracker = () => {
   });
 
   const columns = [
+    { key: 'projectName', label: 'Project Name', icon: FileSpreadsheet },
     { key: 'company', label: 'Company', icon: Building },
     { key: 'programPitched', label: 'Program Pitched', icon: FileSpreadsheet },
     { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },
@@ -301,7 +342,7 @@ const BDTracker = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search companies, contacts, or programs..."
+              placeholder="Search project names, companies, contacts, or programs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -351,31 +392,71 @@ const BDTracker = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {column.label}
                 </label>
-                {column.key === 'cda' ? (
-                  <div className="relative">
-                    <select
+                {editingId === entry.id ? (
+                  column.key === 'cda' ? (
+                    <div className="relative">
+                      <select
+                        value={formData[column.key]}
+                        onChange={(e) => handleInputChange(column.key, e.target.value)}
+                        className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                      >
+                        <option value="">Select...</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  ) : column.key === 'priority' ? (
+                    <div className="relative">
+                      <select
+                        value={formData[column.key] || ''}
+                        onChange={(e) => handleInputChange(column.key, e.target.value)}
+                        className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                      >
+                        <option value="">Select Priority...</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Urgent">Urgent</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
                       value={formData[column.key]}
                       onChange={(e) => handleInputChange(column.key, e.target.value)}
-                      className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
-                    >
-                      <option value="">Select...</option>
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder={column.label}
+                    />
+                  )
                 ) : (
-                  <input
-                    type="text"
-                    value={formData[column.key]}
-                    onChange={(e) => handleInputChange(column.key, e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={column.label}
-                  />
+                  <div className="flex items-center gap-2">
+                    {entry[column.key] ? (
+                      <span>{entry[column.key]}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">-</span>
+                    )}
+                    {column.key === 'cda' && entry[column.key] && (
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        entry[column.key].toLowerCase() === 'yes' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {entry[column.key]}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -453,6 +534,27 @@ const BDTracker = () => {
                               <option value="">Select...</option>
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>
+                              <option value="Pending">Pending</option>
+                              <option value="In Progress">In Progress</option>
+                            </select>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        ) : column.key === 'priority' ? (
+                          <div className="relative">
+                            <select
+                              value={formData[column.key] || ''}
+                              onChange={(e) => handleInputChange(column.key, e.target.value)}
+                              className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                            >
+                              <option value="">Select Priority...</option>
+                              <option value="Low">Low</option>
+                              <option value="Medium">Medium</option>
+                              <option value="High">High</option>
+                              <option value="Urgent">Urgent</option>
                             </select>
                             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                               <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -502,7 +604,7 @@ const BDTracker = () => {
                             <Save className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => setEditingId(null)}
+                            onClick={handleCancelEdit}
                             className="p-1 text-gray-600 hover:text-gray-700"
                             title="Cancel"
                           >

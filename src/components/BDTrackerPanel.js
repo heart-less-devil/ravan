@@ -43,6 +43,7 @@ const BDTrackerPanel = () => {
   const [isDeleting, setIsDeleting] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
+    projectName: '',
     company: '',
     programPitched: '',
     outreachDates: '',
@@ -103,13 +104,13 @@ const BDTrackerPanel = () => {
   };
 
   const validateForm = () => {
-    return formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
+    return formData.projectName.trim() !== '' && formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert('Please fill in Company and Contact Person fields');
+      alert('Please fill in Project Name, Company, and Contact Person fields');
       return;
     }
 
@@ -135,6 +136,7 @@ const BDTrackerPanel = () => {
         const data = await response.json();
         setEntries(prev => [data.data, ...prev]);
         setFormData({
+          projectName: '',
           company: '',
           programPitched: '',
           outreachDates: '',
@@ -173,7 +175,7 @@ const BDTrackerPanel = () => {
 
   const handleSaveEdit = async () => {
     if (!validateForm()) {
-      alert('Please fill in Company and Contact Person fields');
+      alert('Please fill in Project Name, Company, and Contact Person fields');
       return;
     }
 
@@ -196,6 +198,7 @@ const BDTrackerPanel = () => {
         ));
         setEditingId(null);
         setFormData({
+          projectName: '',
           company: '',
           programPitched: '',
           outreachDates: '',
@@ -249,6 +252,7 @@ const BDTrackerPanel = () => {
   const handleDownloadExcel = () => {
     // Create CSV content
     const headers = [
+      'Project Name',
       'Company',
       'Program Pitched',
       'Outreach Dates',
@@ -264,6 +268,7 @@ const BDTrackerPanel = () => {
     const csvContent = [
       headers.join(','),
       ...entries.map(entry => [
+        `"${entry.projectName || ''}"`,
         `"${entry.company}"`,
         `"${entry.programPitched}"`,
         `"${entry.outreachDates}"`,
@@ -290,7 +295,8 @@ const BDTrackerPanel = () => {
   };
 
   const filteredEntries = entries.filter(entry => {
-    const matchesSearch = entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = entry.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         entry.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          entry.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          entry.programPitched.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -303,6 +309,7 @@ const BDTrackerPanel = () => {
   });
 
   const columns = [
+    { key: 'projectName', label: 'Project Name', icon: FileSpreadsheet },
     { key: 'company', label: 'Company', icon: Building },
     { key: 'programPitched', label: 'Program Pitched', icon: FileSpreadsheet },
     { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },

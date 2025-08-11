@@ -38,4 +38,14 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Force redeploy - PDF fixes applied
 
-# Force Render redeploy - Server X-Frame-Options headers need deployment 
+# Force Render redeploy - Server X-Frame-Options headers need deployment
+
+# Added Project Name field to BD Tracker - Backend updated
+
+# Fixed BD Tracker POST/PUT endpoints - Project Name validation working
+
+# Enhanced BD Tracker dropdowns - CDA and Priority fields with proper options
+
+# Fixed BD Tracker edit functionality - Deep copy prevents data corruption
+
+# Updated sidebar navigation - "Search" changed to "Advanced Search" 

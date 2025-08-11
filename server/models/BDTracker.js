@@ -6,6 +6,11 @@ const bdTrackerSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  projectName: {
+    type: String,
+    required: true,
+    trim: true
+  },
   company: {
     type: String,
     required: true,
@@ -72,6 +77,7 @@ const bdTrackerSchema = new mongoose.Schema({
 
 // Create indexes for better performance
 bdTrackerSchema.index({ userId: 1, createdAt: -1 });
+bdTrackerSchema.index({ projectName: 1 });
 bdTrackerSchema.index({ company: 1 });
 bdTrackerSchema.index({ status: 1 });
 
