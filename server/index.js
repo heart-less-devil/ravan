@@ -4234,8 +4234,8 @@ app.post('/api/auth/signup', async (req, res) => {
 
 // Enhanced PDF serving middleware for Render/GoDaddy
 app.use('/pdf', (req, res, next) => {
-  // Set proper headers for PDF files
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Set proper headers for PDF files - allow cross-origin embedding
+  res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -4262,8 +4262,8 @@ app.get('/pdf/:filename', (req, res) => {
     return res.status(404).json({ error: 'PDF not found', path: pdfPath });
   }
   
-  // Set headers for PDF
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Set headers for PDF - allow cross-origin embedding
+  res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'public, max-age=3600');
@@ -4315,11 +4315,27 @@ app.get('/api/pdf/:filename', (req, res) => {
 
 // PDF health check endpoint
 app.get('/api/pdf-health', (req, res) => {
-  const pdfPath = path.join(__dirname, '../public/pdf', 'BioPing Training Manual.pdf');
+  const pdfDir = path.join(__dirname, '../public/pdf');
+  const pdfPath = path.join(pdfDir, 'BioPing Training Manual.pdf');
+  
+  // Check if directory exists
+  const dirExists = fs.existsSync(pdfDir);
+  
+  // Check if file exists
   const exists = fs.existsSync(pdfPath);
   
   // Get file stats for debugging
   let fileStats = null;
+  let availablePdfs = [];
+  
+  if (dirExists) {
+    try {
+      availablePdfs = fs.readdirSync(pdfDir).filter(file => file.endsWith('.pdf'));
+    } catch (error) {
+      console.error('Error reading PDF directory:', error);
+    }
+  }
+  
   if (exists) {
     try {
       fileStats = fs.statSync(pdfPath);
@@ -4331,8 +4347,10 @@ app.get('/api/pdf-health', (req, res) => {
   res.json({
     pdfExists: exists,
     pdfPath: pdfPath,
+    pdfDir: pdfDir,
+    dirExists: dirExists,
     fileSize: fileStats ? fileStats.size : null,
-    availablePdfs: fs.readdirSync(path.join(__dirname, '../public/pdf')).filter(file => file.endsWith('.pdf')),
+    availablePdfs: availablePdfs,
     serverTime: new Date().toISOString(),
     requestHeaders: req.headers,
     serverInfo: {
@@ -4351,9 +4369,9 @@ app.get('/api/test-pdf', (req, res) => {
     return res.status(404).json({ error: 'PDF not found', path: pdfPath });
   }
   
-  // Set headers for PDF
+  // Set headers for PDF - allow cross-origin embedding
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'public, max-age=3600');
   
@@ -4364,5 +4382,15 @@ app.get('/api/test-pdf', (req, res) => {
     res.status(500).json({ error: 'PDF stream error' });
   });
   stream.pipe(res);
+});
+
+// Simple test endpoint to verify server is working
+app.get('/api/test', (req, res) => {
+  res.json({
+    message: 'Server is working!',
+    timestamp: new Date().toISOString(),
+    pdfDir: path.join(__dirname, '../public/pdf'),
+    pdfDirExists: fs.existsSync(path.join(__dirname, '../public/pdf'))
+  });
 });
 
