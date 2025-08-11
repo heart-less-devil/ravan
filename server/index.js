@@ -461,7 +461,7 @@ app.get('/api/secure-pdf/:filename', authenticateToken, (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -521,7 +521,7 @@ app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
         'Content-Length': chunksize,
         'Content-Type': 'application/pdf',
         'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Frame-Options': 'ALLOWALL', // Allow embedding from any domain
         'X-XSS-Protection': '1; mode=block',
         'Referrer-Policy': 'no-referrer',
         'Cache-Control': 'no-store, no-cache, must-revalidate, private',
@@ -534,7 +534,7 @@ app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
         'Content-Length': fileSize,
         'Content-Type': 'application/pdf',
         'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Frame-Options': 'ALLOWALL', // Allow embedding from any domain
         'X-XSS-Protection': '1; mode=block',
         'Referrer-Policy': 'no-referrer',
         'Cache-Control': 'no-store, no-cache, must-revalidate, private',
@@ -4296,7 +4296,7 @@ app.get('/static/pdf/:filename', (req, res) => {
     return res.status(404).json({ error: 'PDF not found' });
   }
   
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Access-Control-Allow-Origin', '*');
   
@@ -4314,7 +4314,7 @@ app.get('/api/pdf/:filename', (req, res) => {
     return res.status(404).json({ error: 'PDF not found' });
   }
   
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Access-Control-Allow-Origin', '*');
   

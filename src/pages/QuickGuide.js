@@ -20,8 +20,6 @@ const QuickGuide = () => {
     if (currentDomain.includes('thebioping.com')) {
       // GoDaddy hosting - PDFs are on Render server
       initialUrl = 'https://bioping-backend.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
-    } else if (currentDomain.includes('netlify.app')) {
-      initialUrl = `https://${currentDomain}/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0`;
     } else if (currentDomain.includes('localhost')) {
       initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
     }
@@ -55,11 +53,7 @@ const QuickGuide = () => {
     
     // Alternative approaches
     '/static/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    '/public/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0',
-    
-    // Simple URLs without parameters
-    '/pdf/BioPing Training Manual.pdf',
-    '/api/pdf/BioPing Training Manual.pdf'
+    '/public/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0'
   ];
 
   // Handle PDF loading errors

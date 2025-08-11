@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Lock, Star, Users, Target, Award, ArrowRight, Eye, FileText, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -6,6 +6,25 @@ import SimplePDFViewer from '../components/SimplePDFViewer';
 
 const BDInsights = ({ user, userPaymentStatus }) => {
   const [selectedPDF, setSelectedPDF] = useState(null);
+  const [pdfBaseUrl, setPdfBaseUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Get current domain and set appropriate PDF base URL
+  useEffect(() => {
+    const currentDomain = window.location.hostname;
+    let baseUrl = '/pdf';
+    
+    // Set appropriate base URL based on current domain
+    if (currentDomain.includes('thebioping.com')) {
+      baseUrl = 'https://bioping-backend.onrender.com/pdf';
+    } else if (currentDomain.includes('localhost')) {
+      baseUrl = '/pdf';
+    }
+    
+    setPdfBaseUrl(baseUrl);
+    setIsLoading(false);
+    console.log('Current domain:', currentDomain, 'Setting PDF base URL to:', baseUrl);
+  }, []);
 
   const insights = [
     {
@@ -17,7 +36,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 1856,
       rating: 4.9,
       featured: true,
-      pdfUrl: '/pdf/BD Conferences, Priority & Budgets.pdf'
+      filename: 'BD Conferences, Priority & Budgets.pdf'
     },
     {
       id: 2,
@@ -28,7 +47,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 1240,
       rating: 4.7,
       featured: false,
-      pdfUrl: '/pdf/Biopharma News & Resources.pdf'
+      filename: 'Biopharma News & Resources.pdf'
     },
     {
       id: 3,
@@ -39,7 +58,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 980,
       rating: 4.8,
       featured: false,
-      pdfUrl: '/pdf/Big Pharma BD Playbook.pdf'
+      filename: 'Big Pharma BD Playbook.pdf'
     },
     {
       id: 4,
@@ -50,7 +69,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 1560,
       rating: 4.9,
       featured: false,
-      pdfUrl: '/pdf/Winning BD Pitch Deck.pdf'
+      filename: 'Winning BD Pitch Deck.pdf'
     },
     {
       id: 5,
@@ -61,7 +80,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       views: 890,
       rating: 4.6,
       featured: false,
-      pdfUrl: '/pdf/BD Process and Tips.pdf'
+      filename: 'BD Process and Tips.pdf'
     },
 
   ];
@@ -77,8 +96,40 @@ const BDInsights = ({ user, userPaymentStatus }) => {
   };
 
   const handleViewPDF = (pdfData) => {
-    setSelectedPDF(pdfData);
-    console.log('Viewing PDF:', pdfData.title);
+    // Use Render server URLs directly for GoDaddy hosting
+    const currentDomain = window.location.hostname;
+    let fullPdfUrl = '';
+    let fallbackUrls = [];
+    
+    if (currentDomain.includes('thebioping.com')) {
+      // GoDaddy hosting - use Render server
+      fullPdfUrl = `https://bioping-backend.onrender.com/pdf/${encodeURIComponent(pdfData.filename)}`;
+      
+      // Add fallback URLs for GoDaddy
+      fallbackUrls = [
+        `https://bioping-backend.onrender.com/api/pdf/${encodeURIComponent(pdfData.filename)}`,
+        `https://bioping-backend.onrender.com/static/pdf/${encodeURIComponent(pdfData.filename)}`,
+        `https://bioping-backend.onrender.com/api/test-pdf`
+      ];
+    } else if (currentDomain.includes('localhost')) {
+      // Local development
+      fullPdfUrl = `/pdf/${pdfData.filename}`;
+      fallbackUrls = [
+        `/api/pdf/${pdfData.filename}`,
+        `/static/pdf/${pdfData.filename}`
+      ];
+    }
+    
+    const pdfDataWithUrl = { 
+      ...pdfData, 
+      pdfUrl: fullPdfUrl,
+      fallbackUrls: fallbackUrls
+    };
+    
+    setSelectedPDF(pdfDataWithUrl);
+    console.log('Viewing PDF:', pdfData.title, 'URL:', fullPdfUrl);
+    console.log('Current domain:', currentDomain);
+    console.log('Fallback URLs:', fallbackUrls);
   };
 
   const formatViews = (views) => {
@@ -166,8 +217,47 @@ const BDInsights = ({ user, userPaymentStatus }) => {
           </div>
         )}
 
+        {/* Loading State */}
+        {hasAccess && isLoading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading BD Insights...</p>
+          </div>
+        )}
+
+        {/* Debug Info (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-gray-100 rounded-lg p-4 mb-6">
+            <h4 className="font-semibold text-gray-800 mb-2">Debug Information:</h4>
+            <p className="text-sm text-gray-600">PDF Base URL: {pdfBaseUrl}</p>
+            <p className="text-sm text-gray-600">Current Domain: {window.location.hostname}</p>
+            <p className="text-sm text-gray-600">Loading State: {isLoading ? 'Yes' : 'No'}</p>
+            <p className="text-sm text-gray-600">Available PDFs: {insights.map(i => i.filename).join(', ')}</p>
+            
+            {/* Test PDF URLs */}
+            <div className="mt-4">
+              <h5 className="font-semibold text-gray-800 mb-2">Test PDF URLs:</h5>
+              {insights.map((insight, index) => {
+                const testUrl = `https://bioping-backend.onrender.com/pdf/${encodeURIComponent(insight.filename)}`;
+                return (
+                  <div key={index} className="mb-2">
+                    <a 
+                      href={testUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline text-sm"
+                    >
+                      Test: {insight.filename}
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Resources Grid - Only show for users with access */}
-        {hasAccess && (
+        {hasAccess && !isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {insights.map((insight, index) => (
               <motion.div
@@ -244,6 +334,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
                 pdfUrl={selectedPDF.pdfUrl} 
                 title={selectedPDF.title}
                 onClose={() => setSelectedPDF(null)}
+                fallbackUrls={selectedPDF.fallbackUrls}
               />
             </div>
           </div>
