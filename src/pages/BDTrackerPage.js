@@ -129,13 +129,57 @@ const BDTrackerPage = () => {
   };
 
   const handleEdit = (entry) => {
-    setFormData(entry);
+    setFormData({
+      projectName: entry.projectName || '',
+      company: entry.company || '',
+      programPitched: entry.programPitched || '',
+      outreachDates: entry.outreachDates || '',
+      contactFunction: entry.contactFunction || '',
+      contactPerson: entry.contactPerson || '',
+      cda: entry.cda || '',
+      feedback: entry.feedback || '',
+      nextSteps: entry.nextSteps || '',
+      priority: entry.priority || '',
+      followUp: entry.followUp || '',
+      timelines: entry.timelines || '',
+      reminders: entry.reminders || ''
+    });
     setEditingId(entry.id);
   };
 
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({
+      projectName: '',
+      company: '',
+      programPitched: '',
+      outreachDates: '',
+      contactFunction: '',
+      contactPerson: '',
+      cda: '',
+      feedback: '',
+      nextSteps: '',
+      priority: '',
+      followUp: '',
+      timelines: '',
+      reminders: ''
+    });
+  };
+
   const handleSaveEdit = async () => {
+    // Validate form before updating
+    if (!validateForm()) {
+      alert('Please fill in Project Name, Company, and Contact Person fields');
+      return;
+    }
+
+    console.log('Attempting to update entry with ID:', editingId);
+    console.log('Form data to update:', formData);
+
     try {
       const token = localStorage.getItem('token');
+      console.log('Token available:', !!token);
+      
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${editingId}`, {
         method: 'PUT',
         headers: {
@@ -145,12 +189,19 @@ const BDTrackerPage = () => {
         body: JSON.stringify(formData)
       });
 
+      console.log('Update response status:', response.status);
+      console.log('Update response ok:', response.ok);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log('Update successful:', data);
+        
         setEntries(prev => prev.map(entry => 
           entry.id === editingId ? { ...entry, ...formData } : entry
         ));
         setEditingId(null);
         setFormData({
+          projectName: '',
           company: '',
           programPitched: '',
           outreachDates: '',
@@ -159,15 +210,19 @@ const BDTrackerPage = () => {
           cda: '',
           feedback: '',
           nextSteps: '',
+          priority: '',
+          followUp: '',
           timelines: '',
           reminders: ''
         });
       } else {
-        alert('Failed to update entry');
+        const errorData = await response.json();
+        console.error('Update failed:', errorData);
+        alert(`Failed to update entry: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating entry:', error);
-      alert('Error updating entry');
+      alert(`Error updating entry: ${error.message}`);
     }
   };
 
@@ -176,8 +231,13 @@ const BDTrackerPage = () => {
       return;
     }
 
+    console.log('Attempting to delete entry with ID:', id);
+    console.log('Entry to delete:', entries.find(entry => entry.id === id));
+
     try {
       const token = localStorage.getItem('token');
+      console.log('Token available:', !!token);
+      
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${id}`, {
         method: 'DELETE',
         headers: {
@@ -185,14 +245,20 @@ const BDTrackerPage = () => {
         }
       });
 
+      console.log('Delete response status:', response.status);
+      console.log('Delete response ok:', response.ok);
+
       if (response.ok) {
         setEntries(prev => prev.filter(entry => entry.id !== id));
+        console.log('Entry deleted successfully');
       } else {
-        alert('Failed to delete entry');
+        const errorData = await response.json();
+        console.error('Delete failed:', errorData);
+        alert(`Failed to delete entry: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error deleting entry:', error);
-      alert('Error deleting entry');
+      alert(`Error deleting entry: ${error.message}`);
     }
   };
 
@@ -518,13 +584,15 @@ const BDTrackerPage = () => {
                           column.key === 'cda' ? (
                             <div className="relative">
                               <select
-                                value={formData[column.key]}
+                                value={formData[column.key] || ''}
                                 onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                               >
-                                <option value="">Select...</option>
+                                <option value="">Select CDA Status</option>
                                 <option value="Yes">Yes</option>
                                 <option value="No">No</option>
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
                               </select>
                               <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -535,14 +603,15 @@ const BDTrackerPage = () => {
                           ) : column.key === 'priority' ? (
                             <div className="relative">
                               <select
-                                value={formData[column.key]}
+                                value={formData[column.key] || ''}
                                 onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                               >
-                                <option value="">Select...</option>
-                                <option value="High">High</option>
-                                <option value="Medium">Medium</option>
+                                <option value="">Select Priority Level</option>
                                 <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
                               </select>
                               <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -553,9 +622,9 @@ const BDTrackerPage = () => {
                           ) : (
                             <input
                               type="text"
-                              value={formData[column.key]}
+                              value={formData[column.key] || ''}
                               onChange={(e) => handleInputChange(column.key, e.target.value)}
-                              className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
                           )
                         ) : (

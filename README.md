@@ -54,4 +54,10 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Fixed BDTrackerPage - Added Project Name column, updated validation and search logic
 
-# Fixed sidebar navigation - "Advance Search" corrected to "Advanced Search" 
+# Fixed sidebar navigation - "Advance Search" corrected to "Advanced Search"
+
+# Enhanced delete functionality - Added debugging and better error handling
+
+# Fixed update functionality - Added validation, debugging, and proper form reset
+
+# Fixed select dropdown styling - Better padding, colors, and text visibility 
