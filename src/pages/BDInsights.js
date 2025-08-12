@@ -9,6 +9,19 @@ const BDInsights = ({ user, userPaymentStatus }) => {
   const [viewedContent, setViewedContent] = useState([]);
   const [selectedPDF, setSelectedPDF] = useState(null);
 
+  // Get current domain and set appropriate PDF base URL
+  const getPdfUrl = (filename) => {
+    const currentDomain = window.location.hostname;
+    
+    if (currentDomain.includes('localhost')) {
+      // Local development - use static PDF directory
+      return `/pdf/${filename}`;
+    } else {
+      // Render hosting - use Render server URLs
+      return `https://bioping-backend.onrender.com/pdf/${filename}`;
+    }
+  };
+
   const bdInsights = {
     'BD Insights': [
       {
@@ -20,7 +33,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         views: 1856,
         rating: 4.9,
         featured: true,
-        pdfUrl: '/pdf/BD Conferences, Priority & Budgets.pdf'
+        pdfUrl: getPdfUrl('BD Conferences, Priority & Budgets.pdf')
       },
       {
         id: 2,
@@ -31,7 +44,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         views: 1240,
         rating: 4.7,
         featured: false,
-        pdfUrl: '/pdf/Biopharma News & Resources.pdf'
+        pdfUrl: getPdfUrl('Biopharma News & Resources.pdf')
       },
       {
         id: 3,
@@ -42,7 +55,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         views: 980,
         rating: 4.8,
         featured: false,
-        pdfUrl: '/pdf/Big Pharma BD Playbook.pdf'
+        pdfUrl: getPdfUrl('Big Pharma BD Playbook.pdf')
       },
       {
         id: 4,
@@ -53,7 +66,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         views: 1560,
         rating: 4.9,
         featured: false,
-        pdfUrl: '/pdf/Winning BD Pitch Deck.pdf'
+        pdfUrl: getPdfUrl('Winning BD Pitch Deck.pdf')
       },
       {
         id: 5,
@@ -64,7 +77,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         views: 890,
         rating: 4.6,
         featured: false,
-        pdfUrl: '/pdf/BD Process and Tips.pdf'
+        pdfUrl: getPdfUrl('BD Process and Tips.pdf')
       },
       {
         id: 6,
@@ -75,7 +88,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         views: 750,
         rating: 4.7,
         featured: false,
-        pdfUrl: '/pdf/Deal Comps Data.pdf'
+        pdfUrl: getPdfUrl('Deal Comps Data.pdf')
       },
     ]
   };
@@ -85,13 +98,17 @@ const BDInsights = ({ user, userPaymentStatus }) => {
     ? Object.values(bdInsights).flat()
     : bdInsights[selectedCategory] || [];
 
+  // Add error handling for PDF loading
   const handleViewPDF = (content) => {
     if (!viewedContent.includes(content.id)) {
       setViewedContent(prev => [...prev, content.id]);
     }
     
+    // Log the PDF URL for debugging
+    console.log('Attempting to load PDF:', content.pdfUrl);
+    console.log('Current domain:', window.location.hostname);
+    
     setSelectedPDF(content);
-    console.log('Viewing PDF:', content.title);
   };
 
   const formatViews = (views) => {
