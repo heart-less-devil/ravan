@@ -175,7 +175,7 @@ function App() {
               <Route path="/dashboard/saved-searches" element={<Dashboard />} />
               <Route path="/dashboard/resources/definitions" element={<Dashboard />} />
               <Route path="/dashboard/resources/quick-guide" element={<QuickGuide />} />
-              <Route path="/dashboard/resources/bd-insights" element={<BDInsights />} />
+              <Route path="/dashboard/resources/bd-insights" element={<Dashboard />} />
               <Route path="/dashboard/resources/coaching-tips" element={<Dashboard />} />
               <Route path="/dashboard/resources/free-content" element={<Dashboard />} />
               <Route path="/dashboard/legal" element={<Dashboard />} />

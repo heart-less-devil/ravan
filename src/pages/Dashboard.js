@@ -508,7 +508,7 @@ const Dashboard = () => {
       case '/dashboard/resources/quick-guide':
         return <QuickGuide />;
       case '/dashboard/resources/bd-insights':
-        return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
+        return <BDInsights user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/resources/free-content':
         return <FreeContent user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/legal':

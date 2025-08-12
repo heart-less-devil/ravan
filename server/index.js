@@ -158,6 +158,43 @@ app.get('/api/test-pdf', (req, res) => {
   }
 });
 
+// PDF health check endpoint
+app.get('/api/pdf-health', (req, res) => {
+  const pdfDir = path.join(__dirname, '../public/pdf');
+  const pdfFiles = fs.existsSync(pdfDir) ? fs.readdirSync(pdfDir).filter(file => file.endsWith('.pdf')) : [];
+  
+  res.json({ 
+    status: 'PDF directory check',
+    pdfDir: pdfDir,
+    pdfDirExists: fs.existsSync(pdfDir),
+    pdfFiles: pdfFiles,
+    totalFiles: pdfFiles.length,
+    sampleFile: pdfFiles[0] || 'No PDFs found'
+  });
+});
+
+// Direct PDF serving endpoint with proper headers
+app.get('/api/pdf/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const pdfPath = path.join(__dirname, '../public/pdf', filename);
+  
+  if (fs.existsSync(pdfPath)) {
+    // Set proper headers for PDF viewing
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    // Stream the PDF file
+    const fileStream = fs.createReadStream(pdfPath);
+    fileStream.pipe(res);
+  } else {
+    res.status(404).json({ error: 'PDF not found', filename });
+  }
+});
+
 // Test endpoint
 app.get('/api/test', (req, res) => {
   const pdfDir = path.join(__dirname, '../public/pdf');
@@ -1026,26 +1063,136 @@ app.get('/api/dashboard/resources/coaching-tips', authenticateToken, (req, res) 
 });
 
 app.get('/api/dashboard/resources/free-content', authenticateToken, (req, res) => {
+  // Redirect to BD Insights endpoint
+  res.redirect('/api/dashboard/resources/bd-insights');
+});
+
+app.get('/api/dashboard/resources/bd-insights', authenticateToken, (req, res) => {
+  // Only allow universal user to access BD Insights
+  if (req.user.email !== 'universalx0242@gmail.com') {
+    return res.status(403).json({ 
+      message: 'Access denied. Only universal users can access BD Insights.' 
+    });
+  }
+
   res.json({
-    content: [
+    insights: [
       {
-        title: "1:1 Business Development Consulting with Vik",
-        description: "Book a one-hour personalized session to discuss strategy, partnerships, or specific BD challenges. Reach out to Vik at gvij@cdslifescigroup.com"
+        id: 1,
+        title: 'BD Conferences - Priority, Budgets and Smart ROI Tips',
+        description: 'Strategic insights from 15+ years of experience in Large Pharma to Small Biotechs.',
+        type: 'PDF',
+        size: '2.5 MB',
+        views: 1856,
+        rating: 4.9,
+        featured: true,
+        filename: 'BD Conferences, Priority & Budgets.pdf'
       },
       {
-        title: "Deal Comparables by Therapeutic Area",
-        description: "Access curated deal comps segmented by therapeutic area to benchmark and guide your partnering strategy."
+        id: 2,
+        title: 'Biopharma Industry News and Resources',
+        description: 'Latest industry updates and strategic resources for business development.',
+        type: 'PDF',
+        size: '1.8 MB',
+        views: 1240,
+        rating: 4.7,
+        featured: false,
+        filename: 'Biopharma News & Resources.pdf'
       },
       {
-        title: "BD & Strategy Templates",
-        description: "Download ready-to-use templates for licensing, M&A, outreach, and strategic planning."
+        id: 3,
+        title: 'Big Pharma\'s BD Blueprint including Strategic Interest Areas',
+        description: 'Comprehensive blueprint for understanding large pharma business development strategies.',
+        type: 'PDF',
+        size: '3.2 MB',
+        views: 980,
+        rating: 4.8,
+        featured: false,
+        filename: 'Big Pharma BD Playbook.pdf'
       },
       {
-        title: "BD Conferences",
-        description: "Ranked & Reviewed"
+        id: 4,
+        title: 'Winning BD Pitch Decks and Management Tips',
+        description: 'Proven strategies and templates for creating compelling BD presentations.',
+        type: 'PDF',
+        size: '2.1 MB',
+        views: 1560,
+        rating: 4.9,
+        featured: false,
+        filename: 'Winning BD Pitch Deck.pdf'
+      },
+      {
+        id: 5,
+        title: 'BD Process and Tips',
+        description: 'Comprehensive BD process guide and strategic tips for success.',
+        type: 'PDF',
+        size: '1.5 MB',
+        views: 890,
+        rating: 4.6,
+        featured: false,
+        filename: 'BD Process and Tips.pdf'
       }
     ]
   });
+});
+
+// Universal user subscription renewal endpoint
+app.post('/api/auth/renew-universal-subscription', authenticateToken, (req, res) => {
+  try {
+    // Only allow universalx0242@gmail.com to use this endpoint
+    if (req.user.email !== 'universalx0242@gmail.com') {
+      return res.status(403).json({ message: 'Access denied. Only universal users can renew subscriptions.' });
+    }
+
+    const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const user = mockDB.users[userIndex];
+    const now = new Date();
+
+    // Renew subscription with extended access
+    mockDB.users[userIndex] = {
+      ...user,
+      paymentCompleted: true,
+      currentPlan: 'premium', // Upgrade to premium plan
+      currentCredits: 1000, // Give 1000 credits for extended access
+      lastCreditRenewal: now.toISOString(),
+      nextCreditRenewal: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
+      paymentUpdatedAt: now.toISOString()
+    };
+
+    // Add to payment history
+    if (!mockDB.users[userIndex].paymentHistory) {
+      mockDB.users[userIndex].paymentHistory = [];
+    }
+
+    mockDB.users[userIndex].paymentHistory.push({
+      date: now.toISOString(),
+      amount: 0, // Free renewal for universal user
+      plan: 'premium',
+      status: 'completed',
+      type: 'universal_renewal'
+    });
+
+    saveDataToFiles();
+
+    console.log(`✅ Universal subscription renewed for ${req.user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Universal subscription renewed successfully',
+      newPlan: 'premium',
+      newCredits: 1000,
+      nextRenewal: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error renewing universal subscription:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.get('/api/dashboard/legal', authenticateToken, (req, res) => {
