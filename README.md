@@ -72,4 +72,32 @@ A comprehensive platform for business development professionals in the biotech a
 
 # Enhanced mobile responsiveness - Added scroll hints and better mobile layout
 
-# Fixed BD Tracker edit functionality - Only one row edits at a time, fixed ID format handling 
+# Fixed BD Tracker edit functionality - Only one row edits at a time, fixed ID format handling
+
+# Documented 404 error fix - Frontend deployment issue on GoDaddy hosting
+
+# Fixed box widths to 350px - Both Current Plan and Upgrade Your Plan boxes now have consistent width
+
+# Fixed double arrows in BD Tracker dropdowns - Removed custom arrows to prevent duplication
+
+# Enhanced dropdown styling - Better padding, borders, and text visibility for all BD Tracker dropdowns
+
+# Fixed dropdown width - Set min-width to 200px for better text visibility in all dropdowns
+
+# Adjusted dropdown width - Reduced from 200px to 150px for better proportions
+
+# Fixed table layout - Actions column overflow and horizontal scrolling issues resolved
+
+# Fixed edit mode overflow - Compact dropdowns and inputs prevent table expansion beyond container
+
+# Simplified dropdown placeholders - Changed from verbose text to simple "Select" for cleaner UI
+
+# Optimized column widths - Outreach Dates and Contact Function made narrower, CDA and Priority made wider for better text visibility
+
+# Fixed email overflow - Added text truncation and width constraints to prevent email from overflowing containers
+
+# Reduced email text size - Changed from text-sm to text-xs for more compact display in profile cards
+
+# Removed debug information - Cleaned up BD Insights page by removing development debug section and console logs
+
+# Optimized login page layout - Moved logo higher and reduced spacing for better alignment with right side content 

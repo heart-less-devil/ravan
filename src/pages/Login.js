@@ -289,9 +289,9 @@ const Login = () => {
         ))}
       </div>
       
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+      <div className="relative z-10 flex items-start justify-center min-h-screen p-4 pt-8">
         <div className="w-full max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Left Side - Login Form */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -306,7 +306,7 @@ const Login = () => {
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ duration: 0.8, delay: 0.2 }}
-                    className="flex items-center justify-center mb-8"
+                    className="flex items-center justify-center mb-2"
                   >
                     <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity duration-300">
                       <img 
@@ -339,7 +339,7 @@ const Login = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.3 }}
-                    className="text-4xl font-bold text-black mb-3"
+                    className="text-4xl font-bold text-black mb-2"
                   >
                     Welcome Back
                   </motion.h2>

@@ -4419,3 +4419,7 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// Note: Frontend routes like /dashboard, /dashboard/bd-tracker are handled by React Router
+// on the frontend (GoDaddy hosting). This server only handles API routes.
+// For frontend routing issues, check GoDaddy hosting configuration.
+

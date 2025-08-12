@@ -405,7 +405,7 @@ const BDTrackerPage = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
               >
                 <option value="all">All Entries</option>
                 <option value="with-cda">With CDA</option>
@@ -413,11 +413,6 @@ const BDTrackerPage = () => {
                 <option value="pending">Pending Feedback</option>
                 <option value="high-priority">High Priority</option>
               </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
             </div>
           </div>
           
@@ -484,35 +479,25 @@ const BDTrackerPage = () => {
                       <select
                         value={formData[column.key]}
                         onChange={(e) => handleInputChange(column.key, e.target.value)}
-                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
                       >
-                        <option value="">Select...</option>
+                        <option value="">Select</option>
                         <option value="Yes">Yes</option>
                         <option value="No">No</option>
                       </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
                     </div>
                   ) : column.key === 'priority' ? (
                     <div className="relative">
                       <select
                         value={formData[column.key]}
                         onChange={(e) => handleInputChange(column.key, e.target.value)}
-                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
                       >
-                        <option value="">Select...</option>
+                        <option value="">Select</option>
                         <option value="High">High</option>
                         <option value="Medium">Medium</option>
                         <option value="Low">Low</option>
                       </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
                     </div>
                   ) : (
                     <input
@@ -547,15 +532,21 @@ const BDTrackerPage = () => {
         )}
 
         {/* Excel-like Table */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <table className="w-full border-collapse">
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse min-w-[900px]">
             {/* Header */}
             <thead className="bg-gray-50">
               <tr>
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50"
+                    className={`border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 ${
+                      column.key === 'outreachDates' ? 'w-24' : 
+                      column.key === 'contactFunction' ? 'w-28' : 
+                      column.key === 'cda' ? 'w-32' : 
+                      column.key === 'priority' ? 'w-32' : ''
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <column.icon className="w-4 h-4 text-gray-600" />
@@ -563,7 +554,7 @@ const BDTrackerPage = () => {
                     </div>
                   </th>
                 ))}
-                <th className="border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50">
+                <th className="border border-gray-200 px-2 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50">
                   Actions
                 </th>
               </tr>
@@ -586,7 +577,12 @@ const BDTrackerPage = () => {
                     {columns.map((column) => (
                       <td
                         key={column.key}
-                        className="border border-gray-200 px-4 py-3 text-sm text-gray-900"
+                        className={`border border-gray-200 px-4 py-3 text-sm text-gray-900 ${
+                          column.key === 'outreachDates' ? 'w-24' : 
+                          column.key === 'contactFunction' ? 'w-28' : 
+                          column.key === 'cda' ? 'w-32' : 
+                          column.key === 'priority' ? 'w-32' : ''
+                        }`}
                       >
                         {editingId === (entry.id || entry._id) ? (
                           column.key === 'cda' ? (
@@ -594,45 +590,35 @@ const BDTrackerPage = () => {
                               <select
                                 value={formData[column.key] || ''}
                                 onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                                className="w-full px-2 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium"
                               >
-                                <option value="">Select CDA Status</option>
+                                <option value="">Select</option>
                                 <option value="Yes">Yes</option>
                                 <option value="No">No</option>
                                 <option value="Pending">Pending</option>
                                 <option value="In Progress">In Progress</option>
                               </select>
-                              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </div>
                             </div>
                           ) : column.key === 'priority' ? (
                             <div className="relative">
                               <select
                                 value={formData[column.key] || ''}
                                 onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                                className="w-full px-2 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium"
                               >
-                                <option value="">Select Priority Level</option>
+                                <option value="">Select</option>
                                 <option value="Low">Low</option>
                                 <option value="Medium">Medium</option>
                                 <option value="High">High</option>
                                 <option value="Urgent">Urgent</option>
                               </select>
-                              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </div>
                             </div>
                           ) : (
                             <input
                               type="text"
                               value={formData[column.key] || ''}
                               onChange={(e) => handleInputChange(column.key, e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                           )
                         ) : (
@@ -666,8 +652,8 @@ const BDTrackerPage = () => {
                     ))}
                     
                     {/* Actions */}
-                    <td className="border border-gray-200 px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <td className="border border-gray-200 px-2 py-2">
+                      <div className="flex items-center gap-1">
                         {editingId === (entry.id || entry._id) ? (
                           <>
                             <button
@@ -710,6 +696,7 @@ const BDTrackerPage = () => {
               )}
             </tbody>
           </table>
+            </div>
         </div>
 
         {/* Summary */}

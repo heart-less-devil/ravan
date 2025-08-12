@@ -722,7 +722,7 @@ const Dashboard = () => {
                   </motion.div>
                   <div className="hidden sm:block">
                     <div className="text-sm font-semibold text-gray-900">{user.name || 'User'}</div>
-                    <div className="text-xs text-gray-500">{user.email}</div>
+                    <div className="text-xs text-gray-500 break-all max-w-30">{user.email}</div>
                 </div>
               </div>
                 <motion.button
@@ -978,7 +978,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'User'} 👋</h1>
-            <div className="flex items-center space-x-3 mt-4 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2 inline-block">
+            <div className="flex items-center space-x-3 mt-4 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2 inline-block w-[350px]">
               <Calendar className="w-5 h-5" />
                               <span className="font-medium">Current Plan: Free</span>
             </div>
@@ -989,7 +989,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between"
+                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between w-[350px]"
               >
                 <div className="flex items-center space-x-3">
                   <AlertCircle className="w-4 h-4 text-white" />
@@ -1016,7 +1016,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between"
+                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between w-[350px]"
               >
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="w-4 h-4 text-white" />

@@ -23,7 +23,6 @@ const BDInsights = ({ user, userPaymentStatus }) => {
     
     setPdfBaseUrl(baseUrl);
     setIsLoading(false);
-    console.log('Current domain:', currentDomain, 'Setting PDF base URL to:', baseUrl);
   }, []);
 
   const insights = [
@@ -225,36 +224,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
           </div>
         )}
 
-        {/* Debug Info (only in development) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-gray-100 rounded-lg p-4 mb-6">
-            <h4 className="font-semibold text-gray-800 mb-2">Debug Information:</h4>
-            <p className="text-sm text-gray-600">PDF Base URL: {pdfBaseUrl}</p>
-            <p className="text-sm text-gray-600">Current Domain: {window.location.hostname}</p>
-            <p className="text-sm text-gray-600">Loading State: {isLoading ? 'Yes' : 'No'}</p>
-            <p className="text-sm text-gray-600">Available PDFs: {insights.map(i => i.filename).join(', ')}</p>
-            
-            {/* Test PDF URLs */}
-            <div className="mt-4">
-              <h5 className="font-semibold text-gray-800 mb-2">Test PDF URLs:</h5>
-              {insights.map((insight, index) => {
-                const testUrl = `https://bioping-backend.onrender.com/pdf/${encodeURIComponent(insight.filename)}`;
-                return (
-                  <div key={index} className="mb-2">
-                    <a 
-                      href={testUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline text-sm"
-                    >
-                      Test: {insight.filename}
-                    </a>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+
 
         {/* Resources Grid - Only show for users with access */}
         {hasAccess && !isLoading && (

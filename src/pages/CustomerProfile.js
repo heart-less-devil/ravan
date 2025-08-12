@@ -394,7 +394,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                   {user.avatar}
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">{user.name}</h2>
-                <p className="text-gray-600 mb-2">{user.email}</p>
+                <p className="text-gray-600 mb-2 text-xs break-all max-w-full truncate" title={user.email}>{user.email}</p>
                 <p className="text-sm text-gray-500">{user.company}</p>
                 <p className="text-sm text-gray-500">{user.role}</p>
               </div>
