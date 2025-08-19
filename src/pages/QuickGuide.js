@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, AlertCircle, Info, Download, Eye, X, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
+import { FileText, AlertCircle, Info, Download, Eye, X, ChevronUp, ChevronDown, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const QuickGuide = () => {
+  const navigate = useNavigate();
   const [showPdf, setShowPdf] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pdfUrl, setPdfUrl] = useState('');
@@ -268,8 +270,27 @@ const QuickGuide = () => {
             </div>
           </div>
           
-          
         </div>
+      </div>
+
+      {/* Back Button - placed below header */}
+      <div className="max-w-7xl mx-auto">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate('/dashboard/resources');
+            }
+          }}
+          aria-label="Go back"
+          className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white shadow-xl hover:shadow-2xl border border-white/10 hover:from-slate-800 hover:via-blue-800 hover:to-slate-800"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="font-semibold">Back</span>
+        </motion.button>
       </div>
 
       {/* Main Content */}

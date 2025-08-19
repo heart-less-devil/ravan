@@ -603,6 +603,13 @@ const Dashboard = () => {
                     <Link
                       key={item.name}
                       to={item.path}
+                      onClick={(e) => {
+                        if (item.path === '/dashboard/search' && location.pathname === '/dashboard/search') {
+                          e.preventDefault();
+                          const version = Date.now();
+                          window.location.href = `/dashboard/search?v=${version}`;
+                        }
+                      }}
                       className={`group flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg transition-all duration-200 mb-1 ${
                         location.pathname === item.path 
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
