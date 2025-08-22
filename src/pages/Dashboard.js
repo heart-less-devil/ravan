@@ -3291,6 +3291,27 @@ const PricingPage = () => {
       popular: true,
       buttonText: "Choose plan",
       buttonStyle: "primary"
+    },
+    {
+      id: 'daily-12',
+      name: "Daily Test (12 days)",
+      description: "Perfect for testing our platform",
+      credits: "50 credits per day",
+      monthlyPrice: 1,
+      annualPrice: 12,
+      features: [
+        "1 Seat included",
+        "Get 50 credits daily for 12 days",
+        "$1 USD one time payment",
+        "Total: $12 for 12 days",
+        "Daily automatic billing",
+        "Unlimited Access to Free Resources",
+        "Perfect for trial and testing"
+      ],
+      icon: Zap,
+      popular: false,
+      buttonText: "Start Testing",
+      buttonStyle: "primary"
     }
   ];
 
@@ -3337,12 +3358,12 @@ const PricingPage = () => {
       
       // Set credits based on plan
       let credits = 5; // Default
-      if (selectedPlan.id === 'monthly') {
+      if (selectedPlan.id === 'basic') {
         credits = 50;
-      } else if (selectedPlan.id === 'annual') {
+      } else if (selectedPlan.id === 'premium') {
         credits = 100;
-      } else if (selectedPlan.id === 'test') {
-        credits = 1;
+      } else if (selectedPlan.id === 'daily-12') {
+        credits = 50; // Daily credits
       }
       localStorage.setItem('userCredits', credits.toString());
       
@@ -3469,6 +3490,12 @@ const PricingPage = () => {
                       Save ${((plan.monthlyPrice || plan.price) * 12) - (plan.annualPrice || plan.price)}/year
                     </div>
                   )}
+                  {/* Special display for daily-12 plan */}
+                  {plan.id === 'daily-12' && (
+                    <div className="text-sm text-blue-600 font-medium mt-1">
+                      Daily billing for 12 days
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3485,7 +3512,7 @@ const PricingPage = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-300 mt-auto ${
-                  plan.id === 'free' || userCurrentPlan === plan.id
+                  (plan.id === 'free' && userCurrentPlan === 'free') || userCurrentPlan === plan.id
                     ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
                     : plan.buttonStyle === 'primary' 
                       ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-soft hover:shadow-medium' 
@@ -3493,12 +3520,25 @@ const PricingPage = () => {
                 }`}
                 onClick={() => handleSelectPlan(plan)}
               >
-                {plan.id === 'free' 
-                  ? 'Current Plan' 
-                  : userCurrentPlan === plan.id 
-                    ? 'Current Plan' 
-                    : plan.buttonText
-                }
+                {(() => {
+                  // Free plan logic
+                  if (plan.id === 'free') {
+                    return userCurrentPlan === 'free' ? 'Current Plan' : 'Current Plan';
+                  }
+                  
+                  // Daily Test plan logic
+                  if (plan.id === 'daily-12') {
+                    return userCurrentPlan === 'daily-12' ? 'Current Plan' : 'Start Testing';
+                  }
+                  
+                  // Other plans logic
+                  if (userCurrentPlan === plan.id) {
+                    return 'Current Plan';
+                  }
+                  
+                  // Default: show plan's button text
+                  return plan.buttonText;
+                })()}
               </motion.button>
             </div>
           </motion.div>
