@@ -45,10 +45,10 @@
     "role": "user",
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
-    "currentPlan": "test",
-    "currentCredits": 0,
-    "lastCreditRenewal": "2025-08-01T20:37:34.589Z",
-    "nextCreditRenewal": "2025-08-31T20:37:34.589Z",
+    "currentPlan": "daily-12",
+    "currentCredits": 50,
+    "lastCreditRenewal": "2025-08-22T02:40:20.850Z",
+    "nextCreditRenewal": "2025-08-23T02:40:20.850Z",
     "company": "Company",
     "invoices": [
       {
@@ -71,7 +71,10 @@
         "description": "Test Plan Payment",
         "plan": "Test Plan"
       }
-    ]
+    ],
+    "subscriptionId": "sub_1RyktvLf1iznKy11eaUTWA2b",
+    "subscriptionEndAt": "2025-09-03T02:40:20.850Z",
+    "subscriptionOnHold": false
   },
   {
     "id": 5,

@@ -185,7 +185,12 @@ const Dashboard = () => {
         
         if (!token) {
           console.log('No token found, redirecting to login');
-          localStorage.clear(); // Clear any corrupted data
+          // Preserve trial start when clearing
+          const preservedRegistrationDate = localStorage.getItem('registrationDate');
+          localStorage.clear();
+          if (preservedRegistrationDate) {
+            localStorage.setItem('registrationDate', preservedRegistrationDate);
+          }
           navigate('/login');
           return;
         }
@@ -201,7 +206,12 @@ const Dashboard = () => {
           
           if (testResponse.status === 401) {
             console.log('Token expired, redirecting to login');
+            // Preserve trial start when clearing
+            const preservedRegistrationDate = localStorage.getItem('registrationDate');
             localStorage.clear();
+            if (preservedRegistrationDate) {
+              localStorage.setItem('registrationDate', preservedRegistrationDate);
+            }
             navigate('/login');
             return;
           }
@@ -257,10 +267,14 @@ const Dashboard = () => {
           if (subscriptionData.currentPlan) {
             localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
           }
-          // Only update credits from backend for paid users, not free users
-          if (subscriptionData.currentCredits && subscriptionData.paymentCompleted) {
+          // Always trust backend for credits (enforce trial expiry)
+          if (typeof subscriptionData.currentCredits === 'number') {
             localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
             setUserCredits(subscriptionData.currentCredits);
+          }
+          // Show backend days remaining for trial, if provided
+          if (typeof subscriptionData.daysRemaining === 'number') {
+            setDaysRemaining(subscriptionData.daysRemaining);
           }
           
           // Update state with backend data
@@ -3263,7 +3277,7 @@ const PricingPage = () => {
       name: "Premium Plan",
       description: "For advanced users and teams",
       credits: "100 credits per month",
-      monthlyPrice: 600,
+      monthlyPrice: 750,
       annualPrice: 7200,
       features: [
         "Everything in Basic, plus:",

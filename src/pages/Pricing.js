@@ -75,7 +75,7 @@ const Pricing = () => {
       name: "Premium Plan",
       description: "For advanced users and teams",
       credits: "100 credits per month",
-      monthlyPrice: 600,
+      monthlyPrice: 750,
       annualPrice: 7200,
       features: [
         "Everything in Basic, plus:",
@@ -88,6 +88,24 @@ const Pricing = () => {
       icon: Target,
       popular: true,
       buttonText: "Choose plan",
+      buttonStyle: "primary"
+    },
+    {
+      id: 'daily-12',
+      name: "Daily Test (12 days)",
+      description: "$1 per day for 12 days – daily subscription",
+      credits: "50 credits per day",
+      monthlyPrice: 1,
+      annualPrice: 12,
+      features: [
+        "50 credits included daily",
+        "Daily $1 automatic billing",
+        "12-day subscription cycle",
+        "Total: $12 for 12 days"
+      ],
+      icon: CreditCard,
+      popular: false,
+      buttonText: "Start Daily Plan",
       buttonStyle: "primary"
     }
   ];
@@ -269,17 +287,25 @@ const Pricing = () => {
                     <p className="text-gray-600 mb-4">
                       {plan.description}
                     </p>
-                    <div className="mb-4">
-                      <div className="text-sm text-gray-600 mb-2">
-                        {plan.credits}
-                      </div>
-                      <div className="text-3xl font-bold text-gray-900">
-                        ${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {isAnnual ? '/ yearly' : '/ monthly'}
-                      </div>
-                    </div>
+                                         <div className="mb-4">
+                       <div className="text-sm text-gray-600 mb-2">
+                         {plan.credits}
+                       </div>
+                       <div className="text-3xl font-bold text-gray-900">
+                         {plan.id === 'daily-12' ? '$1 USD' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                       </div>
+                       <div className="text-sm text-gray-500">
+                         {plan.id === 'daily-12' ? 'one time' : (isAnnual ? '/ yearly' : '/ monthly')}
+                       </div>
+                                               {/* Show yearly savings for Basic and Premium plans */}
+                        {isAnnual && (plan.id === 'basic' || plan.id === 'premium') && (
+                          <div className="mt-2">
+                            <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                              Save ${plan.id === 'basic' ? '1200' : '1800'}/year
+                            </span>
+                          </div>
+                        )}
+                     </div>
                   </div>
 
                   <div className="space-y-4 mb-8">

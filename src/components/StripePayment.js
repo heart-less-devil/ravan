@@ -29,21 +29,40 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
     }
 
     try {
-      console.log('Creating payment intent...', { amount, planId: plan.id, isAnnual });
+      console.log('Creating payment/session...', { amount, planId: plan.id, isAnnual });
       
-      // Create payment intent for subscription
-      const response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          amount,
-          planId: plan.id,
-          isAnnual,
-          customerEmail: localStorage.getItem('userEmail') || null // Include user email if available
-        }),
-      });
+      // Special daily-12 subscription flow
+      let response;
+      if (plan.id === 'daily-12') {
+        let customerEmail = localStorage.getItem('userEmail') || null;
+        if (!customerEmail) {
+          try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            if (u && u.email) customerEmail = u.email;
+          } catch (_) {}
+        }
+        response = await fetch(`${API_BASE_URL}/api/subscription/create-daily-12`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerEmail
+          }),
+        });
+      } else {
+        // Default one-time payment intent
+        response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            amount,
+            planId: plan.id,
+            isAnnual,
+            customerEmail: localStorage.getItem('userEmail') || null
+          }),
+        });
+      }
 
       console.log('Payment intent response status:', response.status);
       console.log('Payment intent response ok:', response.ok);

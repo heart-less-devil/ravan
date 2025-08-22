@@ -273,38 +273,41 @@ const QuickGuide = () => {
         </div>
       </div>
 
-      {/* Back Button - placed below header */}
+      {/* Back Button and Training Manual Section - placed side by side */}
       <div className="max-w-7xl mx-auto">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            if (window.history.length > 1) {
-              navigate(-1);
-            } else {
-              navigate('/dashboard/resources');
-            }
-          }}
-          aria-label="Go back"
-          className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white shadow-xl hover:shadow-2xl border border-white/10 hover:from-slate-800 hover:via-blue-800 hover:to-slate-800"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-semibold">Back</span>
-        </motion.button>
+        <div className="flex items-center justify-between mb-2">
+          {/* Back Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/dashboard/resources');
+              }
+            }}
+            aria-label="Go back"
+            className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white shadow-xl hover:shadow-2xl border border-white/10 hover:from-slate-800 hover:via-blue-800 hover:to-slate-800"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-semibold">Back</span>
+          </motion.button>
+
+          {/* Training Manual Section */}
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
+              <FileText className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Training Manual</h2>
+            <p className="text-gray-600 text-lg">Access the complete BioPing training documentation</p>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="max-w-7xl mx-auto">
-          
-          {/* Professional PDF Display Section */}
-          <div className="text-center mb-10">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
-              <FileText className="w-12 h-12 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Training Manual</h2>
-            <p className="text-gray-600 text-xl mb-8">Access the complete BioPing training documentation</p>
-          </div>
 
           {/* Professional PDF Viewer */}
           <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl p-10 shadow-2xl border border-gray-200 mb-8 max-w-7xl mx-auto">

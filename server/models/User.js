@@ -67,6 +67,16 @@ const userSchema = new mongoose.Schema({
   nextCreditRenewal: {
     type: Date
   },
+  subscriptionOnHold: {
+    type: Boolean,
+    default: false
+  },
+  subscriptionId: {
+    type: String
+  },
+  subscriptionEndAt: {
+    type: Date
+  },
   paymentUpdatedAt: {
     type: Date
   }

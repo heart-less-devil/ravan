@@ -3608,6 +3608,121 @@ app.post('/api/create-subscription', async (req, res) => {
   }
 });
 
+// Experimental: Create 12-day $1/day metered subscription (Test Plan)
+// Requires env STRIPE_DAILY_1USD_PRICE_ID
+app.post('/api/subscription/create-daily-12', async (req, res) => {
+  try {
+    const { customerEmail } = req.body;
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return res.status(400).json({ error: 'Stripe not configured' });
+    }
+
+    // Resolve or create daily $1 price automatically if not provided via env
+    let priceId = process.env.STRIPE_DAILY_1USD_PRICE_ID || '';
+    try {
+      if (!priceId) {
+        // Try to find by lookup_key first
+        const priceList = await stripe.prices.list({ active: true, limit: 100 });
+        const existing = priceList.data.find(p => p.lookup_key === 'daily_1usd_12days');
+        if (existing) {
+          priceId = existing.id;
+        } else {
+          // Create product and price
+          const product = await stripe.products.create({ name: 'Daily Test Plan (12 days)' });
+          const newPrice = await stripe.prices.create({
+            unit_amount: 100,
+            currency: 'usd',
+            recurring: { interval: 'day' },
+            product: product.id,
+            lookup_key: 'daily_1usd_12days'
+          });
+          priceId = newPrice.id;
+        }
+      }
+    } catch (e) {
+      console.log('Auto-create daily price failed:', e.message);
+      return res.status(400).json({ error: 'Unable to provision daily price in Stripe. Please set STRIPE_DAILY_1USD_PRICE_ID.' });
+    }
+
+    // Create or get customer
+    let customer = null;
+    if (customerEmail) {
+      const existing = await stripe.customers.list({ email: customerEmail, limit: 1 });
+      customer = existing.data[0] || await stripe.customers.create({ email: customerEmail });
+    } else {
+      // Create an anonymous customer to proceed in test flows
+      customer = await stripe.customers.create({
+        metadata: { note: 'Created without email for daily-12 plan' }
+      });
+    }
+
+    // Create a simple payment intent for $1
+    console.log('Creating payment intent for daily subscription...');
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: 100, // $1.00 in cents
+      currency: 'usd',
+      customer: customer.id,
+      metadata: {
+        planId: 'daily-12',
+        customerEmail: customerEmail
+      },
+      automatic_payment_methods: { enabled: true }
+    });
+
+    console.log('Payment intent created successfully:', {
+      id: paymentIntent.id,
+      amount: paymentIntent.amount,
+      status: paymentIntent.status,
+      hasClientSecret: !!paymentIntent.client_secret
+    });
+
+    // Create subscription separately
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' }
+    });
+
+    console.log('Subscription created successfully:', {
+      id: subscription.id,
+      status: subscription.status
+    });
+
+    // Return the client secret from our payment intent
+    const clientSecret = paymentIntent.client_secret;
+
+    const endAt = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000);
+
+    // Persist minimal state for demo users
+    const uidx = customerEmail ? mockDB.users.findIndex(u => u.email === customerEmail) : -1;
+    if (uidx !== -1) {
+      mockDB.users[uidx].paymentCompleted = true;
+      mockDB.users[uidx].currentPlan = 'daily-12';
+      mockDB.users[uidx].currentCredits = 50;
+      mockDB.users[uidx].subscriptionId = subscription.id;
+      mockDB.users[uidx].subscriptionEndAt = endAt.toISOString();
+      mockDB.users[uidx].subscriptionOnHold = false;
+      mockDB.users[uidx].lastCreditRenewal = new Date().toISOString();
+      mockDB.users[uidx].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      saveDataToFiles('daily_subscription_started');
+    }
+
+    res.json({
+      subscriptionId: subscription.id,
+      clientSecret: clientSecret,
+      endAt: endAt.toISOString()
+    });
+  } catch (error) {
+    console.error('Create daily subscription error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create daily subscription', 
+      details: error.message,
+      stack: error.stack 
+    });
+  }
+});
 
 
 // Webhook for Stripe events
@@ -3802,11 +3917,52 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       break;
 
     case 'invoice.payment_succeeded':
-      console.log('Invoice payment succeeded:', event.data.object.id);
+      const paidInvoice = event.data.object;
+      console.log('Invoice payment succeeded:', paidInvoice.id);
+      try {
+        const subId = paidInvoice.subscription;
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const cust = await stripe.customers.retrieve(sub.customer);
+          const email = cust.email;
+          const idx = mockDB.users.findIndex(u => u.email === email);
+          if (idx !== -1) {
+            mockDB.users[idx].subscriptionOnHold = false;
+            if (mockDB.users[idx].currentPlan === 'daily-12') {
+              mockDB.users[idx].currentCredits = 50;
+              mockDB.users[idx].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+              saveDataToFiles('daily_subscription_paid');
+            }
+          }
+        }
+      } catch (e) { console.log('paid update error:', e.message); }
       break;
 
     case 'invoice.payment_failed':
-      console.log('Invoice payment failed:', event.data.object.id);
+      const failedInvoice = event.data.object;
+      console.log('Invoice payment failed:', failedInvoice.id);
+      try {
+        const subId = failedInvoice.subscription;
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const cust = await stripe.customers.retrieve(sub.customer);
+          const email = cust.email;
+          const idx = mockDB.users.findIndex(u => u.email === email);
+          if (idx !== -1) {
+            mockDB.users[idx].subscriptionOnHold = true;
+            saveDataToFiles('subscription_on_hold');
+          }
+          if (email) {
+            const mailOptions = {
+              from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+              to: email,
+              subject: 'Payment Issue - Action Required',
+              html: `<p>Your recent payment failed. Please update your payment method to continue your subscription.</p>`
+            };
+            try { await transporter.sendMail(mailOptions); } catch (e) { console.log('Mail error:', e.message); }
+          }
+        }
+      } catch (e) { console.log('on-hold update error:', e.message); }
       break;
       
     default:
@@ -4137,6 +4293,11 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
 
     // Check if subscription is active and when credits should renew
     const now = new Date();
+    const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+    const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+    const trialDays = 3;
+    const trialExpired = daysSinceRegistration >= trialDays;
+    const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
     const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
     const nextRenewal = user.nextCreditRenewal ? new Date(user.nextCreditRenewal) : null;
     
@@ -4177,6 +4338,25 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
           saveDataToFiles();
         }
       }
+    } else {
+      // Enforce free-trial credits server-side
+      const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+      if (userIndex !== -1) {
+        if (trialExpired) {
+          // Trial expired → force credits to 0
+          if (mockDB.users[userIndex].currentCredits !== 0) {
+            mockDB.users[userIndex].currentCredits = 0;
+            saveDataToFiles('free_trial_expired');
+          }
+        } else if (
+          mockDB.users[userIndex].currentCredits === undefined ||
+          mockDB.users[userIndex].currentCredits === null
+        ) {
+          // Ensure default 5 credits during trial
+          mockDB.users[userIndex].currentCredits = 5;
+          saveDataToFiles('free_trial_defaulted');
+        }
+      }
     }
 
     // Return current credits (don't override if user has used some)
@@ -4192,7 +4372,7 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
           currentCredits = 1;
         }
       } else {
-        currentCredits = 5; // Free users
+        currentCredits = trialExpired ? 0 : 5; // Free users with trial enforcement
       }
     }
 
@@ -4203,7 +4383,9 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
       lastCreditRenewal: user.lastCreditRenewal,
       nextCreditRenewal: user.nextCreditRenewal,
       shouldRenewCredits,
-      creditsToGive
+      creditsToGive,
+      trialExpired,
+      daysRemaining: user.paymentCompleted && user.currentPlan !== 'free' ? null : trialDaysRemaining
     });
   } catch (error) {
     console.error('Error fetching subscription status:', error);
@@ -4221,6 +4403,19 @@ app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
     }
 
     const user = mockDB.users[userIndex];
+    // Enforce free trial expiry before allowing credit usage
+    if (!user.paymentCompleted || user.currentPlan === 'free') {
+      const now = new Date();
+      const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+      const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysSinceRegistration >= 3) {
+        if (user.currentCredits !== 0) {
+          mockDB.users[userIndex].currentCredits = 0;
+          saveDataToFiles('free_trial_expired_block');
+        }
+        return res.status(400).json({ success: false, message: 'Free trial expired' });
+      }
+    }
     
     if (user.currentCredits > 0) {
       user.currentCredits -= 1;
