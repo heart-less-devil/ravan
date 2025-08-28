@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Upload, 
   Database, 
@@ -21,6 +22,7 @@ import {
 import { API_BASE_URL, ADMIN_API_BASE_URL } from '../config';
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [uploadedData, setUploadedData] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -656,6 +658,46 @@ Created: ${new Date(session.createdAt).toLocaleString()}
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-2xl border border-indigo-400/20 backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200"
+            onClick={() => navigate('/dashboard/pdf-management')}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-indigo-100 text-sm font-medium mb-2">PDF Management</p>
+                <p className="text-3xl font-bold text-white">6</p>
+                <p className="text-indigo-200 text-xs mt-2">BD Resources</p>
+              </div>
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <FileText className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 shadow-2xl border border-emerald-400/20 backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200"
+            onClick={() => navigate('/dashboard/pricing-management')}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-emerald-100 text-sm font-medium mb-2">Pricing Management</p>
+                <p className="text-3xl font-bold text-white">4</p>
+                <p className="text-emerald-200 text-xs mt-2">Subscription Plans</p>
+              </div>
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
               </div>
             </div>
           </motion.div>

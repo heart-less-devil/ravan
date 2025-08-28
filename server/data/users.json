@@ -48,8 +48,8 @@
     "paymentCompleted": true,
     "currentPlan": "daily-12",
     "currentCredits": 50,
-    "lastCreditRenewal": "2025-08-22T02:40:20.850Z",
-    "nextCreditRenewal": "2025-08-23T02:40:20.850Z",
+    "lastCreditRenewal": "2025-08-28T07:06:31.834Z",
+    "nextCreditRenewal": "2025-08-29T07:06:31.834Z",
     "company": "Company",
     "invoices": [
       {
@@ -73,8 +73,8 @@
         "plan": "Test Plan"
       }
     ],
-    "subscriptionId": "sub_1RyktvLf1iznKy11eaUTWA2b",
-    "subscriptionEndAt": "2025-09-03T02:40:20.850Z",
+    "subscriptionId": "sub_1S0zusLf1iznKy11yxNSf5E5",
+    "subscriptionEndAt": "2025-09-09T07:06:31.834Z",
     "subscriptionOnHold": false
   },
   {

@@ -7,6 +7,11 @@ import { API_BASE_URL } from '../config';
 // Load Stripe with correct publishable key
 const stripePromise = loadStripe('pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT');
 
+// Validate Stripe is loaded
+if (!stripePromise) {
+  console.error('❌ Failed to load Stripe');
+}
+
 const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -22,8 +27,20 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
     setError(null);
 
     if (!stripe || !elements) {
-      setError('Stripe not loaded. Please refresh the page.');
-      onError && onError('Stripe not loaded. Please refresh the page.');
+      const errorMsg = 'Stripe not loaded. Please refresh the page.';
+      console.error('❌ Stripe not loaded:', { stripe: !!stripe, elements: !!elements });
+      setError(errorMsg);
+      onError && onError(errorMsg);
+      setLoading(false);
+      return;
+    }
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      const errorMsg = 'Invalid payment amount. Please try again.';
+      console.error('❌ Invalid amount:', amount);
+      setError(errorMsg);
+      onError && onError(errorMsg);
       setLoading(false);
       return;
     }
@@ -64,12 +81,12 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         });
       }
 
-      console.log('Payment intent response status:', response.status);
-      console.log('Payment intent response ok:', response.ok);
+      console.log('📡 Payment intent response status:', response.status);
+      console.log('📡 Payment intent response ok:', response.ok);
 
       if (!response.ok) {
         const errorData = await response.text();
-        console.error('Payment intent error response:', errorData);
+        console.error('❌ Payment intent error response:', errorData);
         throw new Error(`Payment intent failed: ${response.status} ${errorData}`);
       }
 
@@ -91,14 +108,22 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         },
       });
 
-      console.log('Payment confirmation result:', { paymentError, paymentIntent });
+      console.log('💳 Payment confirmation result:', { 
+        paymentError: paymentError ? paymentError.message : null, 
+        paymentIntent: paymentIntent ? paymentIntent.id : null,
+        status: paymentIntent ? paymentIntent.status : null
+      });
 
       if (paymentError) {
-        console.error('Payment confirmation error:', paymentError);
+        console.error('❌ Payment confirmation error:', paymentError);
         setError(paymentError.message);
         onError && onError(paymentError.message);
       } else {
-        console.log('Payment successful:', paymentIntent);
+        console.log('✅ Payment successful:', {
+          id: paymentIntent.id,
+          amount: paymentIntent.amount,
+          status: paymentIntent.status
+        });
         onSuccess && onSuccess(paymentIntent);
       }
     } catch (err) {

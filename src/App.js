@@ -21,6 +21,8 @@ import ContactSales from './pages/ContactSales';
 import AdminPanel from './pages/AdminPanel';
 import AdminUsers from './pages/AdminUsers';
 import AdminLogin from './pages/AdminLogin';
+import PDFManagement from './pages/PDFManagement';
+import PricingManagement from './pages/PricingManagement';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import BDTrackerPage from './pages/BDTrackerPage';
 import QuickGuide from './pages/QuickGuide';
@@ -203,6 +205,16 @@ function App() {
                   <AdminPanel />
                 </ProtectedAdminRoute>
               } />
+                        <Route path="/dashboard/pdf-management" element={
+            <ProtectedAdminRoute>
+              <PDFManagement />
+            </ProtectedAdminRoute>
+          } />
+          <Route path="/dashboard/pricing-management" element={
+            <ProtectedAdminRoute>
+              <PricingManagement />
+            </ProtectedAdminRoute>
+          } />
               <Route path="/dashboard/admin-users" element={
                 <ProtectedAdminRoute>
                   <AdminUsers />

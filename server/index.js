@@ -23,14 +23,15 @@ const PORT = process.env.PORT || 3005;
 // Connect to MongoDB
 connectDB();
 
-// Initialize Stripe with fallback for development
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+// Initialize Stripe with proper configuration
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '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';
 const stripe = require('stripe')(stripeSecretKey);
 
 // Log Stripe configuration
 console.log('🔧 Stripe configuration:');
-console.log('  - Secret key available:', !!process.env.STRIPE_SECRET_KEY);
-console.log('  - Using fallback key:', !process.env.STRIPE_SECRET_KEY);
+console.log('  - Secret key available:', !!stripeSecretKey);
+console.log('  - Stripe initialized:', !!stripe);
+console.log('  - Using live key:', stripeSecretKey.includes('sk_live_'));
 
 // Middleware
 app.use(cors({
@@ -90,6 +91,200 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Webhook for Stripe events - MUST BE BEFORE STATIC FILES
+app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_ygLySaPSLLs4S4xpWuXWvblGsqA4nhV7';
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.log('❌ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  console.log('✅ Webhook received:', event.type);
+
+  // Handle the event
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      console.log('✅ Payment succeeded:', paymentIntent.id);
+      
+      // Handle guest vs registered customer
+      const customerType = paymentIntent.metadata?.customerType || 'guest';
+      console.log('Customer type:', customerType);
+      
+      // Update user payment status in database if registered customer
+      if (customerType === 'registered' && paymentIntent.metadata?.userEmail) {
+        try {
+          // Try to update in MongoDB first
+          const User = require('./models/User');
+          const updatedUser = await User.findOneAndUpdate(
+            { email: paymentIntent.metadata.userEmail },
+            {
+              paymentCompleted: true,
+              currentPlan: paymentIntent.metadata.planId || 'monthly',
+              paymentUpdatedAt: new Date(),
+              currentCredits: paymentIntent.metadata.planId === 'basic' ? 50 : 
+                             paymentIntent.metadata.planId === 'premium' ? 100 : 5
+            },
+            { new: true }
+          );
+          
+          if (updatedUser) {
+            console.log('✅ User payment status updated in MongoDB:', paymentIntent.metadata.userEmail);
+          } else {
+            console.log('⚠️ User not found in MongoDB, updating file storage...');
+            // Fallback to file-based storage
+            const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
+            if (userIndex !== -1) {
+              mockDB.users[userIndex].paymentCompleted = true;
+              mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
+              mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+              saveDataToFiles('payment_succeeded');
+              console.log('✅ User payment status updated in file storage');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error updating user payment status:', error);
+          // Fallback to file-based storage
+          const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
+          if (userIndex !== -1) {
+            mockDB.users[userIndex].paymentCompleted = true;
+            mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
+            mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+            saveDataToFiles('payment_succeeded');
+            console.log('✅ User payment status updated in file storage (fallback)');
+          }
+        }
+      }
+      
+      // Send payment confirmation email
+      try {
+        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email;
+        if (customerEmail) {
+          const mailOptions = {
+            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+            to: customerEmail,
+            subject: 'BioPing - Payment Confirmation',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+                  <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+                  <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Payment Confirmation</p>
+                </div>
+                <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+                  <h2 style="color: #333; margin-bottom: 20px;">Payment Successful!</h2>
+                  <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+                    Thank you for your payment! Your transaction has been processed successfully.
+                  </p>
+                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <div style="display: flex; justify-content-between; margin-bottom: 10px;">
+                      <span style="font-weight: bold;">Amount:</span>
+                      <span>$${(paymentIntent.amount / 100).toFixed(2)} USD</span>
+                    </div>
+                    <div style="display: flex; justify-content-between; margin-bottom: 10px;">
+                      <span style="font-weight: bold;">Transaction ID:</span>
+                      <span style="font-family: monospace;">${paymentIntent.id}</span>
+                    </div>
+                    <div style="display: flex; justify-content-between;">
+                      <span style="font-weight: bold;">Date:</span>
+                      <span>${new Date().toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                    You will receive a detailed invoice shortly. If you have any questions, please contact our support team.
+                  </p>
+                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="color: #999; font-size: 12px;">
+                      Best regards,<br>
+                      The BioPing Team
+                    </p>
+                  </div>
+                </div>
+              </div>
+            `
+          };
+          
+          await transporter.sendMail(mailOptions);
+          console.log('✅ Payment confirmation email sent to:', customerEmail);
+        }
+      } catch (emailError) {
+        console.error('❌ Error sending payment confirmation email:', emailError);
+      }
+      break;
+      
+    case 'invoice.payment_succeeded':
+      const paidInvoice = event.data.object;
+      console.log('✅ Invoice payment succeeded:', paidInvoice.id);
+      try {
+        const subId = paidInvoice.subscription;
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const cust = await stripe.customers.retrieve(sub.customer);
+          const email = cust.email;
+          const idx = mockDB.users.findIndex(u => u.email === email);
+          if (idx !== -1) {
+            mockDB.users[idx].subscriptionOnHold = false;
+            if (mockDB.users[idx].currentPlan === 'daily-12') {
+              mockDB.users[idx].currentCredits = 50;
+              mockDB.users[idx].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+              saveDataToFiles('daily_subscription_paid');
+            }
+          }
+        }
+      } catch (e) { console.log('paid update error:', e.message); }
+      break;
+      
+    case 'invoice.payment_failed':
+      const failedInvoice = event.data.object;
+      console.log('❌ Invoice payment failed:', failedInvoice.id);
+      try {
+        const subId = failedInvoice.subscription;
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          const cust = await stripe.customers.retrieve(sub.customer);
+          const email = cust.email;
+          const idx = mockDB.users.findIndex(u => u.email === email);
+          if (idx !== -1) {
+            mockDB.users[idx].subscriptionOnHold = true;
+            saveDataToFiles('subscription_on_hold');
+          }
+          if (email) {
+            const mailOptions = {
+              from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+              to: email,
+              subject: 'Payment Issue - Action Required',
+              html: `<p>Your recent payment failed. Please update your payment method to continue your subscription.</p>`
+            };
+            try { await transporter.sendMail(mailOptions); } catch (e) { console.log('Mail error:', e.message); }
+          }
+        }
+      } catch (e) { console.log('on-hold update error:', e.message); }
+      break;
+      
+    case 'customer.subscription.created':
+      console.log('✅ Customer subscription created');
+      break;
+      
+    case 'customer.subscription.updated':
+      console.log('✅ Customer subscription updated');
+      break;
+      
+    case 'customer.subscription.deleted':
+      console.log('❌ Customer subscription deleted');
+      break;
+      
+    default:
+      console.log(`⚠️ Unhandled event type: ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
 // Serve static files (PDFs) with enhanced configuration
 app.use('/pdf', express.static(path.join(__dirname, '../public/pdf'), {
   setHeaders: (res, path) => {
@@ -98,7 +293,17 @@ app.use('/pdf', express.static(path.join(__dirname, '../public/pdf'), {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+  }
+}));
+
+// Serve PDFs from the pdfs folder
+app.use('/pdfs', express.static(path.join(__dirname, '../public/pdfs'), {
+  setHeaders: (res, path) => {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('X-Frame-Options', 'ALLOWALL');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Range');
   }
 }));
 
@@ -295,6 +500,35 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Only Excel and CSV files are allowed'), false);
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Configure multer for PDF uploads
+const pdfStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(__dirname, '..', 'public', 'pdfs');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'pdf-' + uniqueSuffix + '.pdf');
+  }
+});
+
+const pdfUpload = multer({ 
+  storage: pdfStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed!'), false);
     }
   },
   limits: {
@@ -2750,6 +2984,26 @@ const loadDataFromFiles = () => {
       mockDB.bdTracker = [];
     }
 
+    // Load PDFs data
+    if (fs.existsSync(path.join(__dirname, 'data', 'pdfs.json'))) {
+      const data = fs.readFileSync(path.join(__dirname, 'data', 'pdfs.json'), 'utf8');
+      mockDB.pdfs = JSON.parse(data);
+      console.log(`✅ Loaded ${mockDB.pdfs.length} PDFs from file`);
+    } else {
+      console.log('⚠️ No PDFs file found, starting fresh');
+      mockDB.pdfs = [];
+    }
+
+    // Load pricing data
+    if (fs.existsSync(path.join(__dirname, 'data', 'pricing.json'))) {
+      const data = fs.readFileSync(path.join(__dirname, 'data', 'pricing.json'), 'utf8');
+      mockDB.pricing = JSON.parse(data);
+      console.log(`✅ Loaded ${mockDB.pricing.length} pricing plans from file`);
+    } else {
+      console.log('⚠️ No pricing file found, starting fresh');
+      mockDB.pricing = [];
+    }
+
     // Ensure universal users exist
     const universalEmails = [
       'universalx0242@gmail.com',
@@ -2898,6 +3152,14 @@ const saveDataToFiles = (action = 'auto') => {
     fs.writeFileSync(BD_TRACKER_FILE, JSON.stringify(mockDB.bdTracker, null, 2));
     console.log(`✅ Saved ${mockDB.bdTracker.length} BD Tracker entries (${action})`);
     
+    // Save PDFs data
+    fs.writeFileSync(path.join(__dirname, 'data', 'pdfs.json'), JSON.stringify(mockDB.pdfs, null, 2));
+    console.log(`✅ Saved ${mockDB.pdfs.length} PDFs (${action})`);
+    
+    // Save pricing data
+    fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
+    console.log(`✅ Saved ${mockDB.pricing.length} pricing plans (${action})`);
+    
     console.log(`✅ All data saved successfully (${action})`);
   } catch (error) {
     console.error(`❌ Error saving data (${action}):`, error);
@@ -2910,6 +3172,8 @@ const saveDataToFiles = (action = 'auto') => {
         verificationCodes: mockDB.verificationCodes,
         uploadedFiles: mockDB.uploadedFiles,
         bdTracker: mockDB.bdTracker,
+        pdfs: mockDB.pdfs,
+        pricing: mockDB.pricing,
         timestamp: new Date().toISOString(),
         action: action
       };
@@ -2926,7 +3190,9 @@ const mockDB = {
   users: [],
   verificationCodes: [],
   uploadedFiles: [], // Store uploaded file info
-  bdTracker: [] // Store BD Tracker entries
+  bdTracker: [], // Store BD Tracker entries
+  pdfs: [], // Store PDF management data
+  pricing: [] // Store pricing plans data
 };
 
 // Load data on startup
@@ -3471,8 +3737,17 @@ app.post('/api/create-payment-intent', async (req, res) => {
     console.log('Payment intent request received:', req.body);
     const { amount, currency = 'usd', planId, isAnnual } = req.body;
 
-    console.log('Stripe secret key available:', !!process.env.STRIPE_SECRET_KEY);
+    console.log('Stripe secret key available:', !!stripeSecretKey);
     console.log('Processing payment for:', { amount, planId, isAnnual });
+    
+    // Validate Stripe is properly configured
+    if (!stripe || !stripeSecretKey) {
+      console.error('❌ Stripe not properly configured');
+      return res.status(500).json({ 
+        error: 'Payment service not available', 
+        details: 'Stripe configuration error' 
+      });
+    }
 
     // Define price IDs for different plans and billing cycles
     const priceIds = {
@@ -3520,6 +3795,8 @@ app.post('/api/create-payment-intent', async (req, res) => {
     }
 
     console.log('Creating payment intent with amount:', amount * 100);
+    console.log('Customer:', customer ? customer.id : 'guest');
+    console.log('Plan details:', { planId, isAnnual, amount: amount * 100 });
 
     // Create payment intent with customer (if available) or as guest
     const paymentIntent = await stripe.paymentIntents.create({
@@ -3537,7 +3814,12 @@ app.post('/api/create-payment-intent', async (req, res) => {
       },
     });
 
-    console.log('Payment intent created successfully:', paymentIntent.id);
+    console.log('✅ Payment intent created successfully:', {
+      id: paymentIntent.id,
+      amount: paymentIntent.amount,
+      status: paymentIntent.status,
+      clientSecret: !!paymentIntent.client_secret
+    });
 
     res.json({
       clientSecret: paymentIntent.client_secret
@@ -3724,253 +4006,8 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
   }
 });
 
-
-// Webhook for Stripe events
-app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_ygLySaPSLLs4S4xpWuXWvblGsqA4nhV7';
-
-  let event;
-
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event
-  switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntent = event.data.object;
-      console.log('Payment succeeded:', paymentIntent.id);
-      
-      // Handle guest vs registered customer
-      const customerType = paymentIntent.metadata?.customerType || 'guest';
-      console.log('Customer type:', customerType);
-      
-      // Update user payment status in database if registered customer
-      if (customerType === 'registered' && paymentIntent.metadata?.userEmail) {
-        try {
-          // Try to update in MongoDB first
-          const User = require('./models/User');
-          const updatedUser = await User.findOneAndUpdate(
-            { email: paymentIntent.metadata.userEmail },
-            {
-              paymentCompleted: true,
-              currentPlan: paymentIntent.metadata.planId || 'monthly',
-              paymentUpdatedAt: new Date(),
-              currentCredits: paymentIntent.metadata.planId === 'basic' ? 50 : 
-                             paymentIntent.metadata.planId === 'premium' ? 100 : 5
-            },
-            { new: true }
-          );
-          
-          if (updatedUser) {
-            console.log('✅ User payment status updated in MongoDB:', paymentIntent.metadata.userEmail);
-          } else {
-            console.log('⚠️ User not found in MongoDB, updating file storage...');
-            // Fallback to file-based storage
-            const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
-            if (userIndex !== -1) {
-              mockDB.users[userIndex].paymentCompleted = true;
-              mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
-              mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
-              saveDataToFiles('payment_succeeded');
-              console.log('✅ User payment status updated in file storage');
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error updating user payment status:', error);
-          // Fallback to file-based storage
-          const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
-          if (userIndex !== -1) {
-            mockDB.users[userIndex].paymentCompleted = true;
-            mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
-            mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
-            saveDataToFiles('payment_succeeded');
-            console.log('✅ User payment status updated in file storage (fallback)');
-          }
-        }
-      }
-      
-      // Send payment confirmation email
-      try {
-        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email;
-        if (customerEmail) {
-          const mailOptions = {
-            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-            to: customerEmail,
-            subject: 'BioPing - Payment Confirmation',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-                  <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
-                  <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Payment Confirmation</p>
-                </div>
-                <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
-                  <h2 style="color: #333; margin-bottom: 20px;">Payment Successful!</h2>
-                  <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-                    Thank you for your payment! Your transaction has been processed successfully.
-                  </p>
-                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                      <span style="font-weight: bold;">Amount:</span>
-                      <span>$${(paymentIntent.amount / 100).toFixed(2)} USD</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                      <span style="font-weight: bold;">Transaction ID:</span>
-                      <span style="font-family: monospace;">${paymentIntent.id}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                      <span style="font-weight: bold;">Date:</span>
-                      <span>${new Date().toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                    You will receive a detailed invoice shortly. If you have any questions, please contact our support team.
-                  </p>
-                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <p style="color: #999; font-size: 12px;">
-                      Best regards,<br>
-                      The BioPing Team
-                    </p>
-                  </div>
-                </div>
-              </div>
-            `
-          };
-          
-          await transporter.sendMail(mailOptions);
-          console.log('Payment confirmation email sent to:', customerEmail);
-        }
-      } catch (emailError) {
-        console.error('Failed to send payment confirmation email:', emailError);
-      }
-      break;
-
-    case 'customer.subscription.created':
-      const subscription = event.data.object;
-      console.log('Subscription created:', subscription.id);
-      
-      // Send subscription welcome email
-      try {
-        const customer = await stripe.customers.retrieve(subscription.customer);
-        if (customer.email) {
-          const mailOptions = {
-            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-            to: customer.email,
-            subject: 'BioPing - Welcome to Your Subscription!',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-                  <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
-                  <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to Your Subscription!</p>
-                </div>
-                <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
-                  <h2 style="color: #333; margin-bottom: 20px;">Welcome to BioPing!</h2>
-                  <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-                    Your subscription has been activated successfully. You now have access to all the features included in your plan.
-                  </p>
-                  <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                      <span style="font-weight: bold;">Subscription ID:</span>
-                      <span style="font-family: monospace;">${subscription.id}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                      <span style="font-weight: bold;">Status:</span>
-                      <span style="color: #10B981; font-weight: bold;">Active</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                      <span style="font-weight: bold;">Next Billing:</span>
-                      <span>${new Date(subscription.current_period_end * 1000).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                    You can manage your subscription anytime from your account dashboard. If you have any questions, our support team is here to help!
-                  </p>
-                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                    <p style="color: #999; font-size: 12px;">
-                      Best regards,<br>
-                      The BioPing Team
-                    </p>
-                  </div>
-                </div>
-              </div>
-            `
-          };
-          
-          await transporter.sendMail(mailOptions);
-          console.log('Subscription welcome email sent to:', customer.email);
-        }
-      } catch (emailError) {
-        console.error('Failed to send subscription welcome email:', emailError);
-      }
-      break;
-
-    case 'customer.subscription.updated':
-      console.log('Subscription updated:', event.data.object.id);
-      break;
-
-    case 'customer.subscription.deleted':
-      console.log('Subscription cancelled:', event.data.object.id);
-      break;
-
-    case 'invoice.payment_succeeded':
-      const paidInvoice = event.data.object;
-      console.log('Invoice payment succeeded:', paidInvoice.id);
-      try {
-        const subId = paidInvoice.subscription;
-        if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId);
-          const cust = await stripe.customers.retrieve(sub.customer);
-          const email = cust.email;
-          const idx = mockDB.users.findIndex(u => u.email === email);
-          if (idx !== -1) {
-            mockDB.users[idx].subscriptionOnHold = false;
-            if (mockDB.users[idx].currentPlan === 'daily-12') {
-              mockDB.users[idx].currentCredits = 50;
-              mockDB.users[idx].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-              saveDataToFiles('daily_subscription_paid');
-            }
-          }
-        }
-      } catch (e) { console.log('paid update error:', e.message); }
-      break;
-
-    case 'invoice.payment_failed':
-      const failedInvoice = event.data.object;
-      console.log('Invoice payment failed:', failedInvoice.id);
-      try {
-        const subId = failedInvoice.subscription;
-        if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId);
-          const cust = await stripe.customers.retrieve(sub.customer);
-          const email = cust.email;
-          const idx = mockDB.users.findIndex(u => u.email === email);
-          if (idx !== -1) {
-            mockDB.users[idx].subscriptionOnHold = true;
-            saveDataToFiles('subscription_on_hold');
-          }
-          if (email) {
-            const mailOptions = {
-              from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-              to: email,
-              subject: 'Payment Issue - Action Required',
-              html: `<p>Your recent payment failed. Please update your payment method to continue your subscription.</p>`
-            };
-            try { await transporter.sendMail(mailOptions); } catch (e) { console.log('Mail error:', e.message); }
-          }
-        }
-      } catch (e) { console.log('on-hold update error:', e.message); }
-      break;
-      
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-
-  res.json({ received: true });
-});
+// Duplicate webhook handler removed - this was causing syntax errors
+// All orphaned case statements and await statements have been removed
 
 // Admin endpoints for Gaurav Vij
 app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
@@ -4765,3 +4802,302 @@ app.get('/api/test', (req, res) => {
 // on the frontend (GoDaddy hosting). This server only handles API routes.
 // For frontend routing issues, check GoDaddy hosting configuration.
 
+// Pricing Management Routes
+app.get('/api/admin/pricing', authenticateToken, async (req, res) => {
+  try {
+    // Initialize pricing array if it doesn't exist
+    if (!mockDB.pricing) mockDB.pricing = [];
+    
+    // If no pricing plans exist, create default ones
+    if (mockDB.pricing.length === 0) {
+      const defaultPlans = [
+        {
+          _id: `plan_${Date.now()}_1`,
+          name: 'Free',
+          monthlyPrice: 0,
+          yearlyPrice: 0,
+          credits: 5,
+          features: 'Basic access\n5 credits per month\nLimited features',
+          description: 'Perfect for getting started',
+          isPopular: false,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: `plan_${Date.now()}_2`,
+          name: 'Basic',
+          monthlyPrice: 99,
+          yearlyPrice: 990,
+          credits: 100,
+          features: '100 credits per month\nAdvanced search\nPriority support',
+          description: 'Great for small teams',
+          isPopular: false,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: `plan_${Date.now()}_3`,
+          name: 'Premium',
+          monthlyPrice: 750,
+          yearlyPrice: 7500,
+          credits: 500,
+          features: '500 credits per month\nPremium features\nDedicated support\nCustom integrations',
+          description: 'Enterprise-grade solution',
+          isPopular: true,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: `plan_${Date.now()}_4`,
+          name: 'Daily Test (12 days)',
+          monthlyPrice: 12,
+          yearlyPrice: 0,
+          credits: 50,
+          features: '50 credits per day\n12-day trial\nDaily billing',
+          description: 'Perfect for testing our platform',
+          isPopular: false,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+      
+      mockDB.pricing = defaultPlans;
+      
+      // Save to file
+      fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
+      console.log('✅ Created default pricing plans');
+      
+      // Save all data
+      saveDataToFiles('default_pricing_plans_created');
+    }
+    
+    res.json({ plans: mockDB.pricing });
+  } catch (error) {
+    console.error('Error fetching pricing plans:', error);
+    res.status(500).json({ error: 'Failed to fetch pricing plans' });
+  }
+});
+
+app.post('/api/admin/pricing', authenticateToken, async (req, res) => {
+  try {
+    const { name, monthlyPrice, yearlyPrice, credits, features, description, isPopular, isActive } = req.body;
+    
+    if (!name || !monthlyPrice || !credits) {
+      return res.status(400).json({ error: 'Name, monthly price, and credits are required' });
+    }
+    
+    const newPlan = {
+      _id: `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name,
+      monthlyPrice: parseFloat(monthlyPrice),
+      yearlyPrice: yearlyPrice ? parseFloat(yearlyPrice) : 0,
+      credits: parseInt(credits),
+      features: features || '',
+      description: description || '',
+      isPopular: isPopular || false,
+      isActive: isActive !== false,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    if (!mockDB.pricing) mockDB.pricing = [];
+    mockDB.pricing.push(newPlan);
+    
+    // Save to file
+    fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
+    
+    // Save all data
+    saveDataToFiles('pricing_plan_created');
+    
+    res.status(201).json({ success: true, plan: newPlan });
+  } catch (error) {
+    console.error('Error creating pricing plan:', error);
+    res.status(500).json({ error: 'Failed to create pricing plan' });
+  }
+});
+
+app.put('/api/admin/pricing/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, monthlyPrice, yearlyPrice, credits, features, description, isPopular, isActive } = req.body;
+    
+    if (!mockDB.pricing) mockDB.pricing = [];
+    
+    const planIndex = mockDB.pricing.findIndex(plan => plan._id === id);
+    if (planIndex === -1) {
+      return res.status(404).json({ error: 'Pricing plan not found' });
+    }
+    
+    const updatedPlan = {
+      ...mockDB.pricing[planIndex],
+      name: name || mockDB.pricing[planIndex].name,
+      monthlyPrice: monthlyPrice ? parseFloat(monthlyPrice) : mockDB.pricing[planIndex].monthlyPrice,
+      yearlyPrice: yearlyPrice ? parseFloat(yearlyPrice) : mockDB.pricing[planIndex].yearlyPrice,
+      credits: credits ? parseInt(credits) : mockDB.pricing[planIndex].credits,
+      features: features !== undefined ? features : mockDB.pricing[planIndex].features,
+      description: description !== undefined ? description : mockDB.pricing[planIndex].description,
+      isPopular: isPopular !== undefined ? isPopular : mockDB.pricing[planIndex].isPopular,
+      isActive: isActive !== undefined ? isActive : mockDB.pricing[planIndex].isActive,
+      updatedAt: new Date()
+    };
+    
+    mockDB.pricing[planIndex] = updatedPlan;
+    
+    // Save to file
+    fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
+    
+    // Save all data
+    saveDataToFiles('pricing_plan_updated');
+    
+    res.json({ success: true, plan: updatedPlan });
+  } catch (error) {
+    console.error('Error updating pricing plan:', error);
+    res.status(500).json({ error: 'Failed to update pricing plan' });
+  }
+});
+
+app.delete('/api/admin/pricing/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mockDB.pricing) mockDB.pricing = [];
+    
+    const planIndex = mockDB.pricing.findIndex(plan => plan._id === id);
+    if (planIndex === -1) {
+      return res.status(404).json({ error: 'Pricing plan not found' });
+    }
+    
+    // Don't allow deletion of Free plan
+    if (mockDB.pricing[planIndex].name === 'Free') {
+      return res.status(400).json({ error: 'Cannot delete the Free plan' });
+    }
+    
+    mockDB.pricing.splice(planIndex, 1);
+    
+    // Save to file
+    fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
+    
+    // Save all data
+    saveDataToFiles('pricing_plan_deleted');
+    
+    res.json({ success: true, message: 'Pricing plan deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting pricing plan:', error);
+    res.status(500).json({ error: 'Failed to delete pricing plan' });
+  }
+});
+
+// PDF Management Routes
+app.post('/api/admin/pdfs/upload', authenticateToken, pdfUpload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+
+    const { name, description } = req.body;
+    const pdfUrl = `/pdfs/${req.file.filename}`;
+
+    // Save to database
+    const pdfData = {
+      _id: Date.now().toString(),
+      name,
+      description,
+      url: pdfUrl,
+      filename: req.file.filename,
+      uploadedAt: new Date(),
+      uploadedBy: req.user.id
+    };
+
+    // Add to mockDB
+    if (!mockDB.pdfs) mockDB.pdfs = [];
+    mockDB.pdfs.push(pdfData);
+
+    // Save to file
+    fs.writeFileSync(path.join(__dirname, 'data', 'pdfs.json'), JSON.stringify(mockDB.pdfs, null, 2));
+
+    res.json({ message: 'PDF uploaded successfully', pdf: pdfData });
+  } catch (error) {
+    console.error('PDF upload error:', error);
+    res.status(500).json({ error: 'Failed to upload PDF' });
+  }
+});
+
+app.get('/api/admin/pdfs', authenticateToken, async (req, res) => {
+  try {
+    // Initialize pdfs array if it doesn't exist
+    if (!mockDB.pdfs) mockDB.pdfs = [];
+    
+    // Only auto-detect if the database is empty
+    if (mockDB.pdfs.length === 0) {
+      console.log('🔄 PDFs database is empty, auto-detecting from public/pdf folder...');
+      
+      // Auto-detect existing PDFs from public/pdf folder
+      const existingPdfPath = path.join(__dirname, '..', 'public', 'pdf');
+      if (fs.existsSync(existingPdfPath)) {
+        const existingPdfFiles = fs.readdirSync(existingPdfPath).filter(file => file.endsWith('.pdf'));
+        
+        // Add existing PDFs to the database
+        existingPdfFiles.forEach(filename => {
+          const pdfData = {
+            _id: `existing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: filename.replace('.pdf', '').replace(/_/g, ' ').replace(/,/g, ' - '),
+            description: `Existing PDF: ${filename}`,
+            url: `/pdf/${filename}`,
+            filename: filename,
+            uploadedAt: new Date(),
+            uploadedBy: 'system',
+            isExisting: true
+          };
+          mockDB.pdfs.push(pdfData);
+        });
+        
+        // Save updated data
+        fs.writeFileSync(path.join(__dirname, 'data', 'pdfs.json'), JSON.stringify(mockDB.pdfs, null, 2));
+        console.log(`✅ Auto-detected and added ${existingPdfFiles.length} PDFs`);
+      }
+    } else {
+      console.log(`✅ Using existing PDFs database with ${mockDB.pdfs.length} PDFs`);
+    }
+    
+    res.json({ pdfs: mockDB.pdfs });
+  } catch (error) {
+    console.error('Error fetching PDFs:', error);
+    res.status(500).json({ error: 'Failed to fetch PDFs' });
+  }
+});
+
+app.delete('/api/admin/pdfs/:id', authenticateToken, async (req, res) => {
+  try {
+    const pdfId = req.params.id;
+    const pdfIndex = mockDB.pdfs.findIndex(pdf => pdf._id === pdfId);
+    
+    if (pdfIndex === -1) {
+      return res.status(404).json({ error: 'PDF not found' });
+    }
+
+    const pdf = mockDB.pdfs[pdfIndex];
+    
+    // Delete file from server
+    const filePath = path.join(__dirname, '..', 'public', 'pdfs', pdf.filename);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Remove from database
+    mockDB.pdfs.splice(pdfIndex, 1);
+    
+    // Save to file
+    fs.writeFileSync(path.join(__dirname, 'data', 'pdfs.json'), JSON.stringify(mockDB.pdfs, null, 2));
+
+    res.json({ message: 'PDF deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting PDF:', error);
+    res.status(500).json({ error: 'Failed to delete PDF' });
+  }
+});
+
+// PDF Management Routes added successfully
