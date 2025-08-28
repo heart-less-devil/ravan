@@ -89,9 +89,7 @@ app.use((req, res, next) => {
   }
 });
 
-app.use(express.json());
-
-// Webhook for Stripe events - MUST BE BEFORE STATIC FILES
+// Webhook for Stripe events - MUST BE BEFORE express.json() middleware
 app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_ygLySaPSLLs4S4xpWuXWvblGsqA4nhV7';
@@ -284,6 +282,9 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
 
   res.json({ received: true });
 });
+
+// Add express.json() middleware AFTER webhook route
+app.use(express.json());
 
 // Serve static files (PDFs) with enhanced configuration
 app.use('/pdf', express.static(path.join(__dirname, '../public/pdf'), {
