@@ -1302,8 +1302,7 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) 
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get payment status from localStorage (this would normally come from database)
-    // For now, we'll return the basic user info and let frontend handle payment status
+    // Return complete user data including invoices and payment history
     res.json({
       user: {
         email: user.email,
@@ -1313,8 +1312,14 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) 
         lastName: user.lastName,
         company: user.company,
         createdAt: user.createdAt,
-        // Payment info will be handled by frontend localStorage
-        hasPaymentInfo: true // Indicates user can have payment data
+        currentPlan: user.currentPlan || 'free',
+        paymentCompleted: user.paymentCompleted || false,
+        currentCredits: user.currentCredits || 5,
+        invoices: user.invoices || [],
+        paymentHistory: user.paymentHistory || [],
+        lastCreditRenewal: user.lastCreditRenewal,
+        nextCreditRenewal: user.nextCreditRenewal,
+        hasPaymentInfo: true
       }
     });
     
@@ -3777,8 +3782,7 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) 
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get payment status from localStorage (this would normally come from database)
-    // For now, we'll return the basic user info and let frontend handle payment status
+    // Return complete user data including invoices and payment history
     res.json({
       user: {
         email: user.email,
@@ -3788,8 +3792,14 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) 
         lastName: user.lastName,
         company: user.company,
         createdAt: user.createdAt,
-        // Payment info will be handled by frontend localStorage
-        hasPaymentInfo: true // Indicates user can have payment data
+        currentPlan: user.currentPlan || 'free',
+        paymentCompleted: user.paymentCompleted || false,
+        currentCredits: user.currentCredits || 5,
+        invoices: user.invoices || [],
+        paymentHistory: user.paymentHistory || [],
+        lastCreditRenewal: user.lastCreditRenewal,
+        nextCreditRenewal: user.nextCreditRenewal,
+        hasPaymentInfo: true
       }
     });
     
