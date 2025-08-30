@@ -1,42 +1,16 @@
-# GoDaddy .htaccess file for PDF hosting
+# Minimal .htaccess for public directory
+RewriteEngine On
 
-# Enable CORS for PDF files
-<IfModule mod_headers.c>
-    <FilesMatch "\.pdf$">
-        Header set Access-Control-Allow-Origin "*"
-        Header set Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
-        Header set Access-Control-Allow-Headers "Range"
-        Header set X-Frame-Options "SAMEORIGIN"
-        Header set Content-Type "application/pdf"
-        Header set Cache-Control "public, max-age=3600"
-    </FilesMatch>
-</IfModule>
+# Allow all files
+Options +FollowSymLinks
 
-# Force no-cache for HTML, JS, CSS files
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType text/html "access plus 0 seconds"
-    ExpiresByType text/css "access plus 0 seconds"
-    ExpiresByType application/javascript "access plus 0 seconds"
-    ExpiresByType application/pdf "access plus 1 hour"
-</IfModule>
+# Basic SPA routing
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /index.html [QSA,L]
 
-# Handle PDF requests
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    
-    # Serve PDF files with proper headers
-    RewriteRule ^pdf/(.*\.pdf)$ /public/pdf/$1 [L]
-    
-    # Handle API routes
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^api/(.*)$ /server/index.js [L]
-</IfModule>
-
-# Security headers
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-</IfModule> 
+# Allow access to all file types
+<FilesMatch ".*">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
