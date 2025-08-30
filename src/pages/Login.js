@@ -102,6 +102,14 @@ const Login = () => {
         body: JSON.stringify(formData),
       });
 
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
+      }
+
       const data = await response.json();
 
       if (response.ok) {
@@ -125,8 +133,12 @@ const Login = () => {
         setError('Network error: Cannot connect to server. Please check if the server is running. If this persists, please contact support.');
       } else if (err.message.includes('Failed to fetch')) {
         setError('Server is currently unavailable. Please try again in a few minutes.');
+      } else if (err.message.includes('Non-JSON response')) {
+        setError('Server configuration error. Please contact support or try again later.');
+      } else if (err.message.includes('SyntaxError') && err.message.includes('JSON')) {
+        setError('Server returned invalid response. Please contact support.');
       } else {
-        setError('Network error. Please try again.');
+        setError(err.message || 'Network error. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -151,6 +163,14 @@ const Login = () => {
         },
         body: JSON.stringify({ email: forgotEmail }),
       });
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
+      }
 
       const data = await response.json();
 
@@ -204,6 +224,14 @@ const Login = () => {
           newPassword: newPassword
         }),
       });
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
+      }
 
       const data = await response.json();
 

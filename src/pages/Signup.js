@@ -151,6 +151,14 @@ const Signup = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
+      }
+      
       const data = await response.json();
       console.log('API response data:', data);
 
@@ -207,6 +215,14 @@ const Signup = () => {
           code: code 
         })
       });
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
+      }
 
       const data = await response.json();
 
