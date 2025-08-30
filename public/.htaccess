@@ -1,16 +1,30 @@
-# Minimal .htaccess for public directory
+# BioPing Public Directory Configuration
 RewriteEngine On
 
-# Allow all files
-Options +FollowSymLinks
+# Allow access to all files
+Options +FollowSymLinks -Indexes
 
-# Basic SPA routing
+# Handle React Router - redirect all requests to index.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ /index.html [QSA,L]
+
+# Set proper MIME types
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType image/svg+xml .svg
+    AddType application/pdf .pdf
+    AddType application/json .json
+</IfModule>
 
 # Allow access to all file types
 <FilesMatch ".*">
     Order Allow,Deny
     Allow from all
 </FilesMatch>
+
+# Error documents
+ErrorDocument 403 /403.html
+ErrorDocument 404 /404.html
+ErrorDocument 500 /404.html
