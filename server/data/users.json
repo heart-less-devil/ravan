@@ -47,9 +47,9 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 50,
-    "lastCreditRenewal": "2025-08-28T07:06:31.834Z",
-    "nextCreditRenewal": "2025-08-29T07:06:31.834Z",
+    "currentCredits": 0,
+    "lastCreditRenewal": "2025-08-29T12:33:06.244Z",
+    "nextCreditRenewal": "2025-09-28T12:33:06.244Z",
     "company": "Company",
     "invoices": [
       {

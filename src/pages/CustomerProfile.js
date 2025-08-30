@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
+import creditTracker from '../utils/creditTracker';
 
 const CustomerProfile = ({ user: propUser, onBack }) => {
   const [user, setUser] = useState({
@@ -93,118 +94,170 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     company: ''
   });
 
-  // Load user data and payment status
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
+    // Load user data and payment status
+  const loadUserData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
 
-        // Get user profile
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+      // Get user profile
+      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        if (profileData.user) {
+          setUser(prev => ({
+            ...prev,
+            name: profileData.user.name || 'User',
+            email: profileData.user.email || 'user@example.com',
+            company: profileData.user.company || 'Company',
+            role: profileData.user.role || 'User',
+            avatar: (profileData.user.name || 'U').charAt(0).toUpperCase(),
+            joinDate: profileData.user.createdAt || new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+          }));
+        }
+      }
+
+      // Get payment status
+      const paymentResponse = await fetch(`${API_BASE_URL}/api/auth/payment-status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // Get user invoices
+      const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (paymentResponse.ok) {
+        const paymentData = await paymentResponse.json();
+        console.log('Payment data received:', paymentData);
+        
+        // Determine plan based on payment status
+        let planName = 'Free';
+        let planStatus = 'active';
+        let credits = 5;
+        let totalCredits = 5;
+        let subscriptionStatus = 'inactive';
+        let amount = 0;
+        let usedCredits = 0;
+
+        if (paymentData.paymentCompleted && paymentData.currentPlan !== 'free') {
+          planName = paymentData.currentPlan === 'monthly' ? 'Monthly Plan' : 
+                    paymentData.currentPlan === 'annual' ? 'Annual Plan' : 
+                    paymentData.currentPlan === 'test' ? 'Test Plan' : 'Paid Plan';
+          planStatus = 'active';
+          credits = paymentData.currentPlan === 'monthly' ? 50 : 
+                   paymentData.currentPlan === 'annual' ? 100 : 
+                   paymentData.currentPlan === 'test' ? 1 : 5;
+          totalCredits = credits;
+          subscriptionStatus = 'active';
+          amount = paymentData.currentPlan === 'test' ? 1 : 
+                  paymentData.currentPlan === 'monthly' ? 500 : 
+                  paymentData.currentPlan === 'annual' ? 4800 : 0;
+          
+          // Get used credits from localStorage or calculate from usage
+          const existingCredits = localStorage.getItem('userCredits');
+          if (existingCredits) {
+            usedCredits = totalCredits - parseInt(existingCredits);
           }
-        });
-
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          if (profileData.user) {
-            setUser(prev => ({
-              ...prev,
-              name: profileData.user.name || 'User',
-              email: profileData.user.email || 'user@example.com',
-              company: profileData.user.company || 'Company',
-              role: profileData.user.role || 'User',
-              avatar: (profileData.user.name || 'U').charAt(0).toUpperCase(),
-              joinDate: profileData.user.createdAt || new Date().toISOString(),
-              lastLogin: new Date().toISOString()
-            }));
+          
+          // Update localStorage with new credits
+          localStorage.setItem('userCredits', credits.toString());
+        } else {
+          // Free users - get existing credits from localStorage
+          const existingCredits = localStorage.getItem('userCredits');
+          credits = existingCredits ? parseInt(existingCredits) : 5;
+          totalCredits = 5;
+          
+          // Calculate used credits
+          usedCredits = totalCredits - credits;
+          
+          // Only set to 5 if no existing credits (new user)
+          if (!existingCredits) {
+            localStorage.setItem('userCredits', '5');
+            credits = 5;
+            usedCredits = 0;
           }
         }
 
-        // Get payment status
-        const paymentResponse = await fetch(`${API_BASE_URL}/api/auth/payment-status`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        // Get invoices data
+        let invoices = [];
+        if (invoicesResponse.ok) {
+          const invoicesData = await invoicesResponse.json();
+          invoices = invoicesData.data || [];
+          console.log('Invoices data received:', invoices);
+        }
 
-        // Get user invoices
-        const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (paymentResponse.ok) {
-          const paymentData = await paymentResponse.json();
-          
-          // Determine plan based on payment status
-          let planName = 'Free';
-          let planStatus = 'active';
-          let credits = 5;
-          let totalCredits = 5;
-          let subscriptionStatus = 'inactive';
-          let amount = 0;
-
-          if (paymentData.paymentCompleted && paymentData.currentPlan !== 'free') {
-            planName = paymentData.currentPlan === 'monthly' ? 'Monthly Plan' : 
-                      paymentData.currentPlan === 'annual' ? 'Annual Plan' : 
-                      paymentData.currentPlan === 'test' ? 'Test Plan' : 'Paid Plan';
-            planStatus = 'active';
-            credits = paymentData.currentPlan === 'monthly' ? 50 : 
-                     paymentData.currentPlan === 'annual' ? 100 : 
-                     paymentData.currentPlan === 'test' ? 1 : 5;
-            totalCredits = credits;
-            subscriptionStatus = 'active';
-            amount = paymentData.currentPlan === 'monthly' ? 500 : 
-                    paymentData.currentPlan === 'annual' ? 4800 : 
-                    paymentData.currentPlan === 'test' ? 1 : 0;
-            
-            // Update localStorage with new credits
-            localStorage.setItem('userCredits', credits.toString());
-          } else {
-            // Free users - don't reset credits, keep existing credits
-            const existingCredits = localStorage.getItem('userCredits');
-            credits = existingCredits ? parseInt(existingCredits) : 5;
-            totalCredits = 5;
-            // Only set to 5 if no existing credits (new user)
-            if (!existingCredits) {
-              localStorage.setItem('userCredits', '5');
-            }
-          }
-
-          // Get invoices data
-          let invoices = [];
-          if (invoicesResponse.ok) {
-            const invoicesData = await invoicesResponse.json();
-            invoices = invoicesData.data || [];
-          }
-
-          setUser(prev => ({
-            ...prev,
-            plan: planName,
-            planStatus: planStatus,
-            credits: credits,
-            totalCredits: totalCredits,
-            invoices: invoices,
-            subscription: {
-              ...prev.subscription,
-              status: subscriptionStatus,
-              amount: amount
-            }
+        // Get payment history from invoices
+        let paymentHistory = [];
+        if (invoices && invoices.length > 0) {
+          paymentHistory = invoices.map(invoice => ({
+            id: invoice.id,
+            amount: invoice.amount,
+            currency: invoice.currency || 'USD',
+            date: invoice.date,
+            description: invoice.description || 'Plan subscription',
+            status: invoice.status
           }));
         }
 
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        setLoading(false);
+        setUser(prev => ({
+          ...prev,
+          plan: planName,
+          planStatus: planStatus,
+          credits: credits,
+          totalCredits: totalCredits,
+          usedCredits: usedCredits,
+          invoices: invoices,
+          paymentHistory: paymentHistory,
+          subscription: {
+            ...prev.subscription,
+            status: subscriptionStatus,
+            amount: amount
+          }
+        }));
       }
-    };
 
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadUserData();
+    
+    // Set up credit tracker listener
+    const handleCreditChange = (newCredits) => {
+      setUser(prev => ({
+        ...prev,
+        credits: newCredits,
+        usedCredits: prev.totalCredits - newCredits
+      }));
+    };
+    
+    creditTracker.addListener(handleCreditChange);
+    
+    // Set up periodic credit sync every 5 seconds
+    const creditSyncInterval = setInterval(() => {
+      syncCredits();
+    }, 5000);
+    
+    // Cleanup on component unmount
+    return () => {
+      clearInterval(creditSyncInterval);
+      creditTracker.removeListener(handleCreditChange);
+    };
   }, []);
 
   const tabs = [
@@ -277,7 +330,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `invoice-${invoice.id}.txt`;
+        a.download = `invoice-${invoice.id}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -288,6 +341,34 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     } catch (error) {
       console.error('Error downloading invoice:', error);
       alert('Error downloading invoice. Please try again.');
+    }
+  };
+
+  const handleDownloadAllInvoices = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/auth/download-all-invoices`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `all-invoices-${user.email}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to download all invoices. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error downloading all invoices:', error);
+      alert('Error downloading all invoices. Please try again.');
     }
   };
 
@@ -356,6 +437,42 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     window.location.href = '/dashboard/pricing';
   };
 
+  // Function to update credits when they are used
+  const updateCredits = (creditsUsed) => {
+    const currentCredits = parseInt(localStorage.getItem('userCredits') || '5');
+    const newCredits = Math.max(0, currentCredits - creditsUsed);
+    localStorage.setItem('userCredits', newCredits.toString());
+    
+    setUser(prev => ({
+      ...prev,
+      credits: newCredits,
+      usedCredits: prev.totalCredits - newCredits
+    }));
+    
+    console.log(`Credits updated: ${creditsUsed} used, ${newCredits} remaining`);
+  };
+
+  // Function to get current credits from localStorage
+  const getCurrentCredits = () => {
+    return parseInt(localStorage.getItem('userCredits') || '5');
+  };
+
+  // Function to sync credits with localStorage
+  const syncCredits = () => {
+    const currentCredits = getCurrentCredits();
+    setUser(prev => ({
+      ...prev,
+      credits: currentCredits,
+      usedCredits: prev.totalCredits - currentCredits
+    }));
+  };
+
+  // Function to refresh user data
+  const refreshUserData = () => {
+    // Reload user data from API
+    loadUserData();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -370,15 +487,24 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={onBack}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-            </div>
+                         <div className="flex items-center space-x-4">
+               <button
+                 onClick={onBack}
+                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+               >
+                 <ArrowLeft className="w-5 h-5" />
+               </button>
+               <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+             </div>
+             <div className="flex items-center space-x-2">
+               <button
+                 onClick={refreshUserData}
+                 className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                 title="Refresh Profile Data"
+               >
+                 <RefreshCw className="w-5 h-5" />
+               </button>
+             </div>
           </div>
         </div>
       </div>
@@ -412,9 +538,16 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                     })}
                     <span className="font-semibold text-gray-900">{user.plan}</span>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {user.credits} credits remaining
-                  </div>
+                                     <div className="text-sm text-gray-600">
+                     {user.credits} credits remaining
+                   </div>
+                   <button
+                     onClick={syncCredits}
+                     className="text-xs text-blue-600 hover:text-blue-700 mt-1 flex items-center space-x-1"
+                   >
+                     <RefreshCw className="w-3 h-3" />
+                     <span>Sync</span>
+                   </button>
                 </div>
               </div>
 
@@ -451,17 +584,24 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                 >
                   {/* Stats Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-2xl shadow-lg p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Credits Used</p>
-                          <p className="text-2xl font-bold text-gray-900">{user.usedCredits}/{user.totalCredits}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Database className="w-6 h-6 text-blue-600" />
-                        </div>
-                      </div>
-                    </div>
+                                         <div className="bg-white rounded-2xl shadow-lg p-6">
+                       <div className="flex items-center justify-between">
+                         <div>
+                           <p className="text-sm font-medium text-gray-600">Credits Used</p>
+                           <p className="text-2xl font-bold text-gray-900">{user.usedCredits}/{user.totalCredits}</p>
+                           <button
+                             onClick={syncCredits}
+                             className="text-xs text-blue-600 hover:text-blue-700 mt-1 flex items-center space-x-1"
+                           >
+                             <RefreshCw className="w-3 h-3" />
+                             <span>Sync Credits</span>
+                           </button>
+                         </div>
+                         <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                           <Database className="w-6 h-6 text-blue-600" />
+                         </div>
+                       </div>
+                     </div>
 
                     <div className="bg-white rounded-2xl shadow-lg p-6">
                       <div className="flex items-center justify-between">
@@ -643,42 +783,65 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                   exit={{ opacity: 0, y: -20 }}
                   className="space-y-6"
                 >
-                  <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Payment History</h3>
-                    <div className="space-y-4">
-                      {user.paymentHistory && user.paymentHistory.length > 0 ? (
-                        user.paymentHistory.map((payment) => (
-                          <div key={payment.id} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-4">
-                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                  <CheckCircle className="w-5 h-5 text-green-600" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-900">{payment.description}</p>
-                                  <p className="text-sm text-gray-600">Transaction ID: {payment.id}</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold text-gray-900">
-                                  {formatCurrency(payment.amount, payment.currency)}
-                                </p>
-                                <p className="text-sm text-gray-600">{formatDate(payment.date)}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                            <CreditCard className="w-8 h-8 text-gray-400" />
-                          </div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">No Payment History</h3>
-                          <p className="text-gray-600">You haven't made any payments yet.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                                     <div className="bg-white rounded-2xl shadow-lg p-6">
+                     <div className="flex items-center justify-between mb-6">
+                       <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
+                       <button
+                         onClick={refreshUserData}
+                         className="text-sm text-primary-600 hover:text-primary-700 flex items-center space-x-1"
+                       >
+                         <RefreshCw className="w-4 h-4" />
+                         <span>Refresh</span>
+                       </button>
+                     </div>
+                     <div className="space-y-4">
+                       {user.paymentHistory && user.paymentHistory.length > 0 ? (
+                         user.paymentHistory.map((payment) => (
+                           <div key={payment.id} className="border border-gray-200 rounded-lg p-4">
+                             <div className="flex items-center justify-between">
+                               <div className="flex items-center space-x-4">
+                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                                   payment.status === 'paid' ? 'bg-green-100' : 'bg-yellow-100'
+                                 }`}>
+                                   {payment.status === 'paid' ? (
+                                     <CheckCircle className="w-5 h-5 text-green-600" />
+                                   ) : (
+                                     <Clock className="w-5 h-5 text-yellow-600" />
+                                   )}
+                                 </div>
+                                 <div>
+                                   <p className="font-medium text-gray-900">{payment.description}</p>
+                                   <p className="text-sm text-gray-600">Invoice ID: {payment.id}</p>
+                                   <p className="text-xs text-gray-500 capitalize">Status: {payment.status}</p>
+                                 </div>
+                               </div>
+                               <div className="text-right">
+                                 <p className="font-semibold text-gray-900">
+                                   {formatCurrency(payment.amount, payment.currency)}
+                                 </p>
+                                 <p className="text-sm text-gray-600">{formatDate(payment.date)}</p>
+                               </div>
+                             </div>
+                           </div>
+                         ))
+                       ) : (
+                         <div className="text-center py-8">
+                           <div className="w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                             <CreditCard className="w-8 h-8 text-gray-400" />
+                           </div>
+                           <h3 className="text-lg font-medium text-gray-900 mb-2">No Payment History</h3>
+                           <p className="text-gray-600">You haven't made any payments yet.</p>
+                           <button
+                             onClick={refreshUserData}
+                             className="mt-4 text-sm text-primary-600 hover:text-primary-700 flex items-center space-x-1 mx-auto"
+                           >
+                             <RefreshCw className="w-4 h-4" />
+                             <span>Check for Updates</span>
+                           </button>
+                         </div>
+                       )}
+                     </div>
+                   </div>
                 </motion.div>
               )}
 
@@ -691,7 +854,18 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                   className="space-y-6"
                 >
                   <div className="bg-white rounded-2xl shadow-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Invoices</h3>
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900">Invoices</h3>
+                      {user.invoices && user.invoices.length > 0 && (
+                        <button
+                          onClick={handleDownloadAllInvoices}
+                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <DownloadIcon className="w-4 h-4" />
+                          <span>Download All</span>
+                        </button>
+                      )}
+                    </div>
                     <div className="space-y-4">
                       {user.invoices && user.invoices.length > 0 ? (
                         user.invoices.map((invoice) => (

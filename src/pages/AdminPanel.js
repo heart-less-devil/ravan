@@ -17,7 +17,11 @@ import {
   BarChart3,
   DollarSign,
   RefreshCw,
-  Mail
+  Mail,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  X
 } from 'lucide-react';
 import { API_BASE_URL, ADMIN_API_BASE_URL } from '../config';
 
@@ -43,6 +47,15 @@ const AdminPanel = () => {
   const [consultingSessions, setConsultingSessions] = useState([]);
   const [contactSubmissions, setContactSubmissions] = useState([]);
   const [showPasswords, setShowPasswords] = useState(false);
+  
+  // User Management State
+  const [suspensionModal, setSuspensionModal] = useState(false);
+  const [selectedUserForSuspension, setSelectedUserForSuspension] = useState(null);
+  const [suspensionForm, setSuspensionForm] = useState({
+    reason: '',
+    duration: '1',
+    customDate: ''
+  });
 
   useEffect(() => {
     // Load data from backend
@@ -345,6 +358,121 @@ const AdminPanel = () => {
     const updatedData = uploadedData.filter(item => item.id !== id);
     setUploadedData(updatedData);
     calculateStats(updatedData);
+  };
+
+  // User Management Functions
+  const openSuspensionModal = (user) => {
+    setSelectedUserForSuspension(user);
+    setSuspensionForm({
+      reason: '',
+      duration: '1',
+      customDate: ''
+    });
+    setSuspensionModal(true);
+  };
+
+  const closeSuspensionModal = () => {
+    setSuspensionModal(false);
+    setSelectedUserForSuspension(null);
+    setSuspensionForm({
+      reason: '',
+      duration: '1',
+      customDate: ''
+    });
+  };
+
+  const handleSuspensionSubmit = async () => {
+    try {
+      if (!suspensionForm.reason) {
+        alert('Please provide a reason for suspension');
+        return;
+      }
+
+      let suspendUntil;
+      if (suspensionForm.duration === 'custom') {
+        suspendUntil = suspensionForm.customDate;
+      } else {
+        const duration = parseInt(suspensionForm.duration);
+        const now = new Date();
+        suspendUntil = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000)).toISOString();
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/suspend-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: selectedUserForSuspension.id,
+          reason: suspensionForm.reason,
+          suspendUntil: suspendUntil,
+          duration: suspensionForm.duration === 'custom' ? 'custom' : `${suspensionForm.duration} days`
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert('User suspended successfully');
+        closeSuspensionModal();
+        fetchUsers(); // Refresh user list
+      } else {
+        const error = await response.json();
+        alert(`Failed to suspend user: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error suspending user:', error);
+      alert('Error suspending user');
+    }
+  };
+
+  const handleUnsuspendUser = async (userId) => {
+    try {
+      if (!window.confirm('Are you sure you want to unsuspend this user?')) {
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/unsuspend-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (response.ok) {
+        alert('User unsuspended successfully');
+        fetchUsers(); // Refresh user list
+      } else {
+        const error = await response.json();
+        alert(`Failed to unsuspend user: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error unsuspending user:', error);
+      alert('Error unsuspending user');
+    }
+  };
+
+  const getSuspensionStatus = (user) => {
+    if (!user.suspended) return null;
+    
+    const now = new Date();
+    const suspendUntil = new Date(user.suspended.suspendedUntil);
+    
+    if (now < suspendUntil) {
+      return {
+        status: 'suspended',
+        timeRemaining: Math.ceil((suspendUntil - now) / (24 * 60 * 60 * 1000))
+      };
+    } else {
+      return {
+        status: 'expired',
+        timeRemaining: 0
+      };
+    }
   };
 
   const refreshData = async () => {
@@ -685,7 +813,8 @@ Created: ${new Date(session.createdAt).toLocaleString()}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 shadow-2xl border border-emerald-400/20 backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200"
+            className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 shadow-2xl border bo
+            rder-emerald-400/20 backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200"
             onClick={() => navigate('/dashboard/pricing-management')}
           >
             <div className="flex items-center justify-between">
@@ -762,6 +891,7 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                 { id: 'upload', name: 'Upload Data', icon: Upload },
                 { id: 'manage', name: 'Manage Data', icon: FileText },
                 { id: 'users', name: 'Users', icon: Users },
+                { id: 'user-management', name: 'User Management', icon: Users },
                 { id: 'activity', name: 'User Activity', icon: BarChart3 },
                 { id: 'trials', name: 'Trial Data', icon: RefreshCw },
                 { id: 'customers', name: 'Potential Customers', icon: Users },
@@ -1298,6 +1428,170 @@ Created: ${new Date(session.createdAt).toLocaleString()}
               </motion.div>
             )}
 
+            {activeTab === 'user-management' && (
+              <motion.div
+                key="user-management"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={refreshData}
+                        className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Refresh
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Test suspension with a quick 1-minute suspension
+                          const testUser = users.find(u => u.role !== 'admin');
+                          if (testUser) {
+                            setSelectedUserForSuspension(testUser);
+                            setSuspensionForm({
+                              reason: 'Test suspension - 1 minute',
+                              duration: 'custom',
+                              customDate: new Date(Date.now() + 60000).toISOString().slice(0, 16)
+                            });
+                            setSuspensionModal(true);
+                          } else {
+                            alert('No non-admin users found to test with');
+                          }
+                        }}
+                        className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg hover:bg-orange-700"
+                      >
+                        <AlertTriangle className="w-4 h-4" />
+                        Test Suspension (1 min)
+                      </button>
+                    </div>
+                  </div>
+
+                  {users.length > 0 ? (
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                User
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Email
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Role
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {users.map((user) => {
+                              const suspensionStatus = getSuspensionStatus(user);
+                              return (
+                                <tr key={user.id}>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span className="text-sm font-medium text-blue-600">
+                                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                        </span>
+                                      </div>
+                                      <div className="ml-3">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {user.name || 'Unknown'}
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                          ID: {user.id}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {user.email}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      user.role === 'admin' 
+                                        ? 'bg-purple-100 text-purple-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {user.role}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    {suspensionStatus ? (
+                                      <div className="flex items-center space-x-2">
+                                        {suspensionStatus.status === 'suspended' ? (
+                                          <>
+                                            <AlertTriangle className="w-4 h-4 text-red-500" />
+                                            <span className="text-sm text-red-600 font-medium">
+                                              Suspended ({suspensionStatus.timeRemaining} days left)
+                                            </span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Clock className="w-4 h-4 text-yellow-500" />
+                                            <span className="text-sm text-yellow-600 font-medium">
+                                              Suspension Expired
+                                            </span>
+                                          </>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center space-x-2">
+                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                        <span className="text-sm text-green-600 font-medium">Active</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div className="flex items-center space-x-2">
+                                      {suspensionStatus && suspensionStatus.status === 'suspended' ? (
+                                        <button
+                                          onClick={() => handleUnsuspendUser(user.id)}
+                                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
+                                        >
+                                          <CheckCircle className="w-3 h-3 mr-1" />
+                                          Unsuspend
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => openSuspensionModal(user)}
+                                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
+                                        >
+                                          <AlertTriangle className="w-3 h-3 mr-1" />
+                                          Suspend
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Users Found</h3>
+                      <p className="text-gray-500">No users are currently registered in the system.</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'contacts' && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -1418,6 +1712,91 @@ Created: ${new Date(session.createdAt).toLocaleString()}
           </div>
         </div>
       </div>
+
+      {/* Suspension Modal */}
+      {suspensionModal && selectedUserForSuspension && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Suspend User: {selectedUserForSuspension.name || selectedUserForSuspension.email}
+                </h3>
+                <button
+                  onClick={closeSuspensionModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for Suspension *
+                  </label>
+                  <textarea
+                    value={suspensionForm.reason}
+                    onChange={(e) => setSuspensionForm(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="Enter reason for suspension..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Suspension Duration
+                  </label>
+                  <select
+                    value={suspensionForm.duration}
+                    onChange={(e) => setSuspensionForm(prev => ({ ...prev, duration: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="1">1 Day</option>
+                    <option value="3">3 Days</option>
+                    <option value="7">1 Week</option>
+                    <option value="30">1 Month</option>
+                    <option value="90">3 Months</option>
+                    <option value="custom">Custom Date</option>
+                  </select>
+                </div>
+
+                {suspensionForm.duration === 'custom' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Custom End Date
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={suspensionForm.customDate}
+                      onChange={(e) => setSuspensionForm(prev => ({ ...prev, customDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end space-x-3 pt-4">
+                  <button
+                    onClick={closeSuspensionModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSuspensionSubmit}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700"
+                  >
+                    Suspend User
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

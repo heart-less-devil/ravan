@@ -6,7 +6,7 @@ import SecurePDFViewer from '../components/SecurePDFViewer';
 import BDTrackerPage from './BDTrackerPage';
 import QuickGuide from './QuickGuide';
 import BDInsights from './BDInsights';
-import StripePayment from '../components/StripePayment';
+// StripePayment will be imported dynamically when needed
 import { 
   Grid, 
   Search, 
@@ -38,6 +38,7 @@ import {
   Share2,
   Plus,
   ArrowRight,
+  ArrowLeft,
   CheckCircle,
   AlertCircle,
   Activity,
@@ -70,6 +71,7 @@ import {
 import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
 import CustomerProfile from './CustomerProfile';
+import SuspensionNotice from '../components/SuspensionNotice';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -89,8 +91,46 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [daysRemaining, setDaysRemaining] = useState(3);
   const [showError, setShowError] = useState(false);
+  const [suspensionData, setSuspensionData] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Check for user suspension
+  const checkUserSuspension = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      console.log('🔍 Checking user suspension status...');
+      
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('📡 Suspension check response status:', response.status);
+
+      if (response.status === 403) {
+        const errorData = await response.json();
+        console.log('🚫 Suspension check error data:', errorData);
+        
+        if (errorData.message === 'Account suspended' && errorData.suspended) {
+          console.log('🚨 User is suspended! Setting suspension data:', errorData.suspended);
+          setSuspensionData(errorData.suspended);
+        }
+      } else if (response.ok) {
+        console.log('✅ User is not suspended');
+        // User is not suspended, clear any existing suspension data
+        if (suspensionData) {
+          console.log('🧹 Clearing existing suspension data');
+          setSuspensionData(null);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error checking suspension:', error);
+    }
+  };
 
   useEffect(() => {
     // Check if user is logged in
@@ -123,6 +163,21 @@ const Dashboard = () => {
     const paymentCompleted = localStorage.getItem('paymentCompleted');
     const userCurrentPlan = localStorage.getItem('userCurrentPlan');
     
+    // Check for user suspension immediately and then periodically
+    checkUserSuspension();
+    
+    // Set up periodic suspension check (every 30 seconds)
+    const suspensionInterval = setInterval(checkUserSuspension, 30000);
+    
+    // Also check suspension when user tries to access protected features
+    const checkSuspensionOnAction = () => {
+      checkUserSuspension();
+    };
+    
+    // Add event listeners for user actions
+    document.addEventListener('click', checkSuspensionOnAction);
+    document.addEventListener('keydown', checkSuspensionOnAction);
+    
     // Debug: Log the payment status
     console.log('Payment Status Debug:', {
       paymentCompleted,
@@ -130,6 +185,13 @@ const Dashboard = () => {
       hasPaid: paymentCompleted === 'true' && userCurrentPlan && userCurrentPlan !== 'free',
       currentPlan: userCurrentPlan || 'free'
     });
+    
+    // Cleanup interval and event listeners on component unmount
+    return () => {
+      clearInterval(suspensionInterval);
+      document.removeEventListener('click', checkSuspensionOnAction);
+      document.removeEventListener('keydown', checkSuspensionOnAction);
+    };
     
     // Store payment status for conditional rendering
     setUserPaymentStatus({
@@ -379,6 +441,7 @@ const Dashboard = () => {
   };
 
   const handleSettingsClick = () => {
+    console.log('Profile button clicked, opening profile...');
     setShowCustomerProfile(true);
   };
 
@@ -386,8 +449,24 @@ const Dashboard = () => {
     setShowCustomerProfile(false);
   };
 
+  // Auto-close profile when navigating to other pages (but not when opening profile)
+  useEffect(() => {
+    // Only close profile if we're navigating away from dashboard pages entirely
+    // Don't close when just switching between dashboard sub-pages
+    if (showCustomerProfile && !location.pathname.startsWith('/dashboard')) {
+      setShowCustomerProfile(false);
+    }
+  }, [location.pathname, showCustomerProfile]);
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
+    
+    // Check for suspension before allowing search
+    await checkUserSuspension();
+    if (suspensionData) {
+      setError('Your account is suspended. Please contact support.');
+      return;
+    }
     
     setSearchLoading(true);
     setError(null); // Clear any previous errors
@@ -507,6 +586,30 @@ const Dashboard = () => {
       case '/dashboard':
         return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} />;
       case '/dashboard/search':
+        // Check for suspension before allowing access to Search
+        if (suspensionData) {
+          return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-red-100">
+              <div className="text-center p-8 bg-white rounded-2xl shadow-lg border border-red-200">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-red-800 mb-2">Access Restricted</h2>
+                <p className="text-red-600 mb-4">Your account is currently suspended.</p>
+                <p className="text-sm text-gray-600 mb-6">
+                  Reason: {suspensionData.reason}<br/>
+                  Suspended until: {new Date(suspensionData.suspendedUntil).toLocaleString()}
+                </p>
+                <button
+                  onClick={() => checkUserSuspension()}
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Check Status
+                </button>
+              </div>
+            </div>
+          );
+        }
         return <SearchPage 
           searchType={searchType} 
           useCredit={consumeCredit} 
@@ -515,6 +618,30 @@ const Dashboard = () => {
           setGlobalSearchResults={setGlobalSearchResults}
         />;
       case '/dashboard/bd-tracker':
+        // Check for suspension before allowing access to BD Tracker
+        if (suspensionData) {
+          return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-red-100">
+              <div className="text-center p-8 bg-white rounded-2xl shadow-lg border border-red-200">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-red-800 mb-2">Access Restricted</h2>
+                <p className="text-red-600 mb-4">Your account is currently suspended.</p>
+                <p className="text-sm text-gray-600 mb-6">
+                  Reason: {suspensionData.reason}<br/>
+                  Suspended until: {new Date(suspensionData.suspendedUntil).toLocaleString()}
+                </p>
+                <button
+                  onClick={() => checkUserSuspension()}
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Check Status
+                </button>
+              </div>
+            </div>
+          );
+        }
         return <BDTrackerPage />;
 
       case '/dashboard/resources/definitions':
@@ -531,6 +658,8 @@ const Dashboard = () => {
         return <Contact />;
       case '/dashboard/pricing':
         return <PricingPage />;
+      case '/dashboard/pricing-management':
+        return <PricingManagementPage />;
           
       default:
         return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} />;
@@ -550,6 +679,14 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+      {/* Suspension Notice */}
+      {suspensionData && (
+        <SuspensionNotice 
+          suspension={suspensionData} 
+          onClose={() => setSuspensionData(null)}
+        />
+      )}
+      
       {/* Enhanced Sidebar */}
       <motion.div 
         className={`bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white transition-all duration-500 overflow-y-auto ${
@@ -618,6 +755,11 @@ const Dashboard = () => {
                       key={item.name}
                       to={item.path}
                       onClick={(e) => {
+                        // Close profile when navigating to any page
+                        if (showCustomerProfile) {
+                          setShowCustomerProfile(false);
+                        }
+                        
                         if (item.path === '/dashboard/search' && location.pathname === '/dashboard/search') {
                           e.preventDefault();
                           const version = Date.now();
@@ -735,9 +877,11 @@ const Dashboard = () => {
               <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
                   <motion.div 
-                    className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg"
+                    className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg cursor-pointer"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    onClick={handleSettingsClick}
+                    title="Open Profile"
                   >
                     <span className="text-white font-bold text-xl">{user.name?.charAt(0).toUpperCase() || 'U'}</span>
                   </motion.div>
@@ -778,6 +922,8 @@ const Dashboard = () => {
               ) : (
                 renderContent()
               )}
+              {/* Debug info */}
+              {console.log('showCustomerProfile state:', showCustomerProfile)}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -3228,10 +3374,23 @@ const PricingPage = () => {
   const [isAnnual, setIsAnnual] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
+  const [StripePaymentComponent, setStripePaymentComponent] = useState(null);
   const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
     // Get user's current plan from localStorage or default to 'free'
     return localStorage.getItem('userCurrentPlan') || 'free';
   });
+
+  // Dynamically load StripePayment component when needed
+  const loadStripePayment = async () => {
+    if (!StripePaymentComponent) {
+      try {
+        const { default: StripePayment } = await import('../components/StripePayment');
+        setStripePaymentComponent(() => StripePayment);
+      } catch (error) {
+        console.error('Failed to load StripePayment component:', error);
+      }
+    }
+  };
 
   const plans = [
     {
@@ -3338,13 +3497,15 @@ const PricingPage = () => {
     }
   ];
 
-  const handleSelectPlan = (plan) => {
+  const handleSelectPlan = async (plan) => {
     if (plan.id === 'free') {
       // Handle free plan
       setPaymentStatus('Free plan activated!');
       return;
     }
     
+    // Load StripePayment component dynamically before showing payment modal
+    await loadStripePayment();
     setSelectedPlan(plan);
     setShowPayment(true);
   };
@@ -3582,8 +3743,8 @@ const PricingPage = () => {
       </div>
 
       {/* Payment Modal */}
-      {showPayment && selectedPlan && (
-        <StripePayment
+      {showPayment && selectedPlan && StripePaymentComponent && (
+        <StripePaymentComponent
           plan={selectedPlan}
           isAnnual={isAnnual}
           onSuccess={handlePaymentSuccess}
@@ -4327,6 +4488,377 @@ const PricingAnalyticsPage = () => {
           ))}
         </div>
       </div>
+    </div>
+  );
+};
+
+// Pricing Management Page Component
+const PricingManagementPage = () => {
+  const navigate = useNavigate();
+  const [pricingPlans, setPricingPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    credits: '',
+    monthlyPrice: '',
+    annualPrice: '',
+    features: ''
+  });
+
+  useEffect(() => {
+    fetchPricingPlans();
+  }, []);
+
+  const fetchPricingPlans = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPricingPlans(data.pricingPlans || []);
+        setError(null);
+      } else {
+        throw new Error('Failed to fetch pricing plans');
+      }
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const url = editingPlan 
+        ? `${API_BASE_URL}/api/admin/pricing-plans/${editingPlan._id}`
+        : `${API_BASE_URL}/api/admin/pricing-plans`;
+      
+      const method = editingPlan ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...formData,
+          features: formData.features.split(',').map(f => f.trim()).filter(f => f)
+        })
+      });
+
+      if (response.ok) {
+        await fetchPricingPlans();
+        setShowAddModal(false);
+        setEditingPlan(null);
+        setFormData({
+          name: '',
+          description: '',
+          credits: '',
+          monthlyPrice: '',
+          annualPrice: '',
+          features: ''
+        });
+        setError(null);
+      } else {
+        throw new Error('Failed to save pricing plan');
+      }
+    } catch (error) {
+      console.error('Error saving pricing plan:', error);
+      setError(error.message);
+    }
+  };
+
+  const handleDelete = async (planId) => {
+    if (!window.confirm('Are you sure you want to delete this pricing plan?')) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans/${planId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        await fetchPricingPlans();
+        setError(null);
+      } else {
+        throw new Error('Failed to delete pricing plan');
+      }
+    } catch (error) {
+      console.error('Error deleting pricing plan:', error);
+      setError(error.message);
+    }
+  };
+
+  const handleEdit = (plan) => {
+    setEditingPlan(plan);
+    setFormData({
+      name: plan.name,
+      description: plan.description,
+      credits: plan.credits.toString(),
+      monthlyPrice: plan.monthlyPrice.toString(),
+      annualPrice: plan.annualPrice.toString(),
+      features: plan.features.join(', ')
+    });
+    setShowAddModal(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading pricing plans...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/dashboard/admin-panel')}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <div className="flex items-center space-x-3">
+                <DollarSign className="w-8 h-8 text-green-600" />
+                <h1 className="text-2xl font-bold text-gray-900">Pricing Management</h1>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add New Pricing Plan</span>
+              </button>
+              <button
+                onClick={() => navigate('/dashboard/admin-panel')}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                ← Back to Admin Panel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Pricing Plans List */}
+        {pricingPlans.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-12 text-center">
+            <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Pricing Plans Yet</h3>
+            <p className="text-gray-500 mb-6">Get started by creating your first pricing plan</p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Create First Plan
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pricingPlans.map((plan) => (
+              <div key={plan._id} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    plan.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {plan.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                
+                <p className="text-gray-600 mb-4">{plan.description}</p>
+                
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Credits:</span>
+                    <span className="text-sm font-medium">{plan.credits}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Monthly:</span>
+                    <span className="text-sm font-medium">${plan.monthlyPrice}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Annual:</span>
+                    <span className="text-sm font-medium">${plan.annualPrice}</span>
+                  </div>
+                </div>
+                
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Features:</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center">
+                        <CheckCircle className="w-3 h-3 text-green-500 mr-2" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEdit(plan)}
+                    className="flex-1 bg-blue-100 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(plan._id)}
+                    className="flex-1 bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {editingPlan ? 'Edit Pricing Plan' : 'Add New Pricing Plan'}
+            </h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows="2"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
+                <input
+                  type="number"
+                  value={formData.credits}
+                  onChange={(e) => setFormData({ ...formData, credits: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Price ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.monthlyPrice}
+                  onChange={(e) => setFormData({ ...formData, monthlyPrice: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Annual Price ($)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formData.annualPrice}
+                  onChange={(e) => setFormData({ ...formData, annualPrice: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Features (comma-separated)</label>
+                <textarea
+                  value={formData.features}
+                  onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows="3"
+                  placeholder="Feature 1, Feature 2, Feature 3"
+                />
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {editingPlan ? 'Update Plan' : 'Create Plan'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingPlan(null);
+                    setFormData({
+                      name: '',
+                      description: '',
+                      credits: '',
+                      monthlyPrice: '',
+                      annualPrice: '',
+                      features: ''
+                    });
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

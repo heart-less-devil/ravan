@@ -11,6 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const PDFManagement = () => {
   const navigate = useNavigate();
@@ -28,17 +29,25 @@ const PDFManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/pdfs', {
+      console.log('🔍 Fetching PDFs from:', `${API_BASE_URL}/api/admin/pdfs`);
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('📡 PDF API Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📄 PDFs data received:', data);
         setPdfs(data.pdfs || []);
+        setError(null);
       } else {
-        throw new Error('Failed to fetch PDFs');
+        const errorText = await response.text();
+        console.error('❌ PDF API Error:', errorText);
+        throw new Error(`Failed to fetch PDFs: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error fetching PDFs:', error);
@@ -50,17 +59,32 @@ const PDFManagement = () => {
 
   const handlePdfUpload = async (e) => {
     e.preventDefault();
-    if (!newPdf.file || !newPdf.name) return;
+    console.log('📤 Upload attempt:', { file: newPdf.file, name: newPdf.name, description: newPdf.description });
+    
+    if (!newPdf.file || !newPdf.name) {
+      console.log('❌ Validation failed:', { hasFile: !!newPdf.file, hasName: !!newPdf.name });
+      setError('Please select a PDF file and enter a name');
+      return;
+    }
 
     setIsUploading(true);
     const formData = new FormData();
     formData.append('name', newPdf.name);
     formData.append('description', newPdf.description);
     formData.append('pdf', newPdf.file);
+    
+    console.log('📋 FormData prepared:', {
+      name: newPdf.name,
+      description: newPdf.description,
+      file: newPdf.file.name,
+      fileSize: newPdf.file.size
+    });
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/admin/pdfs/upload', {
+      console.log('🌐 Making API call to:', `${API_BASE_URL}/api/admin/pdfs/upload`);
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -68,13 +92,23 @@ const PDFManagement = () => {
         body: formData
       });
 
+      console.log('📡 API Response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Upload successful:', result);
         setNewPdf({ name: '', description: '', file: null });
         await fetchPdfs();
+        // Refresh BD Insights if available
+        if (window.refreshBDInsights) {
+          window.refreshBDInsights();
+        }
         // Show success message
         setError(null);
       } else {
-        throw new Error('Failed to upload PDF');
+        const errorText = await response.text();
+        console.error('❌ Upload failed:', response.status, errorText);
+        throw new Error(`Failed to upload PDF: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error uploading PDF:', error);
@@ -89,7 +123,7 @@ const PDFManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/admin/pdfs/${pdfId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs/${pdfId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -98,6 +132,10 @@ const PDFManagement = () => {
 
       if (response.ok) {
         await fetchPdfs();
+        // Refresh BD Insights if available
+        if (window.refreshBDInsights) {
+          window.refreshBDInsights();
+        }
         setError(null);
       } else {
         throw new Error('Failed to delete PDF');
@@ -228,7 +266,11 @@ const PDFManagement = () => {
                       type="file"
                       id="pdfFile"
                       accept=".pdf"
-                      onChange={(e) => setNewPdf({ ...newPdf, file: e.target.files[0] })}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        console.log('📁 File selected:', file);
+                        setNewPdf({ ...newPdf, file: file });
+                      }}
                       className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
                       required
                     />
@@ -338,15 +380,13 @@ const PDFManagement = () => {
                               <Eye className="w-3.5 h-3.5 mr-1" />
                               View
                             </a>
-                            {!pdf.isExisting && (
-                              <button
-                                onClick={() => handlePdfDelete(pdf._id)}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors duration-200"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 mr-1" />
-                                Delete
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handlePdfDelete(pdf._id)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors duration-200"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              Delete
+                            </button>
                           </div>
                         </div>
                       </motion.div>

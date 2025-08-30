@@ -1,13 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Eye, Star, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SecurePDFViewer from '../components/SecurePDFViewer';
+import { API_BASE_URL } from '../config';
 
 const BDInsights = ({ user, userPaymentStatus }) => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewedContent, setViewedContent] = useState([]);
   const [selectedPDF, setSelectedPDF] = useState(null);
+  const [dynamicPDFs, setDynamicPDFs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch PDFs from API
+  const fetchPDFs = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setDynamicPDFs(data.pdfs || []);
+      } else {
+        console.error('Failed to fetch PDFs');
+      }
+    } catch (error) {
+      console.error('Error fetching PDFs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load PDFs on component mount
+  useEffect(() => {
+    fetchPDFs();
+  }, []);
+
+  // Expose refresh function to parent component
+  useEffect(() => {
+    if (window.refreshBDInsights) {
+      window.refreshBDInsights = fetchPDFs;
+    } else {
+      window.refreshBDInsights = fetchPDFs;
+    }
+  }, []);
 
   // Get current domain and set appropriate PDF base URL
   const getPdfUrl = (filename) => {
@@ -22,75 +63,24 @@ const BDInsights = ({ user, userPaymentStatus }) => {
     }
   };
 
+  // Convert dynamic PDFs to the format expected by the component
+  const convertPDFsToInsights = (pdfs) => {
+    return pdfs.map((pdf, index) => ({
+      id: pdf._id || index + 1,
+      title: pdf.name,
+      description: pdf.description || 'PDF resource from BioPing',
+      type: 'PDF',
+      size: '2.5 MB', // Default size since we don't store this
+      views: Math.floor(Math.random() * 2000) + 500, // Random views for demo
+      rating: (4.0 + Math.random() * 1.0).toFixed(1), // Random rating between 4.0-5.0
+      featured: index === 0, // First PDF is featured
+      pdfUrl: pdf.url
+    }));
+  };
+
+  // Create bdInsights object with dynamic PDFs
   const bdInsights = {
-    'BD Insights': [
-      {
-        id: 1,
-        title: 'BD Conferences - Priority, Budgets and Smart ROI Tips',
-        description: 'Strategic insights from 15+ years of experience in Large Pharma to Small Biotechs.',
-        type: 'PDF',
-        size: '2.5 MB',
-        views: 1856,
-        rating: 4.9,
-        featured: true,
-        pdfUrl: getPdfUrl('BD Conferences, Priority & Budgets.pdf')
-      },
-      {
-        id: 2,
-        title: 'Biopharma Industry News and Resources',
-        description: 'Latest industry updates and strategic resources for business development.',
-        type: 'PDF',
-        size: '1.8 MB',
-        views: 1240,
-        rating: 4.7,
-        featured: false,
-        pdfUrl: getPdfUrl('Biopharma News & Resources.pdf')
-      },
-      {
-        id: 3,
-        title: 'Big Pharma\'s BD Blueprint including Strategic Interest Areas',
-        description: 'Comprehensive blueprint for understanding large pharma business development strategies.',
-        type: 'PDF',
-        size: '3.2 MB',
-        views: 980,
-        rating: 4.8,
-        featured: false,
-        pdfUrl: getPdfUrl('Big Pharma BD Playbook.pdf')
-      },
-      {
-        id: 4,
-        title: 'Winning BD Pitch Decks and Management Tips',
-        description: 'Proven strategies and templates for creating compelling BD presentations.',
-        type: 'PDF',
-        size: '2.1 MB',
-        views: 1560,
-        rating: 4.9,
-        featured: false,
-        pdfUrl: getPdfUrl('Winning BD Pitch Deck.pdf')
-      },
-      {
-        id: 5,
-        title: 'BD Process and Tips',
-        description: 'Comprehensive BD process guide and strategic tips for success.',
-        type: 'PDF',
-        size: '1.5 MB',
-        views: 890,
-        rating: 4.6,
-        featured: false,
-        pdfUrl: getPdfUrl('BD Process and Tips.pdf')
-      },
-      {
-        id: 6,
-        title: 'Deal Comps Data',
-        description: 'Comprehensive deal comparison data and analysis for business development strategies.',
-        type: 'PDF',
-        size: '2.8 MB',
-        views: 750,
-        rating: 4.7,
-        featured: false,
-        pdfUrl: getPdfUrl('Deal Comps Data.pdf')
-      },
-    ]
+    'BD Insights': loading ? [] : convertPDFsToInsights(dynamicPDFs)
   };
 
   const categories = Object.keys(bdInsights);
@@ -164,9 +154,18 @@ const BDInsights = ({ user, userPaymentStatus }) => {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">BD Insights</h2>
             <p className="text-gray-600">BD Insights from 15+ Years of Experience in Large Pharma to Small Biotechs</p>
           </div>
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="w-6 h-6 text-purple-600" />
-            <span className="text-sm font-medium text-gray-600">{filteredContent.length} resources</span>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="w-6 h-6 text-purple-600" />
+              <span className="text-sm font-medium text-gray-600">{filteredContent.length} resources</span>
+            </div>
+            <button
+              onClick={fetchPDFs}
+              disabled={loading}
+              className="px-3 py-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
           </div>
         </div>
 

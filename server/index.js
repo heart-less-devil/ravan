@@ -8,6 +8,7 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const PDFDocument = require('pdfkit');
 require('dotenv').config();
 
 // Import database connection
@@ -160,6 +161,42 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         }
       }
       
+      // Generate invoice for successful payment
+      try {
+        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.userEmail;
+        if (customerEmail) {
+          // Find user in database to add invoice
+          const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
+          if (userIndex !== -1) {
+            // Initialize invoices array if it doesn't exist
+            if (!mockDB.users[userIndex].invoices) {
+              mockDB.users[userIndex].invoices = [];
+            }
+            
+            // Generate unique invoice ID
+            const invoiceId = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const planName = paymentIntent.metadata?.planId || 'Basic Plan';
+            
+            const newInvoice = {
+              id: invoiceId,
+              date: new Date().toISOString(),
+              amount: paymentIntent.amount / 100,
+              currency: paymentIntent.currency || 'usd',
+              status: 'paid',
+              description: `${planName} Subscription`,
+              plan: planName,
+              paymentIntentId: paymentIntent.id,
+              customerEmail: customerEmail
+            };
+            
+            mockDB.users[userIndex].invoices.push(newInvoice);
+            console.log(`✅ Invoice generated for ${customerEmail}: ${invoiceId}`);
+          }
+        }
+      } catch (invoiceError) {
+        console.error('❌ Error generating invoice:', invoiceError);
+      }
+      
       // Send payment confirmation email
       try {
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email;
@@ -194,7 +231,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                     </div>
                   </div>
                   <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                    You will receive a detailed invoice shortly. If you have any questions, please contact our support team.
+                    Your invoice has been generated and is available in your account. If you have any questions, please contact our support team.
                   </p>
                   <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                     <p style="color: #999; font-size: 12px;">
@@ -511,7 +548,7 @@ const upload = multer({
 // Configure multer for PDF uploads
 const pdfStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '..', 'public', 'pdfs');
+    const uploadPath = path.join(__dirname, '..', 'public', 'pdf');
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
@@ -639,6 +676,38 @@ const authenticateToken = (req, res, next) => {
     req.user = user;
     next();
   });
+};
+
+// Middleware to check if user is suspended
+const checkUserSuspension = (req, res, next) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (user && user.suspended && user.suspended.isSuspended) {
+      const now = new Date();
+      const suspendUntil = new Date(user.suspended.suspendedUntil);
+      
+      if (now < suspendUntil) {
+        return res.status(403).json({ 
+          message: 'Account suspended',
+          suspended: {
+            reason: user.suspended.reason,
+            suspendedUntil: user.suspended.suspendedUntil,
+            duration: user.suspended.duration
+          }
+        });
+      } else {
+        // Suspension period has expired, remove suspension
+        delete user.suspended;
+        saveDataToFiles('suspension_expired');
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Error checking user suspension:', error);
+    next(); // Continue if there's an error checking suspension
+  }
 };
 
 // Admin authentication middleware
@@ -1224,7 +1293,7 @@ app.post('/api/auth/login', [
 });
 
 // Protected route to get user profile
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
+app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) => {
   try {
     // Find the user in the database
     const user = mockDB.users.find(u => u.email === req.user.email);
@@ -2379,7 +2448,7 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
 });
 
 // Search biotech data (public endpoint with limits)
-app.post('/api/search-biotech', authenticateToken, [
+app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
   body('drugName').optional(),
   body('diseaseArea').optional(),
   body('developmentStage').optional(),
@@ -3273,7 +3342,7 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
 // BD Tracker API Endpoints
 
 // Get all BD Tracker entries for specific user
-app.get('/api/bd-tracker', authenticateToken, async (req, res) => {
+app.get('/api/bd-tracker', authenticateToken, checkUserSuspension, async (req, res) => {
   try {
     console.log('BD Tracker GET - User ID:', req.user.id);
     console.log('BD Tracker GET - User Email:', req.user.email);
@@ -3699,7 +3768,7 @@ app.post('/api/auth/reset-password', [
 });
 
 // Protected route to get user profile
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
+app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) => {
   try {
     // Find the user in the database
     const user = mockDB.users.find(u => u.email === req.user.email);
@@ -4085,6 +4154,193 @@ app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) =>
   }
 });
 
+// Function to generate PDF invoice
+const generatePDFInvoice = (invoice, user) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: {
+          top: 50,
+          bottom: 50,
+          left: 50,
+          right: 50
+        }
+      });
+
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+      // Add company logo
+      try {
+        const logoPath = path.join(__dirname, '..', 'public', 'image.png');
+        console.log('🔍 Looking for logo at:', logoPath);
+        console.log('🔍 Current directory:', __dirname);
+        
+        if (fs.existsSync(logoPath)) {
+          console.log('✅ Logo found! Adding to PDF...');
+          // Add logo at the top right
+          doc.image(logoPath, {
+            fit: [120, 60],
+            align: 'right'
+          });
+          doc.moveDown(1);
+        } else {
+          console.log('❌ Logo not found at:', logoPath);
+          // Try alternative path
+          const altLogoPath = path.join(__dirname, '..', '..', 'public', 'image.png');
+          console.log('🔍 Trying alternative path:', altLogoPath);
+          if (fs.existsSync(altLogoPath)) {
+            console.log('✅ Logo found at alternative path!');
+            doc.image(altLogoPath, {
+              fit: [120, 60],
+              align: 'right'
+            });
+            doc.moveDown(1);
+          } else {
+            console.log('❌ Logo not found at alternative path either');
+          }
+        }
+      } catch (logoError) {
+        console.log('❌ Error loading logo:', logoError.message);
+      }
+
+      // Only add company name if logo fails
+      if (!fs.existsSync(path.join(__dirname, '..', 'public', 'image.png'))) {
+        doc.fontSize(24)
+           .font('Helvetica-Bold')
+           .fillColor('#2563eb')
+           .text('BioPing', { align: 'center' });
+      }
+      
+      doc.moveDown(0.5);
+      doc.fontSize(14)
+         .font('Helvetica')
+         .fillColor('#6b7280')
+         .text('Business Development Intelligence Platform', { align: 'center' });
+      
+      doc.moveDown(2);
+
+      // Invoice title
+      doc.fontSize(20)
+         .font('Helvetica-Bold')
+         .fillColor('#111827')
+         .text('INVOICE', { align: 'center' });
+      
+      doc.moveDown(1);
+
+      // Invoice details
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#374151')
+         .text(`Invoice #: ${invoice.id}`);
+      
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor('#6b7280')
+         .text(`Date: ${new Date(invoice.date).toLocaleDateString('en-US', { 
+           year: 'numeric', 
+           month: 'long', 
+           day: 'numeric' 
+         })}`);
+      
+      doc.moveDown(1);
+
+      // Customer information
+      doc.fontSize(14)
+         .font('Helvetica-Bold')
+         .fillColor('#111827')
+         .text('Bill To:');
+      
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor('#374151')
+         .text(user.name || 'N/A');
+      
+      if (user.company) {
+        doc.text(user.company);
+      }
+      
+      doc.text(user.email);
+      
+      doc.moveDown(2);
+
+      // Invoice items table
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#111827')
+         .text('Description', 50, doc.y);
+      
+      doc.text('Amount', 400, doc.y);
+      
+      doc.moveDown(0.5);
+      
+      // Draw line
+      doc.strokeColor('#d1d5db')
+         .lineWidth(1)
+         .moveTo(50, doc.y)
+         .lineTo(550, doc.y)
+         .stroke();
+      
+      doc.moveDown(0.5);
+
+      // Invoice item
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor('#374151')
+         .text(invoice.description || 'Subscription Plan', 50, doc.y);
+      
+      doc.text(`$${invoice.amount.toFixed(2)}`, 400, doc.y);
+      
+      doc.moveDown(1);
+      
+      // Draw line
+      doc.strokeColor('#d1d5db')
+         .lineWidth(1)
+         .moveTo(50, doc.y)
+         .lineTo(550, doc.y)
+         .stroke();
+      
+      doc.moveDown(1);
+
+      // Total
+      doc.fontSize(14)
+         .font('Helvetica-Bold')
+         .fillColor('#111827')
+         .text('Total:', 350, doc.y);
+      
+      doc.text(`$${invoice.amount.toFixed(2)}`, 400, doc.y);
+      
+      doc.moveDown(2);
+
+      // Status
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#059669')
+         .text(`Status: ${invoice.status.toUpperCase()}`, { align: 'center' });
+      
+      doc.moveDown(2);
+
+      // Footer
+      doc.fontSize(10)
+         .font('Helvetica')
+         .fillColor('#6b7280')
+         .text('Thank you for choosing BioPing!', { align: 'center' });
+      
+      doc.moveDown(0.5);
+      doc.text('For any questions, please contact our support team at support@bioping.com', { align: 'center' });
+      
+      doc.moveDown(1);
+      doc.text('BioPing - Business Development Intelligence Platform', { align: 'center' });
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 // Download invoice endpoint
 app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, res) => {
   try {
@@ -4102,38 +4358,15 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
       return res.status(404).json({ message: 'Invoice not found' });
     }
 
-    // Generate invoice PDF (simplified version)
-    const invoiceData = {
-      id: invoice.id,
-      user: user,
-      amount: invoice.amount,
-      date: invoice.date,
-      status: invoice.status,
-      description: invoice.description,
-      plan: invoice.plan
-    };
-
-    // Create a simple PDF-like response
-    const invoiceText = `
-INVOICE
-========
-Invoice ID: ${invoiceData.id}
-Date: ${new Date(invoiceData.date).toLocaleDateString()}
-Customer: ${user.name}
-Email: ${user.email}
-Company: ${user.company}
-Plan: ${invoiceData.plan}
-Description: ${invoiceData.description}
-Amount: $${invoiceData.amount}
-Status: ${invoiceData.status}
-
-Thank you for your payment!
-    `.trim();
-
-    // Send as text file instead of PDF for now
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceId}.txt`);
-    res.send(invoiceText);
+    // Generate PDF invoice
+    const pdfBuffer = await generatePDFInvoice(invoice, user);
+    
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${invoiceId}.pdf`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    res.send(pdfBuffer);
   } catch (error) {
     console.error('Error generating invoice:', error);
     res.status(500).json({ message: 'Error generating invoice' });
@@ -4213,6 +4446,339 @@ app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching invoices:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Download all invoices as single PDF
+app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.invoices || user.invoices.length === 0) {
+      return res.status(404).json({ message: 'No invoices found' });
+    }
+
+    // Create a combined PDF with all invoices
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: {
+        top: 50,
+        bottom: 50,
+        left: 50,
+        right: 50
+      }
+    });
+
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=all-invoices-${user.email}.pdf`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.send(pdfBuffer);
+    });
+
+    // Add company logo
+    try {
+      const logoPath = path.join(__dirname, '..', 'public', 'image.png');
+      console.log('🔍 Looking for logo at:', logoPath);
+      console.log('🔍 Current directory:', __dirname);
+      
+              if (fs.existsSync(logoPath)) {
+          console.log('✅ Logo found! Adding to PDF...');
+          // Add logo at the top right
+          doc.image(logoPath, {
+            fit: [120, 60],
+            align: 'right'
+          });
+          doc.moveDown(1);
+        } else {
+        console.log('❌ Logo not found at:', logoPath);
+        // Try alternative path
+        const altLogoPath = path.join(__dirname, '..', '..', 'public', 'image.png');
+        console.log('🔍 Trying alternative path:', altLogoPath);
+                  if (fs.existsSync(altLogoPath)) {
+            console.log('✅ Logo found at alternative path!');
+            doc.image(altLogoPath, {
+              fit: [120, 60],
+              align: 'right'
+            });
+            doc.moveDown(1);
+          } else {
+          console.log('❌ Logo not found at alternative path either');
+        }
+      }
+    } catch (logoError) {
+      console.log('❌ Error loading logo:', logoError.message);
+    }
+
+    // Only add company name if logo fails
+    if (!fs.existsSync(path.join(__dirname, '..', 'public', 'image.png'))) {
+      doc.fontSize(24)
+         .font('Helvetica-Bold')
+         .fillColor('#2563eb')
+         .text('BioPing', { align: 'center' });
+    }
+    
+    doc.moveDown(0.5);
+    doc.fontSize(14)
+       .font('Helvetica')
+       .fillColor('#6b7280')
+       .text('Business Development Intelligence Platform', { align: 'center' });
+    
+    doc.moveDown(2);
+
+    doc.fontSize(20)
+       .font('Helvetica-Bold')
+       .fillColor('#111827')
+       .text('ALL INVOICES', { align: 'center' });
+    
+    doc.moveDown(1);
+
+    doc.fontSize(14)
+       .font('Helvetica-Bold')
+       .fillColor('#374151')
+       .text('Customer:', { align: 'center' });
+    
+    doc.fontSize(12)
+       .font('Helvetica')
+       .fillColor('#6b7280')
+       .text(user.name || 'N/A', { align: 'center' });
+    
+    if (user.company) {
+      doc.text(user.company, { align: 'center' });
+    }
+    
+    doc.text(user.email, { align: 'center' });
+    
+    doc.moveDown(1);
+
+    doc.fontSize(12)
+       .font('Helvetica')
+       .fillColor('#6b7280')
+       .text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+         year: 'numeric', 
+         month: 'long', 
+         day: 'numeric' 
+       })}`, { align: 'center' });
+    
+    doc.moveDown(2);
+
+    doc.fontSize(14)
+       .font('Helvetica-Bold')
+       .fillColor('#111827')
+       .text(`Total Invoices: ${user.invoices.length}`, { align: 'center' });
+    
+    doc.moveDown(1);
+
+    const totalAmount = user.invoices.reduce((sum, inv) => sum + inv.amount, 0);
+    doc.fontSize(14)
+       .font('Helvetica-Bold')
+       .fillColor('#059669')
+       .text(`Total Amount: $${totalAmount.toFixed(2)}`, { align: 'center' });
+
+    // Add each invoice
+    user.invoices.forEach((invoice, index) => {
+      // Add page break between invoices (except for first one)
+      if (index > 0) {
+        doc.addPage();
+      }
+
+      // Add logo to each invoice page
+      try {
+        const logoPath = path.join(__dirname, '..', 'public', 'image.png');
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, {
+            fit: [80, 40],
+            align: 'center'
+          });
+          doc.moveDown(0.5);
+        } else {
+          // Try alternative path
+          const altLogoPath = path.join(__dirname, '..', '..', 'public', 'image.png');
+          if (fs.existsSync(altLogoPath)) {
+            doc.image(altLogoPath, {
+              fit: [80, 40],
+              align: 'center'
+            });
+            doc.moveDown(0.5);
+          }
+        }
+      } catch (logoError) {
+        console.log('Logo not found for invoice page');
+      }
+
+      // Invoice header
+      doc.fontSize(18)
+         .font('Helvetica-Bold')
+         .fillColor('#111827')
+         .text(`Invoice #${invoice.id}`, { align: 'center' });
+      
+      doc.moveDown(1);
+
+      // Invoice details
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#374151')
+         .text(`Date: ${new Date(invoice.date).toLocaleDateString('en-US', { 
+           year: 'numeric', 
+           month: 'long', 
+           day: 'numeric' 
+         })}`);
+      
+      doc.moveDown(0.5);
+
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#374151')
+         .text(`Plan: ${invoice.plan || 'Subscription'}`);
+      
+      doc.moveDown(0.5);
+
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#374151')
+         .text(`Description: ${invoice.description || 'Business Development Platform Access'}`);
+      
+      doc.moveDown(1);
+
+      // Amount and status
+      doc.fontSize(14)
+         .font('Helvetica-Bold')
+         .fillColor('#111827')
+         .text(`Amount: $${invoice.amount.toFixed(2)}`);
+      
+      doc.moveDown(0.5);
+
+      doc.fontSize(12)
+         .font('Helvetica-Bold')
+         .fillColor('#059669')
+         .text(`Status: ${invoice.status.toUpperCase()}`);
+      
+      doc.moveDown(2);
+
+      // Separator line
+      doc.strokeColor('#d1d5db')
+         .lineWidth(1)
+         .moveTo(50, doc.y)
+         .lineTo(550, doc.y)
+         .stroke();
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error('Error generating all invoices PDF:', error);
+    res.status(500).json({ message: 'Error generating invoices PDF' });
+  }
+});
+
+// Admin: Suspend user endpoint
+app.post('/api/admin/suspend-user', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId, reason, suspendUntil, duration } = req.body;
+    
+    if (!userId || !reason || !suspendUntil) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const user = mockDB.users.find(u => u.id === parseInt(userId));
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Add suspension data to user
+    user.suspended = {
+      isSuspended: true,
+      reason: reason,
+      suspendedAt: new Date().toISOString(),
+      suspendedUntil: suspendUntil,
+      duration: duration,
+      suspendedBy: req.user.email
+    };
+
+    // Save to file
+    saveDataToFiles('user_suspended');
+
+    res.json({
+      success: true,
+      message: 'User suspended successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        suspended: user.suspended
+      }
+    });
+  } catch (error) {
+    console.error('Error suspending user:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Admin: Unsuspend user endpoint
+app.post('/api/admin/unsuspend-user', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const user = mockDB.users.find(u => u.id === parseInt(userId));
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Remove suspension data
+    if (user.suspended) {
+      delete user.suspended;
+    }
+
+    // Save to file
+    saveDataToFiles('user_unsuspended');
+
+    res.json({
+      success: true,
+      message: 'User unsuspended successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error('Error unsuspending user:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Admin: Get user suspension status
+app.get('/api/admin/user-suspension/:userId', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = mockDB.users.find(u => u.id === parseInt(userId));
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      suspended: user.suspended || null,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user suspension status:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -4992,15 +5558,82 @@ app.delete('/api/admin/pricing/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Pricing Management Routes
+app.get('/api/admin/pricing-plans', authenticateToken, async (req, res) => {
+  try {
+    // Initialize pricing plans if they don't exist
+    if (!mockDB.pricingPlans) {
+      mockDB.pricingPlans = [
+        {
+          _id: '1',
+          name: 'Free',
+          description: 'Perfect for getting started',
+          credits: 5,
+          monthlyPrice: 0,
+          annualPrice: 0,
+          features: ['5 credits per month', 'Basic search', 'Email support'],
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          _id: '2',
+          name: 'Basic',
+          description: 'For small businesses',
+          credits: 25,
+          monthlyPrice: 29,
+          annualPrice: 290,
+          features: ['25 credits per month', 'Advanced search', 'Priority support', 'BD Tracker'],
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          _id: '3',
+          name: 'Pro',
+          description: 'For growing companies',
+          credits: 100,
+          monthlyPrice: 99,
+          annualPrice: 990,
+          features: ['100 credits per month', 'All features', 'Priority support', 'Custom reports'],
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+      
+      // Save to file
+      fs.writeFileSync(path.join(__dirname, 'data', 'pricingPlans.json'), JSON.stringify(mockDB.pricingPlans, null, 2));
+    }
+    
+    res.json({ pricingPlans: mockDB.pricingPlans });
+  } catch (error) {
+    console.error('Error fetching pricing plans:', error);
+    res.status(500).json({ error: 'Failed to fetch pricing plans' });
+  }
+});
+
 // PDF Management Routes
 app.post('/api/admin/pdfs/upload', authenticateToken, pdfUpload.single('pdf'), async (req, res) => {
   try {
+    console.log('📤 PDF Upload Request:', {
+      file: req.file,
+      body: req.body,
+      headers: req.headers
+    });
+    
     if (!req.file) {
+      console.log('❌ No file received');
       return res.status(400).json({ error: 'No PDF file uploaded' });
     }
 
     const { name, description } = req.body;
-    const pdfUrl = `/pdfs/${req.file.filename}`;
+    const pdfUrl = `/pdf/${req.file.filename}`;
+    
+    console.log('✅ File received:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      size: req.file.size,
+      name: name,
+      description: description
+    });
 
     // Save to database
     const pdfData = {
@@ -5083,7 +5716,7 @@ app.delete('/api/admin/pdfs/:id', authenticateToken, async (req, res) => {
     const pdf = mockDB.pdfs[pdfIndex];
     
     // Delete file from server
-    const filePath = path.join(__dirname, '..', 'public', 'pdfs', pdf.filename);
+    const filePath = path.join(__dirname, '..', 'public', 'pdf', pdf.filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
