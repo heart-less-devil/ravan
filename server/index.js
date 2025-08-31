@@ -334,11 +334,6 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       }
       break;
       
-    case 'invoice.payment_failed':
-      const failedInvoice = event.data.object;
-      console.log('❌ Invoice payment failed:', failedInvoice.id);
-      break;
-      
     case 'invoice.created':
       const newInvoice = event.data.object;
       console.log('📄 New invoice created:', newInvoice.id);

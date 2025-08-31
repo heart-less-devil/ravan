@@ -55,7 +55,8 @@ import {
   TrendingDown,
   Gift,
   Lock,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from 'lucide-react';
 import { 
   Card, 
@@ -231,6 +232,15 @@ const Dashboard = () => {
           'Content-Type': 'application/json'
         }
       });
+
+      // Fetch invoices data
+      console.log('Fetching invoices data...');
+      const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (subscriptionResponse.ok) {
         const subscriptionData = await subscriptionResponse.json();
@@ -257,6 +267,22 @@ const Dashboard = () => {
         console.log('✅ Subscription data updated from backend');
       } else {
         console.log('Subscription fetch failed, using cached data');
+      }
+
+      // Process invoices data
+      if (invoicesResponse.ok) {
+        const invoicesData = await invoicesResponse.json();
+        console.log('Invoices data received:', invoicesData);
+        
+        if (invoicesData.success && invoicesData.data) {
+          setUser(prev => ({
+            ...prev,
+            invoices: invoicesData.data
+          }));
+          console.log('✅ Invoices data updated from backend');
+        }
+      } else {
+        console.log('Invoices fetch failed, using cached data');
       }
       
     } catch (err) {
@@ -628,7 +654,7 @@ const Dashboard = () => {
     
     switch(path) {
       case '/dashboard':
-        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} />;
+        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} />;
       case '/dashboard/search':
         // Check for suspension before allowing access to Search
         if (suspensionData) {
@@ -707,7 +733,7 @@ const Dashboard = () => {
         return <PricingManagementPage />;
           
       default:
-        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} />;
+        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} />;
     }
   };
 
@@ -1096,7 +1122,7 @@ const Dashboard = () => {
 };
 
 // Enhanced Dashboard Home Component
-const DashboardHome = ({ user, userPaymentStatus }) => {
+const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) => {
   const stats = [
     { 
       label: 'Total Searches', 
@@ -1309,7 +1335,138 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
           </div>
         </motion.div>
 
+        {/* User Profile Card */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+        >
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center">
+              <span className="text-white font-bold text-xl">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h3>
+              <p className="text-gray-600">{user?.email || 'user@example.com'}</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm font-medium text-gray-700">Current Plan</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Gift className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-semibold text-green-700">Free</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
+              <span className="text-sm font-medium text-gray-700">Credits Remaining</span>
+              <span className="text-lg font-bold text-blue-600">{userCredits}</span>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-xl">
+              <span className="text-sm font-medium text-gray-700">Trial Expires</span>
+              <span className="text-sm font-semibold text-orange-600">{daysRemaining} days</span>
+            </div>
+          </div>
+          
+          <div className="mt-6 space-y-2">
+            <Link to="/dashboard/customer-profile" className="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+              <User className="w-5 h-5" />
+              <span className="text-sm font-medium">Overview</span>
+            </Link>
+            <Link to="/dashboard/customer-profile" className="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+              <CreditCard className="w-5 h-5" />
+              <span className="text-sm font-medium">Subscription</span>
+            </Link>
+            <Link to="/dashboard/customer-profile" className="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+              <DollarSign className="w-5 h-5" />
+              <span className="text-sm font-medium">$ Payment History</span>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
 
+      {/* Invoices Section */}
+      <div className="mt-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Invoices</h3>
+            <div className="text-sm text-gray-500">
+              {user?.invoices?.length || 0} PDFs • 0 System • {user?.invoices?.length || 0} Uploaded
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {user?.invoices && user.invoices.length > 0 ? (
+              user.invoices.map((invoice) => (
+                <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">Invoice #{invoice.number || invoice.id}</p>
+                        <p className="text-sm text-gray-600">{new Date(invoice.created).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">
+                          ${invoice.amount} {invoice.currency}
+                        </p>
+                        <p className="text-sm text-gray-600 capitalize">{invoice.status}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (invoice.invoice_pdf) {
+                            window.open(invoice.invoice_pdf, '_blank');
+                          } else {
+                            // Download from our API
+                            const token = localStorage.getItem('token');
+                            fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            })
+                            .then(response => response.blob())
+                            .then(blob => {
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `invoice-${invoice.id}.pdf`;
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                            })
+                            .catch(error => console.error('Error downloading invoice:', error));
+                          }
+                        }}
+                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Invoices Available</h3>
+                <p className="text-gray-500">Start by uploading your first PDF resource</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
       </div>
     </div>
   );
