@@ -2,7 +2,7 @@
 const getApiUrl = () => {
   // Check if we're on the live website
   if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
-    return 'https://ravan-8n0h.onrender.com/api';
+    return 'https://bioping-backend.onrender.com/api';
   }
   
   // Development
@@ -17,15 +17,15 @@ const getApiUrl = () => {
   
   // Production fallbacks - try multiple servers
   const productionUrls = [
+    'https://bioping-backend.onrender.com/api',
     'https://thebioping.com/api',
     'https://www.thebioping.com/api',
     'https://ravan-8n0h.onrender.com/api',
-    'https://bioping-backend.onrender.com/api',
     'https://ravan-backend.onrender.com/api',
     'https://bioping-server.onrender.com/api'
   ];
   
-  return productionUrls[0]; // Use your live domain as default
+  return productionUrls[0]; // Use your correct backend as default
 };
 
 export const API_BASE_URL = getApiUrl();
@@ -35,7 +35,7 @@ export const ADMIN_API_BASE_URL = getApiUrl();
 const getBackendURL = () => {
   // Check if we're on the live website
   if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
-    return 'https://ravan-8n0h.onrender.com/api';
+    return 'https://bioping-backend.onrender.com/api';
   }
   
   // Check if we're in development
@@ -50,15 +50,15 @@ const getBackendURL = () => {
   
   // Production fallbacks
   const possibleURLs = [
+    'https://bioping-backend.onrender.com/api',
     'https://thebioping.com/api',
     'https://www.thebioping.com/api',
     'https://ravan-8n0h.onrender.com/api',
-    'https://bioping-backend.onrender.com/api',
     'https://ravan-backend.onrender.com/api',
     'https://bioping-server.onrender.com/api'
   ];
   
-  return possibleURLs[0]; // Use your live domain as default
+  return possibleURLs[0]; // Use your correct backend as default
 };
 
 // Stripe Configuration
