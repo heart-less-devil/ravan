@@ -1,4 +1,4 @@
-// API Configuration with fallback URLs
+// API Configuration with fallback URLs - FORCE REBUILD
 const getApiUrl = () => {
   // Check if we're on the live website
   if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
