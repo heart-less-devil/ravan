@@ -104,7 +104,7 @@ const Dashboard = () => {
 
       console.log('🔍 Checking user suspension status...');
       
-      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -156,7 +156,7 @@ const Dashboard = () => {
 
       // Test token validity first
       try {
-        const testResponse = await fetch(`${API_BASE_URL}/auth/profile`, {
+        const testResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -181,7 +181,7 @@ const Dashboard = () => {
 
       // Fetch user profile
       console.log('Fetching user profile...');
-      const profileResponse = await fetch(`${API_BASE_URL}/auth/profile`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -225,7 +225,7 @@ const Dashboard = () => {
       
       // Fetch subscription data
       console.log('Fetching subscription data...');
-      const subscriptionResponse = await fetch(`${API_BASE_URL}/auth/subscription`, {
+      const subscriptionResponse = await fetch(`${API_BASE_URL}/api/auth/subscription`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -440,7 +440,7 @@ const Dashboard = () => {
         const token = localStorage.getItem('token');
         
         // Call backend to use credit
-        const response = await fetch(`${API_BASE_URL}/auth/use-credit`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/use-credit`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -526,7 +526,7 @@ const Dashboard = () => {
       console.log('Using token:', token);
       console.log('API URL:', `${API_BASE_URL}/search-biotech`);
       
-      const response = await fetch(`${API_BASE_URL}/search-biotech`, {
+      const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1450,7 +1450,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/search-biotech`, {
+      const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -3586,7 +3586,7 @@ const PricingPage = () => {
       // Sync with backend
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/auth/update-payment-status`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -4098,7 +4098,7 @@ const PricingAnalyticsPage = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/pricing-analytics`, {
+      const response = await fetch(`${API_BASE_URL}/api/pricing-analytics`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -4195,7 +4195,7 @@ const PricingAnalyticsPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/pricing-analytics/export`, {
+      const response = await fetch(`${API_BASE_URL}/api/pricing-analytics/export`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

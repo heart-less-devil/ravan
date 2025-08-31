@@ -173,7 +173,7 @@ const Pricing = () => {
       // Sync with backend and set up subscription
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/auth/update-payment-status`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
