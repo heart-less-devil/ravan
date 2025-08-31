@@ -19,9 +19,10 @@ const getApiUrl = () => {
   const productionUrls = [
     'https://thebioping.com/api',
     'https://www.thebioping.com/api',
-    'https://bioping-backend.onrender.com',
-    'https://ravan-backend.onrender.com',
-    'https://bioping-server.onrender.com'
+    'https://ravan-8n0h.onrender.com/api',
+    'https://bioping-backend.onrender.com/api',
+    'https://ravan-backend.onrender.com/api',
+    'https://bioping-server.onrender.com/api'
   ];
   
   return productionUrls[0]; // Use your live domain as default
@@ -51,9 +52,10 @@ const getBackendURL = () => {
   const possibleURLs = [
     'https://thebioping.com/api',
     'https://www.thebioping.com/api',
-    'https://bioping-backend.onrender.com',
-    'https://ravan-backend.onrender.com',
-    'https://bioping-server.onrender.com'
+    'https://ravan-8n0h.onrender.com/api',
+    'https://bioping-backend.onrender.com/api',
+    'https://ravan-backend.onrender.com/api',
+    'https://bioping-server.onrender.com/api'
   ];
   
   return possibleURLs[0]; // Use your live domain as default
