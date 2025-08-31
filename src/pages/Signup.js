@@ -26,6 +26,7 @@ const Signup = () => {
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('privacy'); // 'privacy' or 'terms'
+  const [isEmailBlocked, setIsEmailBlocked] = useState(false);
   
 
   const handleChange = (e) => {
@@ -41,6 +42,11 @@ const Signup = () => {
         ...prev,
         [name]: ''
       }));
+    }
+    
+    // Clear blocked email state when user changes email
+    if (name === 'email' && isEmailBlocked) {
+      setIsEmailBlocked(false);
     }
   };
 
@@ -148,7 +154,25 @@ const Signup = () => {
       console.log('API response headers:', response.headers);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to get error details
+        try {
+          const errorData = await response.json();
+          console.log('Error response:', errorData);
+          
+          // Handle blocked email specifically
+          if (errorData.errorType === 'EMAIL_BLOCKED') {
+            setIsEmailBlocked(true);
+            setErrors(prev => ({ 
+              ...prev, 
+              email: 'This email address is not allowed on our platform. Please use a different email address to create your account.' 
+            }));
+            return;
+          }
+          
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        } catch (parseError) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
       
       // Check if response is JSON before parsing
@@ -503,15 +527,44 @@ const Signup = () => {
                         required
                         value={formData.email}
                         onChange={handleChange}
-                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
-                          errors.email ? 'border-red-400 focus:ring-red-500' : ''
+                        className={`w-full bg-white/10 border rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:shadow-lg transition-all duration-300 ${
+                          isEmailBlocked 
+                            ? 'border-red-500 bg-red-50/20 focus:ring-red-500 focus:border-red-500 focus:shadow-red-500/25' 
+                            : errors.email 
+                              ? 'border-red-400 focus:ring-red-500' 
+                              : 'border-black focus:ring-purple-500 focus:border-purple-500 focus:shadow-purple-500/25'
                         }`}
                         placeholder="Enter your email"
                       />
                       {errors.email && (
-                        <div className="flex items-center mt-2 text-sm text-red-300">
-                          <AlertCircle className="w-4 h-4 mr-1" />
+                        <div className={`flex items-center mt-2 text-sm ${
+                          isEmailBlocked ? 'text-red-500' : 'text-red-300'
+                        }`}>
+                          {isEmailBlocked ? (
+                            <X className="w-4 h-4 mr-1" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 mr-1" />
+                          )}
                           {errors.email}
+                        </div>
+                      )}
+                      
+                      {/* Blocked Email Warning */}
+                      {isEmailBlocked && (
+                        <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <X className="h-5 w-5 text-red-400" />
+                            </div>
+                            <div className="ml-3">
+                              <h3 className="text-sm font-medium text-red-800">
+                                Email Not Allowed
+                              </h3>
+                              <div className="mt-2 text-sm text-red-700">
+                                <p>This email address has been blocked from our platform. Please use a different email address to create your account.</p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -714,13 +767,22 @@ const Signup = () => {
                   {/* Enhanced Submit Button */}
                   <motion.button
                     type="submit"
-                    disabled={isLoading}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading || isEmailBlocked}
+                    whileHover={{ scale: isEmailBlocked ? 1 : 1.02 }}
+                    whileTap={{ scale: isEmailBlocked ? 1 : 0.98 }}
+                    className={`w-full font-semibold py-4 px-6 rounded-xl flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isEmailBlocked 
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
+                    }`}
                   >
                     {isLoading ? (
                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : isEmailBlocked ? (
+                      <>
+                        <span className="text-lg">Email Not Allowed</span>
+                        <X className="w-6 h-6" />
+                      </>
                     ) : (
                       <>
                         <span className="text-lg">Create Account</span>

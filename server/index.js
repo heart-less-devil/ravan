@@ -3000,6 +3000,7 @@ const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 const VERIFICATION_FILE = path.join(__dirname, 'data', 'verificationCodes.json');
 const UPLOADED_FILES_FILE = path.join(__dirname, 'data', 'uploadedFiles.json');
 const BD_TRACKER_FILE = path.join(__dirname, 'data', 'bdTracker.json');
+const BLOCKED_EMAILS_FILE = path.join(__dirname, 'data', 'blockedEmails.json');
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, 'data');
@@ -3077,6 +3078,16 @@ const loadDataFromFiles = () => {
     } else {
       console.log('⚠️ No pricing file found, starting fresh');
       mockDB.pricing = [];
+    }
+
+    // Load blocked emails data
+    if (fs.existsSync(BLOCKED_EMAILS_FILE)) {
+      const data = fs.readFileSync(BLOCKED_EMAILS_FILE, 'utf8');
+      mockDB.blockedEmails = JSON.parse(data);
+      console.log(`✅ Loaded ${mockDB.blockedEmails.length} blocked emails from file`);
+    } else {
+      console.log('⚠️ No blocked emails file found, starting fresh');
+      mockDB.blockedEmails = [];
     }
 
     // Ensure universal users exist
@@ -3235,6 +3246,10 @@ const saveDataToFiles = (action = 'auto') => {
     fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
     console.log(`✅ Saved ${mockDB.pricing.length} pricing plans (${action})`);
     
+    // Save blocked emails data
+    fs.writeFileSync(BLOCKED_EMAILS_FILE, JSON.stringify(mockDB.blockedEmails, null, 2));
+    console.log(`✅ Saved ${mockDB.blockedEmails.length} blocked emails (${action})`);
+    
     console.log(`✅ All data saved successfully (${action})`);
   } catch (error) {
     console.error(`❌ Error saving data (${action}):`, error);
@@ -3267,7 +3282,8 @@ const mockDB = {
   uploadedFiles: [], // Store uploaded file info
   bdTracker: [], // Store BD Tracker entries
   pdfs: [], // Store PDF management data
-  pricing: [] // Store pricing plans data
+  pricing: [], // Store pricing plans data
+  blockedEmails: [] // Store blocked email addresses
 };
 
 // Load data on startup
@@ -3299,13 +3315,94 @@ process.on('SIGTERM', () => {
 // Get all users (admin only)
 app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   try {
+    let users = [];
+    let totalUsers = 0;
 
-    // Return users from mockDB
+    // Try to fetch users from MongoDB first
+    try {
+      const mongoUsers = await User.find({}).select('-password').sort({ createdAt: -1 });
+      if (mongoUsers && mongoUsers.length > 0) {
+        users = mongoUsers.map(user => {
+          // Calculate actual credits based on payment status and trial expiration
+          let actualCredits = user.currentCredits || 5;
+          
+          if (user.paymentCompleted && user.currentPlan !== 'free') {
+            // Paid users - keep their actual credits (like universalx0242 with 34 credits)
+            actualCredits = user.currentCredits || 0;
+          } else {
+            // Free users - check if 3-day trial has expired
+            const registrationDate = new Date(user.createdAt);
+            const currentDate = new Date();
+            const daysSinceRegistration = Math.floor((currentDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (daysSinceRegistration >= 3) {
+              actualCredits = 0; // Trial expired
+            } else {
+              actualCredits = 5; // Still in trial period
+            }
+          }
+          
+          return {
+            id: user._id,
+            _id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            company: user.company,
+            role: user.role,
+            isVerified: user.isVerified,
+            isActive: user.isActive,
+            paymentCompleted: user.paymentCompleted,
+            currentPlan: user.currentPlan,
+            currentCredits: actualCredits,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin,
+            name: `${user.firstName} ${user.lastName}`.trim()
+          };
+        });
+        totalUsers = users.length;
+        console.log(`✅ Fetched ${totalUsers} users from MongoDB`);
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, using file-based storage...');
+    }
+
+    // If no users from MongoDB, fallback to file-based storage
+    if (users.length === 0) {
+      users = mockDB.users.map(user => {
+        // Calculate actual credits based on payment status and trial expiration
+        let actualCredits = user.currentCredits || 5;
+        
+        if (user.paymentCompleted && user.currentPlan !== 'free') {
+          // Paid users - keep their actual credits (like universalx0242 with 34 credits)
+          actualCredits = user.currentCredits || 0;
+        } else {
+          // Free users - check if 3-day trial has expired
+          const registrationDate = new Date(user.createdAt);
+          const currentDate = new Date();
+          const daysSinceRegistration = Math.floor((currentDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysSinceRegistration >= 3) {
+            actualCredits = 0; // Trial expired
+          } else {
+            actualCredits = 5; // Still in trial period
+          }
+        }
+        
+        return {
+          ...user,
+          currentCredits: actualCredits
+        };
+      });
+      totalUsers = users.length;
+      console.log(`📁 Using ${totalUsers} users from file storage`);
+    }
+
     res.json({
       success: true,
       data: {
-        users: mockDB.users,
-        totalUsers: mockDB.users.length
+        users: users,
+        totalUsers: totalUsers
       }
     });
   } catch (error) {
@@ -3320,9 +3417,143 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
 // Delete user (admin only)
 app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
-
     const userId = req.params.id;
-    const user = await User.findByIdAndDelete(userId);
+    console.log(`🗑️ Delete user request - ID: ${userId} (type: ${typeof userId})`);
+    let user = null;
+    let userEmail = null;
+
+    // Try to find and delete user in MongoDB first
+    try {
+      user = await User.findById(userId);
+      if (user) {
+        userEmail = user.email;
+        await User.findByIdAndDelete(userId);
+        console.log(`✅ User deleted from MongoDB: ${userEmail}`);
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, checking file-based storage...');
+    }
+
+    // If not found in MongoDB, check file-based storage
+    if (!user) {
+      const fileUserIndex = mockDB.users.findIndex(u => 
+        u.id === parseInt(userId) || 
+        u.id === userId || 
+        u._id === userId || 
+        u._id === parseInt(userId)
+      );
+      if (fileUserIndex !== -1) {
+        user = mockDB.users[fileUserIndex];
+        userEmail = user.email;
+        mockDB.users.splice(fileUserIndex, 1);
+        console.log(`✅ User deleted from file storage: ${userEmail}`);
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Add email to blocked list to prevent re-registration
+    if (userEmail) {
+      const blockedEmailEntry = {
+        email: userEmail,
+        blockedAt: new Date().toISOString(),
+        blockedBy: req.user.email || 'admin',
+        reason: 'User account deleted by admin'
+      };
+
+      // Add to file-based blocked emails
+      mockDB.blockedEmails.push(blockedEmailEntry);
+      
+      // Save the blocked emails data
+      saveDataToFiles('user_deleted_and_blocked');
+      
+      console.log(`🚫 Email blocked to prevent re-registration: ${userEmail}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully and email blocked from re-registration'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error deleting user' 
+    });
+  }
+});
+
+// Get blocked emails (admin only)
+app.get('/api/admin/blocked-emails', authenticateAdmin, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: mockDB.blockedEmails
+    });
+  } catch (error) {
+    console.error('Error fetching blocked emails:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching blocked emails' 
+    });
+  }
+});
+
+// Add credits to user (admin only)
+app.post('/api/admin/users/:id/add-credits', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { credits, reason } = req.body;
+    
+    if (!credits || credits <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Credits must be a positive number'
+      });
+    }
+
+    let user = null;
+    let userEmail = null;
+
+    // Try to find user in MongoDB first
+    try {
+      console.log(`🔍 Looking for user with ID: ${userId} (type: ${typeof userId})`);
+      user = await User.findById(userId);
+      if (user) {
+        userEmail = user.email;
+        const oldCredits = user.currentCredits || 0;
+        user.currentCredits = oldCredits + credits;
+        await user.save();
+        console.log(`✅ Added ${credits} credits to MongoDB user: ${userEmail} (${oldCredits} → ${user.currentCredits})`);
+      } else {
+        console.log(`❌ User not found in MongoDB with ID: ${userId}`);
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
+    }
+
+    // If not found in MongoDB, check file-based storage
+    if (!user) {
+      const fileUserIndex = mockDB.users.findIndex(u => 
+        u.id === parseInt(userId) || 
+        u.id === userId || 
+        u._id === userId || 
+        u._id === parseInt(userId)
+      );
+      if (fileUserIndex !== -1) {
+        user = mockDB.users[fileUserIndex];
+        userEmail = user.email;
+        user.currentCredits = (user.currentCredits || 0) + credits;
+        saveDataToFiles('credits_added');
+        console.log(`✅ Added ${credits} credits to file user: ${userEmail} (Total: ${user.currentCredits})`);
+      }
+    }
 
     if (!user) {
       return res.status(404).json({ 
@@ -3333,13 +3564,150 @@ app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'User deleted successfully'
+      message: `Successfully added ${credits} credits to ${userEmail}`,
+      data: {
+        userId: user.id || user._id,
+        email: userEmail,
+        newCredits: user.currentCredits,
+        creditsAdded: credits,
+        reason: reason || 'Admin credit addition'
+      }
     });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error adding credits:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Error deleting user' 
+      message: 'Error adding credits' 
+    });
+  }
+});
+
+// Remove credits from user (admin only)
+app.post('/api/admin/users/:id/remove-credits', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { credits, reason } = req.body;
+    
+    if (!credits || credits <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Credits must be a positive number'
+      });
+    }
+
+    let user = null;
+    let userEmail = null;
+
+    // Try to find user in MongoDB first
+    try {
+      console.log(`🔍 Looking for user with ID: ${userId} (type: ${typeof userId})`);
+      user = await User.findById(userId);
+      if (user) {
+        userEmail = user.email;
+        const currentCredits = user.currentCredits || 0;
+        if (currentCredits < credits) {
+          return res.status(400).json({
+            success: false,
+            message: `User only has ${currentCredits} credits, cannot remove ${credits} credits`
+          });
+        }
+        user.currentCredits = currentCredits - credits;
+        await user.save();
+        console.log(`✅ Removed ${credits} credits from MongoDB user: ${userEmail} (${currentCredits} → ${user.currentCredits})`);
+      } else {
+        console.log(`❌ User not found in MongoDB with ID: ${userId}`);
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
+    }
+
+    // If not found in MongoDB, check file-based storage
+    if (!user) {
+      const fileUserIndex = mockDB.users.findIndex(u => 
+        u.id === parseInt(userId) || 
+        u.id === userId || 
+        u._id === userId || 
+        u._id === parseInt(userId)
+      );
+      if (fileUserIndex !== -1) {
+        user = mockDB.users[fileUserIndex];
+        userEmail = user.email;
+        const currentCredits = user.currentCredits || 0;
+        if (currentCredits < credits) {
+          return res.status(400).json({
+            success: false,
+            message: `User only has ${currentCredits} credits, cannot remove ${credits} credits`
+          });
+        }
+        user.currentCredits = currentCredits - credits;
+        saveDataToFiles('credits_removed');
+        console.log(`✅ Removed ${credits} credits from file user: ${userEmail} (Remaining: ${user.currentCredits})`);
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully removed ${credits} credits from ${userEmail}`,
+      data: {
+        userId: user.id || user._id,
+        email: userEmail,
+        newCredits: user.currentCredits,
+        creditsRemoved: credits,
+        reason: reason || 'Admin credit removal'
+      }
+    });
+  } catch (error) {
+    console.error('Error removing credits:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error removing credits' 
+    });
+  }
+});
+
+// Unblock email (admin only)
+app.post('/api/admin/unblock-email', authenticateAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email is required' 
+      });
+    }
+
+    const emailIndex = mockDB.blockedEmails.findIndex(blocked => blocked.email === email);
+    if (emailIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Email not found in blocked list' 
+      });
+    }
+
+    // Remove from blocked list
+    mockDB.blockedEmails.splice(emailIndex, 1);
+    saveDataToFiles('email_unblocked');
+    
+    console.log(`✅ Email unblocked: ${email}`);
+    
+    res.json({
+      success: true,
+      message: 'Email unblocked successfully'
+    });
+  } catch (error) {
+    console.error('Error unblocking email:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error unblocking email' 
     });
   }
 });
@@ -4697,7 +5065,12 @@ app.post('/api/admin/suspend-user', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const user = mockDB.users.find(u => u.id === parseInt(userId));
+    const user = mockDB.users.find(u => 
+      u.id === parseInt(userId) || 
+      u.id === userId || 
+      u._id === userId || 
+      u._id === parseInt(userId)
+    );
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -4740,7 +5113,12 @@ app.post('/api/admin/unsuspend-user', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ message: 'User ID is required' });
     }
 
-    const user = mockDB.users.find(u => u.id === parseInt(userId));
+    const user = mockDB.users.find(u => 
+      u.id === parseInt(userId) || 
+      u.id === userId || 
+      u._id === userId || 
+      u._id === parseInt(userId)
+    );
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -4773,7 +5151,12 @@ app.get('/api/admin/user-suspension/:userId', authenticateAdmin, async (req, res
   try {
     const { userId } = req.params;
     
-    const user = mockDB.users.find(u => u.id === parseInt(userId));
+    const user = mockDB.users.find(u => 
+      u.id === parseInt(userId) || 
+      u.id === userId || 
+      u._id === userId || 
+      u._id === parseInt(userId)
+    );
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -5121,6 +5504,18 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     console.log(`🔧 Signup attempt for: ${email}`);
+
+    // Check if email is blocked
+    const isEmailBlocked = mockDB.blockedEmails.some(blocked => blocked.email === email);
+    if (isEmailBlocked) {
+      console.log('🚫 Email is blocked from registration');
+      return res.status(403).json({ 
+        success: false,
+        message: 'This email address is not allowed on our platform. Please use a different email address to create your account.',
+        errorType: 'EMAIL_BLOCKED',
+        blockedEmail: email
+      });
+    }
 
     // Check if user already exists (try MongoDB first, then fallback to file-based)
     let existingUser = null;

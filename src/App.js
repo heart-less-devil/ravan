@@ -59,7 +59,7 @@ const CacheBuster = ({ children }) => {
 function App() {
   return (
     <MantineProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ScrollToTop />
         <CacheBuster>
           <div className="App min-h-screen bg-gray-50">

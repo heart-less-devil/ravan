@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect, Fragment, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
@@ -54,7 +54,8 @@ import {
   Check,
   TrendingDown,
   Gift,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react';
 import { 
   Card, 
@@ -131,6 +132,147 @@ const Dashboard = () => {
       console.error('❌ Error checking suspension:', error);
     }
   };
+
+  // Fetch user data function - accessible throughout the component
+  const fetchUserData = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('=== FETCH USER DATA DEBUG ===');
+      console.log('Token exists:', !!token);
+      console.log('Token length:', token?.length);
+      console.log('API_BASE_URL:', API_BASE_URL);
+      
+      if (!token) {
+        console.log('No token found, redirecting to login');
+        // Preserve trial start when clearing
+        const preservedRegistrationDate = localStorage.getItem('registrationDate');
+        localStorage.clear();
+        if (preservedRegistrationDate) {
+          localStorage.setItem('registrationDate', preservedRegistrationDate);
+        }
+        navigate('/login');
+        return;
+      }
+
+      // Test token validity first
+      try {
+        const testResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (testResponse.status === 401) {
+          console.log('Token expired, redirecting to login');
+          // Preserve trial start when clearing
+          const preservedRegistrationDate = localStorage.getItem('registrationDate');
+          localStorage.clear();
+          if (preservedRegistrationDate) {
+            localStorage.setItem('registrationDate', preservedRegistrationDate);
+          }
+          navigate('/login');
+          return;
+        }
+      } catch (error) {
+        console.log('Server connection failed, using cached data');
+        // Continue with cached data if server is down
+      }
+
+      // Fetch user profile
+      console.log('Fetching user profile...');
+      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Profile response status:', profileResponse.status);
+      console.log('Profile response ok:', profileResponse.ok);
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        console.log('Profile data received:', profileData);
+        
+        // Update user state
+        setUser(profileData.user);
+        localStorage.setItem('user', JSON.stringify(profileData.user));
+        
+        // Update payment status
+        if (profileData.user) {
+          const hasPaid = profileData.user.paymentCompleted || false;
+          const currentPlan = profileData.user.currentPlan || 'free';
+          setUserPaymentStatus({ hasPaid, currentPlan });
+          localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
+          localStorage.setItem('userCurrentPlan', currentPlan);
+        }
+        
+        // Always trust backend for credits (enforce trial expiry)
+        if (typeof profileData.user.currentCredits === 'number') {
+          localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
+          setUserCredits(profileData.user.currentCredits);
+        }
+        // Show backend days remaining for trial, if provided
+        if (typeof profileData.user.daysRemaining === 'number') {
+          setDaysRemaining(profileData.user.daysRemaining);
+        }
+        
+        console.log('✅ User data updated from backend');
+      } else {
+        console.log('Profile fetch failed, using cached data');
+      }
+      
+      // Fetch subscription data
+      console.log('Fetching subscription data...');
+      const subscriptionResponse = await fetch(`${API_BASE_URL}/api/auth/subscription`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (subscriptionResponse.ok) {
+        const subscriptionData = await subscriptionResponse.json();
+        console.log('Subscription data received:', subscriptionData);
+        
+        // Update payment status from subscription data
+        if (subscriptionData) {
+          const hasPaid = subscriptionData.paymentCompleted || false;
+          const currentPlan = subscriptionData.currentPlan || 'free';
+          setUserPaymentStatus({ hasPaid, currentPlan });
+          localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
+          localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
+        }
+        // Always trust backend for credits (enforce trial expiry)
+        if (typeof subscriptionData.currentCredits === 'number') {
+          localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
+          setUserCredits(subscriptionData.currentCredits);
+        }
+        // Show backend days remaining for trial, if provided
+        if (typeof subscriptionData.daysRemaining === 'number') {
+          setDaysRemaining(subscriptionData.daysRemaining);
+        }
+        
+        console.log('✅ Subscription data updated from backend');
+      } else {
+        console.log('Subscription fetch failed, using cached data');
+      }
+      
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      console.error('Error type:', err.constructor.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
+      // Don't logout, user can still use the app with stored data
+    }
+  }, [navigate]);
+
+  // Manual refresh function for the refresh button
+  const handleManualRefresh = useCallback(() => {
+    console.log('Manual refresh: fetching updated user data');
+    fetchUserData();
+  }, [fetchUserData]);
 
   useEffect(() => {
     // Check if user is logged in
@@ -236,137 +378,13 @@ const Dashboard = () => {
       localStorage.removeItem('isNewUser');
     }
 
-    // Try to fetch fresh user profile and payment status from backend
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        console.log('=== FETCH USER DATA DEBUG ===');
-        console.log('Token exists:', !!token);
-        console.log('Token length:', token?.length);
-        console.log('API_BASE_URL:', API_BASE_URL);
-        
-        if (!token) {
-          console.log('No token found, redirecting to login');
-          // Preserve trial start when clearing
-          const preservedRegistrationDate = localStorage.getItem('registrationDate');
-          localStorage.clear();
-          if (preservedRegistrationDate) {
-            localStorage.setItem('registrationDate', preservedRegistrationDate);
-          }
-          navigate('/login');
-          return;
-        }
-
-        // Test token validity first
-        try {
-          const testResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (testResponse.status === 401) {
-            console.log('Token expired, redirecting to login');
-            // Preserve trial start when clearing
-            const preservedRegistrationDate = localStorage.getItem('registrationDate');
-            localStorage.clear();
-            if (preservedRegistrationDate) {
-              localStorage.setItem('registrationDate', preservedRegistrationDate);
-            }
-            navigate('/login');
-            return;
-          }
-        } catch (error) {
-          console.log('Server connection failed, using cached data');
-          // Continue with cached data if server is down
-        }
-
-        // Fetch user profile
-        console.log('Fetching user profile...');
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('Profile response status:', profileResponse.status);
-        console.log('Profile response ok:', profileResponse.ok);
-        
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          console.log('Profile data received:', profileData);
-          if (profileData.user) {
-            setUser(profileData.user);
-            localStorage.setItem('user', JSON.stringify(profileData.user));
-          }
-        } else {
-          console.error('Profile fetch failed:', profileResponse.status, profileResponse.statusText);
-          // Don't redirect, use cached data
-        }
-
-        // Fetch subscription status (includes credit renewal check)
-        console.log('Fetching subscription status...');
-        const subscriptionResponse = await fetch(`${API_BASE_URL}/api/auth/subscription-status`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('Subscription response status:', subscriptionResponse.status);
-        console.log('Subscription response ok:', subscriptionResponse.ok);
-        
-        if (subscriptionResponse.ok) {
-          const subscriptionData = await subscriptionResponse.json();
-          console.log('Subscription data received:', subscriptionData);
-          
-          // Update localStorage with backend data
-          if (subscriptionData.paymentCompleted) {
-            localStorage.setItem('paymentCompleted', 'true');
-          }
-          if (subscriptionData.currentPlan) {
-            localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
-          }
-          // Always trust backend for credits (enforce trial expiry)
-          if (typeof subscriptionData.currentCredits === 'number') {
-            localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
-            setUserCredits(subscriptionData.currentCredits);
-          }
-          // Show backend days remaining for trial, if provided
-          if (typeof subscriptionData.daysRemaining === 'number') {
-            setDaysRemaining(subscriptionData.daysRemaining);
-          }
-          
-          // Update state with backend data
-          setUserPaymentStatus({
-            hasPaid: subscriptionData.paymentCompleted || false,
-            currentPlan: subscriptionData.currentPlan || 'free'
-          });
-
-          // Show notification if credits were renewed
-          if (subscriptionData.shouldRenewCredits && subscriptionData.creditsToGive > 0) {
-            console.log(`Credits renewed! You now have ${subscriptionData.creditsToGive} credits.`);
-            // You can add a toast notification here
-          }
-        } else {
-          console.error('Subscription fetch failed:', subscriptionResponse.status, subscriptionResponse.statusText);
-          // Use cached data instead of failing
-        }
-      } catch (err) {
-        console.error('=== FETCH USER DATA ERROR ===');
-        console.error('Error type:', err.constructor.name);
-        console.error('Error message:', err.message);
-        console.error('Error stack:', err.stack);
-        // Don't logout, user can still use the app with stored data
-      }
-    };
+    // Fetch fresh user data from backend
 
     fetchUserData();
   }, [navigate]);
 
   // Clear search query and global search results when navigating to other pages
+  // Also refresh user data when navigating to search page to get updated credits
   useEffect(() => {
     const currentPath = location.pathname;
     
@@ -383,7 +401,33 @@ const Dashboard = () => {
       console.log('Clearing global search results - navigating away from search page');
       setGlobalSearchResults(null);
     }
+    
+    // Refresh user data when navigating to search page to get updated credits from admin panel
+    if (currentPath === '/dashboard/search') {
+      console.log('Navigating to search page - refreshing user data to get updated credits');
+      fetchUserData();
+    }
   }, [location.pathname, globalSearchResults]);
+
+  // Periodic refresh of user data when on search page to get updated credits from admin panel
+  useEffect(() => {
+    let intervalId;
+    
+    if (location.pathname === '/dashboard/search') {
+      console.log('Setting up periodic refresh for user data on search page');
+      intervalId = setInterval(() => {
+        console.log('Periodic refresh: fetching updated user data');
+        fetchUserData();
+      }, 30000); // Refresh every 30 seconds
+    }
+    
+    return () => {
+      if (intervalId) {
+        console.log('Clearing periodic refresh interval');
+        clearInterval(intervalId);
+      }
+    };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -616,6 +660,7 @@ const Dashboard = () => {
           userCredits={userCredits}
           globalSearchResults={globalSearchResults}
           setGlobalSearchResults={setGlobalSearchResults}
+          handleManualRefresh={handleManualRefresh}
         />;
       case '/dashboard/bd-tracker':
         // Check for suspension before allowing access to BD Tracker
@@ -1271,7 +1316,7 @@ const DashboardHome = ({ user, userPaymentStatus }) => {
 };
 
 // Enhanced Search Page Component
-const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults }) => {
+const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults, handleManualRefresh }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',
@@ -1952,6 +1997,16 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   </div>
                 </div>
               </div>
+              
+              {/* Refresh Credits Button */}
+              <button
+                onClick={handleManualRefresh}
+                className="bg-blue-100 hover:bg-blue-200 text-blue-600 p-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+                title="Refresh credits from server"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm font-medium">Refresh</span>
+              </button>
             </div>
           </div>
 

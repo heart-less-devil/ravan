@@ -28,7 +28,7 @@ import { API_BASE_URL, ADMIN_API_BASE_URL } from '../config';
 const AdminPanel = () => {
   const navigate = useNavigate();
   const [uploadedData, setUploadedData] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); // Force empty - no users to display
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState({
@@ -47,6 +47,7 @@ const AdminPanel = () => {
   const [consultingSessions, setConsultingSessions] = useState([]);
   const [contactSubmissions, setContactSubmissions] = useState([]);
   const [showPasswords, setShowPasswords] = useState(false);
+
   
   // User Management State
   const [suspensionModal, setSuspensionModal] = useState(false);
@@ -57,12 +58,19 @@ const AdminPanel = () => {
     customDate: ''
   });
 
+  // Credit Management State
+  const [creditModal, setCreditModal] = useState(false);
+  const [selectedUserForCredit, setSelectedUserForCredit] = useState(null);
+  const [creditForm, setCreditForm] = useState({
+    action: 'add', // 'add' or 'remove'
+    credits: '',
+    reason: ''
+  });
+
   useEffect(() => {
     // Load data from backend
     fetchBiotechData();
-
-    
-    fetchUsers();
+    fetchUsers(); // Enable user fetching from MongoDB
     fetchUserActivity();
     fetchTrialData();
     fetchPotentialCustomers();
@@ -291,6 +299,8 @@ const AdminPanel = () => {
     }
   };
 
+
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -416,7 +426,7 @@ const AdminPanel = () => {
         const result = await response.json();
         alert('User suspended successfully');
         closeSuspensionModal();
-        fetchUsers(); // Refresh user list
+        fetchUsers(); // Refresh users list
       } else {
         const error = await response.json();
         alert(`Failed to suspend user: ${error.message}`);
@@ -445,7 +455,7 @@ const AdminPanel = () => {
 
       if (response.ok) {
         alert('User unsuspended successfully');
-        fetchUsers(); // Refresh user list
+        fetchUsers(); // Refresh users list
       } else {
         const error = await response.json();
         alert(`Failed to unsuspend user: ${error.message}`);
@@ -455,6 +465,116 @@ const AdminPanel = () => {
       alert('Error unsuspending user');
     }
   };
+
+  const handleDeleteUser = async (userId) => {
+    try {
+      if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('User deleted successfully');
+        fetchUsers(); // Refresh users list
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete user: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Error deleting user');
+    }
+  };
+
+  // Credit Management Functions
+  const openCreditModal = (user) => {
+    setSelectedUserForCredit(user);
+    setCreditForm({
+      action: 'add',
+      credits: '',
+      reason: ''
+    });
+    setCreditModal(true);
+  };
+
+  const closeCreditModal = () => {
+    setCreditModal(false);
+    setSelectedUserForCredit(null);
+    setCreditForm({
+      action: 'add',
+      credits: '',
+      reason: ''
+    });
+  };
+
+  const handleCreditSubmit = async () => {
+    try {
+      if (!creditForm.credits || creditForm.credits <= 0) {
+        alert('Please enter a valid number of credits');
+        return;
+      }
+
+      if (!creditForm.reason.trim()) {
+        alert('Please provide a reason for this credit action');
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const endpoint = creditForm.action === 'add' 
+        ? `${ADMIN_API_BASE_URL}/api/admin/users/${selectedUserForCredit.id}/add-credits`
+        : `${ADMIN_API_BASE_URL}/api/admin/users/${selectedUserForCredit.id}/remove-credits`;
+
+      console.log('🔧 Credit Management Request:', {
+        action: creditForm.action,
+        userId: selectedUserForCredit.id,
+        credits: creditForm.credits,
+        reason: creditForm.reason,
+        endpoint: endpoint
+      });
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          credits: parseInt(creditForm.credits),
+          reason: creditForm.reason
+        })
+      });
+
+      console.log('🔧 Credit Management Response:', {
+        status: response.status,
+        ok: response.ok
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Credit Management Success:', result);
+        alert(result.message);
+        closeCreditModal();
+        fetchUsers(); // Refresh users list
+      } else {
+        const error = await response.json();
+        console.log('❌ Credit Management Error:', error);
+        alert(`Failed to ${creditForm.action} credits: ${error.message}`);
+      }
+    } catch (error) {
+      console.error(`Error ${creditForm.action}ing credits:`, error);
+      alert(`Error ${creditForm.action}ing credits`);
+    }
+  };
+
+
 
   const getSuspensionStatus = (user) => {
     if (!user.suspended) return null;
@@ -479,7 +599,7 @@ const AdminPanel = () => {
     setLoading(true);
     setError(null);
     try {
-      await Promise.all([fetchBiotechData(), fetchUsers()]);
+      await Promise.all([fetchBiotechData(), fetchUsers()]); // Enable user fetching
     } catch (error) {
       console.error('Error refreshing data:', error);
       setError('Failed to refresh data');
@@ -1143,8 +1263,8 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                 {users.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Users Registered</h3>
-                    <p className="text-gray-600">Users will appear here once they sign up</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Users Found</h3>
+                    <p className="text-gray-600">No users have registered yet</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -1158,6 +1278,7 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -1193,6 +1314,17 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 Active
                               </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                <button 
+                                  onClick={() => handleDeleteUser(user.id || user._id)}
+                                  className="text-red-600 hover:text-red-900 transition-colors duration-200 cursor-pointer"
+                                  title="Delete user"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1489,6 +1621,9 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                                 Status
                               </th>
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Credits
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
                               </th>
                             </tr>
@@ -1553,6 +1688,12 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                                       </div>
                                     )}
                                   </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-medium">{user.currentCredits || 0}</span>
+                                      <span className="text-gray-500 text-xs">credits</span>
+                                    </div>
+                                  </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex items-center space-x-2">
                                       {suspensionStatus && suspensionStatus.status === 'suspended' ? (
@@ -1572,6 +1713,22 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                                           Suspend
                                         </button>
                                       )}
+                                      <button
+                                        onClick={() => openCreditModal(user)}
+                                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200"
+                                        title="Manage credits"
+                                      >
+                                        <DollarSign className="w-3 h-3 mr-1" />
+                                        Credits
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteUser(user.id)}
+                                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
+                                        title="Delete user"
+                                      >
+                                        <Trash2 className="w-3 h-3 mr-1" />
+                                        Delete
+                                      </button>
                                     </div>
                                   </td>
                                 </tr>
@@ -1585,12 +1742,14 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                     <div className="text-center py-12">
                       <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No Users Found</h3>
-                      <p className="text-gray-500">No users are currently registered in the system.</p>
+                      <p className="text-gray-500">No users have registered yet.</p>
                     </div>
                   )}
                 </div>
               </motion.div>
             )}
+
+
 
             {activeTab === 'contacts' && (
               <motion.div
@@ -1790,6 +1949,100 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                     className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700"
                   >
                     Suspend User
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Management Modal */}
+      {creditModal && selectedUserForCredit && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Manage Credits: {selectedUserForCredit.name || selectedUserForCredit.email}
+                </h3>
+                <button
+                  onClick={closeCreditModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Credits
+                  </label>
+                  <div className="text-lg font-semibold text-blue-600">
+                    {selectedUserForCredit.currentCredits || 0} credits
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Action
+                  </label>
+                  <select
+                    value={creditForm.action}
+                    onChange={(e) => setCreditForm(prev => ({ ...prev, action: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="add">Add Credits</option>
+                    <option value="remove">Remove Credits</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Number of Credits *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={creditForm.credits}
+                    onChange={(e) => setCreditForm(prev => ({ ...prev, credits: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter number of credits"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason *
+                  </label>
+                  <textarea
+                    value={creditForm.reason}
+                    onChange={(e) => setCreditForm(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="3"
+                    placeholder="Enter reason for this credit action..."
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-4">
+                  <button
+                    onClick={closeCreditModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreditSubmit}
+                    className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg ${
+                      creditForm.action === 'add' 
+                        ? 'bg-green-600 hover:bg-green-700' 
+                        : 'bg-red-600 hover:bg-red-700'
+                    }`}
+                  >
+                    {creditForm.action === 'add' ? 'Add Credits' : 'Remove Credits'}
                   </button>
                 </div>
               </div>
