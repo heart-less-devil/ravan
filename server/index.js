@@ -313,6 +313,37 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       console.log('❌ Customer subscription deleted');
       break;
       
+    case 'invoice.payment_succeeded':
+      const invoice = event.data.object;
+      console.log('✅ Invoice payment succeeded:', invoice.id);
+      
+      // Update user's payment status when invoice is paid
+      try {
+        const customer = await stripe.customers.retrieve(invoice.customer);
+        if (customer.email) {
+          const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+          if (userIndex !== -1) {
+            mockDB.users[userIndex].paymentCompleted = true;
+            mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+            saveDataToFiles('invoice_payment_succeeded');
+            console.log('✅ User payment status updated for invoice:', invoice.id);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error updating user for invoice payment:', error);
+      }
+      break;
+      
+    case 'invoice.payment_failed':
+      const failedInvoice = event.data.object;
+      console.log('❌ Invoice payment failed:', failedInvoice.id);
+      break;
+      
+    case 'invoice.created':
+      const newInvoice = event.data.object;
+      console.log('📄 New invoice created:', newInvoice.id);
+      break;
+      
     default:
       console.log(`⚠️ Unhandled event type: ${event.type}`);
   }
@@ -4719,7 +4750,7 @@ const generatePDFInvoice = (invoice, user) => {
   });
 };
 
-// Download invoice endpoint
+// Download invoice endpoint - Support both Stripe and local invoices
 app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, res) => {
   try {
     const { invoiceId } = req.params;
@@ -4730,13 +4761,63 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Find the specific invoice
-    const invoice = user.invoices?.find(inv => inv.id === invoiceId);
+    console.log('🔍 Downloading invoice:', invoiceId, 'for user:', user.email);
+
+    // First, try to find the invoice in Stripe
+    let invoice = null;
+    let isStripeInvoice = false;
+
+    try {
+      // Check if this is a Stripe invoice ID
+      const stripeInvoice = await stripe.invoices.retrieve(invoiceId);
+      
+      // Verify this invoice belongs to the user
+      const customers = await stripe.customers.list({
+        email: user.email,
+        limit: 1
+      });
+
+      if (customers.data.length > 0 && stripeInvoice.customer === customers.data[0].id) {
+        invoice = {
+          id: stripeInvoice.id,
+          number: stripeInvoice.number || stripeInvoice.id,
+          amount: stripeInvoice.amount_paid / 100,
+          currency: stripeInvoice.currency.toUpperCase(),
+          status: stripeInvoice.status,
+          created: new Date(stripeInvoice.created * 1000).toISOString(),
+          paid: stripeInvoice.paid,
+          hosted_invoice_url: stripeInvoice.hosted_invoice_url,
+          invoice_pdf: stripeInvoice.invoice_pdf,
+          description: stripeInvoice.description || 'BioPing Subscription',
+          period_start: stripeInvoice.period_start ? new Date(stripeInvoice.period_start * 1000).toISOString() : null,
+          period_end: stripeInvoice.period_end ? new Date(stripeInvoice.period_end * 1000).toISOString() : null
+        };
+        isStripeInvoice = true;
+        console.log('✅ Found Stripe invoice:', invoiceId);
+      }
+    } catch (stripeError) {
+      console.log('❌ Not a Stripe invoice or error:', stripeError.message);
+    }
+
+    // If not found in Stripe, check local invoices
+    if (!invoice) {
+      invoice = user.invoices?.find(inv => inv.id === invoiceId);
+      if (invoice) {
+        console.log('✅ Found local invoice:', invoiceId);
+      }
+    }
+
     if (!invoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
 
-    // Generate PDF invoice
+    // If it's a Stripe invoice and has a PDF URL, redirect to it
+    if (isStripeInvoice && invoice.invoice_pdf) {
+      console.log('📄 Redirecting to Stripe PDF:', invoice.invoice_pdf);
+      return res.redirect(invoice.invoice_pdf);
+    }
+
+    // Otherwise, generate PDF invoice
     const pdfBuffer = await generatePDFInvoice(invoice, user);
     
     // Set headers for PDF download
@@ -4809,7 +4890,7 @@ app.put('/api/auth/update-profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user invoices endpoint
+// Get user invoices endpoint - Fetch from Stripe
 app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
   try {
     const user = mockDB.users.find(u => u.email === req.user.email);
@@ -4818,9 +4899,63 @@ app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    console.log('🔍 Fetching invoices for user:', user.email);
+
+    // Try to fetch invoices from Stripe
+    let stripeInvoices = [];
+    try {
+      // First, find the customer in Stripe by email
+      const customers = await stripe.customers.list({
+        email: user.email,
+        limit: 1
+      });
+
+      if (customers.data.length > 0) {
+        const customer = customers.data[0];
+        console.log('📧 Found Stripe customer:', customer.id);
+
+        // Fetch invoices for this customer
+        const invoices = await stripe.invoices.list({
+          customer: customer.id,
+          limit: 100
+        });
+
+        stripeInvoices = invoices.data.map(invoice => ({
+          id: invoice.id,
+          number: invoice.number || invoice.id,
+          amount: invoice.amount_paid / 100, // Convert from cents
+          currency: invoice.currency.toUpperCase(),
+          status: invoice.status,
+          created: new Date(invoice.created * 1000).toISOString(),
+          paid: invoice.paid,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          invoice_pdf: invoice.invoice_pdf,
+          description: invoice.description || 'BioPing Subscription',
+          period_start: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+          period_end: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null
+        }));
+
+        console.log('📄 Found', stripeInvoices.length, 'Stripe invoices');
+      } else {
+        console.log('❌ No Stripe customer found for email:', user.email);
+      }
+    } catch (stripeError) {
+      console.error('❌ Error fetching from Stripe:', stripeError.message);
+      // Fall back to local invoices if Stripe fails
+    }
+
+    // Combine Stripe invoices with local invoices (if any)
+    const localInvoices = user.invoices || [];
+    const allInvoices = [...stripeInvoices, ...localInvoices];
+
+    // Sort by creation date (newest first)
+    allInvoices.sort((a, b) => new Date(b.created) - new Date(a.created));
+
+    console.log('📊 Total invoices to return:', allInvoices.length);
+
     res.json({
       success: true,
-      data: user.invoices || []
+      data: allInvoices
     });
   } catch (error) {
     console.error('Error fetching invoices:', error);
@@ -4828,7 +4963,7 @@ app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
   }
 });
 
-// Download all invoices as single PDF
+// Download all invoices as single PDF - Support both Stripe and local invoices
 app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) => {
   try {
     const user = mockDB.users.find(u => u.email === req.user.email);
@@ -4837,9 +4972,53 @@ app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) =
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (!user.invoices || user.invoices.length === 0) {
+    console.log('🔍 Downloading all invoices for user:', user.email);
+
+    // Fetch invoices from Stripe first
+    let stripeInvoices = [];
+    try {
+      const customers = await stripe.customers.list({
+        email: user.email,
+        limit: 1
+      });
+
+      if (customers.data.length > 0) {
+        const customer = customers.data[0];
+        const invoices = await stripe.invoices.list({
+          customer: customer.id,
+          limit: 100
+        });
+
+        stripeInvoices = invoices.data.map(invoice => ({
+          id: invoice.id,
+          number: invoice.number || invoice.id,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency.toUpperCase(),
+          status: invoice.status,
+          created: new Date(invoice.created * 1000).toISOString(),
+          paid: invoice.paid,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          invoice_pdf: invoice.invoice_pdf,
+          description: invoice.description || 'BioPing Subscription',
+          period_start: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+          period_end: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null
+        }));
+
+        console.log('📄 Found', stripeInvoices.length, 'Stripe invoices');
+      }
+    } catch (stripeError) {
+      console.error('❌ Error fetching from Stripe:', stripeError.message);
+    }
+
+    // Combine with local invoices
+    const localInvoices = user.invoices || [];
+    const allInvoices = [...stripeInvoices, ...localInvoices];
+
+    if (allInvoices.length === 0) {
       return res.status(404).json({ message: 'No invoices found' });
     }
+
+    console.log('📊 Total invoices to include in PDF:', allInvoices.length);
 
     // Create a combined PDF with all invoices
     const doc = new PDFDocument({
@@ -4951,18 +5130,18 @@ app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) =
     doc.fontSize(14)
        .font('Helvetica-Bold')
        .fillColor('#111827')
-       .text(`Total Invoices: ${user.invoices.length}`, { align: 'center' });
+       .text(`Total Invoices: ${allInvoices.length}`, { align: 'center' });
     
     doc.moveDown(1);
 
-    const totalAmount = user.invoices.reduce((sum, inv) => sum + inv.amount, 0);
+    const totalAmount = allInvoices.reduce((sum, inv) => sum + inv.amount, 0);
     doc.fontSize(14)
        .font('Helvetica-Bold')
        .fillColor('#059669')
        .text(`Total Amount: $${totalAmount.toFixed(2)}`, { align: 'center' });
 
     // Add each invoice
-    user.invoices.forEach((invoice, index) => {
+    allInvoices.forEach((invoice, index) => {
       // Add page break between invoices (except for first one)
       if (index > 0) {
         doc.addPage();
@@ -5176,6 +5355,138 @@ app.get('/api/admin/user-suspension/:userId', authenticateAdmin, async (req, res
   }
 });
 
+// Admin endpoint to sync old payments from Stripe
+app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => {
+  try {
+    console.log('🔄 Starting manual sync of old Stripe payments...');
+    
+    // Get all customers from Stripe
+    let allCustomers = [];
+    let hasMore = true;
+    let startingAfter = null;
+
+    while (hasMore) {
+      const params = { limit: 100 };
+      if (startingAfter) {
+        params.starting_after = startingAfter;
+      }
+
+      const customers = await stripe.customers.list(params);
+      allCustomers = allCustomers.concat(customers.data);
+      
+      hasMore = customers.has_more;
+      if (hasMore && customers.data.length > 0) {
+        startingAfter = customers.data[customers.data.length - 1].id;
+      }
+    }
+
+    console.log(`📧 Found ${allCustomers.length} customers in Stripe`);
+
+    let totalInvoicesAdded = 0;
+    let usersUpdated = 0;
+
+    // Process each customer
+    for (const customer of allCustomers) {
+      if (!customer.email) continue;
+
+      // Find user in local database
+      const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+      if (userIndex === -1) continue;
+
+      // Initialize invoices array if it doesn't exist
+      if (!mockDB.users[userIndex].invoices) {
+        mockDB.users[userIndex].invoices = [];
+      }
+
+      // Get all invoices for this customer
+      let allInvoices = [];
+      hasMore = true;
+      startingAfter = null;
+
+      while (hasMore) {
+        const params = { 
+          customer: customer.id, 
+          limit: 100 
+        };
+        if (startingAfter) {
+          params.starting_after = startingAfter;
+        }
+
+        const invoices = await stripe.invoices.list(params);
+        allInvoices = allInvoices.concat(invoices.data);
+        
+        hasMore = invoices.has_more;
+        if (hasMore && invoices.data.length > 0) {
+          startingAfter = invoices.data[invoices.data.length - 1].id;
+        }
+      }
+
+      // Process each invoice
+      for (const invoice of allInvoices) {
+        // Check if invoice already exists
+        const existingInvoice = mockDB.users[userIndex].invoices.find(
+          inv => inv.id === invoice.id || inv.stripeInvoiceId === invoice.id
+        );
+
+        if (existingInvoice) continue;
+
+        // Create invoice object
+        const invoiceData = {
+          id: invoice.id,
+          stripeInvoiceId: invoice.id,
+          number: invoice.number || invoice.id,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency.toUpperCase(),
+          status: invoice.status,
+          created: new Date(invoice.created * 1000).toISOString(),
+          paid: invoice.paid,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          invoice_pdf: invoice.invoice_pdf,
+          description: invoice.description || 'BioPing Subscription',
+          period_start: invoice.period_start ? new Date(invoice.period_start * 1000).toISOString() : null,
+          period_end: invoice.period_end ? new Date(invoice.period_end * 1000).toISOString() : null,
+          customerEmail: customer.email,
+          syncedAt: new Date().toISOString()
+        };
+
+        mockDB.users[userIndex].invoices.push(invoiceData);
+        totalInvoicesAdded++;
+
+        // Update user's payment status if invoice is paid
+        if (invoice.paid && invoice.status === 'paid') {
+          mockDB.users[userIndex].paymentCompleted = true;
+          mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+        }
+      }
+
+      if (allInvoices.length > 0) {
+        usersUpdated++;
+      }
+    }
+
+    // Save data
+    saveDataToFiles('sync_old_payments');
+
+    res.json({
+      success: true,
+      message: 'Old payments synced successfully',
+      data: {
+        customersProcessed: allCustomers.length,
+        usersUpdated: usersUpdated,
+        invoicesAdded: totalInvoicesAdded
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error syncing old payments:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error syncing old payments',
+      error: error.message 
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 Server URL: http://localhost:${PORT}`);
@@ -5184,6 +5495,7 @@ app.listen(PORT, () => {
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 MongoDB: Connected`);
   console.log(`✅ Health check available at: http://localhost:${PORT}/api/health`);
+  console.log(`🔄 Sync old payments: http://localhost:${PORT}/api/admin/sync-old-payments`);
 }).on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   process.exit(1);
