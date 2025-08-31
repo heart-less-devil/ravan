@@ -2,7 +2,7 @@
 const getApiUrl = () => {
   // Check if we're on the live website
   if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
-    return 'https://thebioping.com/api';
+    return 'https://ravan-8n0h.onrender.com/api';
   }
   
   // Development
@@ -35,7 +35,7 @@ export const ADMIN_API_BASE_URL = getApiUrl();
 const getBackendURL = () => {
   // Check if we're on the live website
   if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
-    return 'https://thebioping.com/api';
+    return 'https://ravan-8n0h.onrender.com/api';
   }
   
   // Check if we're in development
