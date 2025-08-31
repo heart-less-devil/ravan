@@ -83,7 +83,7 @@ const AdminPanel = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/biotech-data`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/biotech-data`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/users`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +156,7 @@ const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/user-activity`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/user-activity`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -185,7 +185,7 @@ const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/trial-data`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/trial-data`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/potential-customers`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/potential-customers`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -243,7 +243,7 @@ const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/api/admin/consulting-sessions`, {
+      const response = await fetch(`${API_BASE_URL}/admin/consulting-sessions`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ const AdminPanel = () => {
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/api/admin/contact-submissions`, {
+      const response = await fetch(`${API_BASE_URL}/admin/contact-submissions`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -316,7 +316,7 @@ const AdminPanel = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-              const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/upload-excel`, {
+              const response = await fetch(`${ADMIN_API_BASE_URL}/admin/upload-excel`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -408,7 +408,7 @@ const AdminPanel = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/suspend-user`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/suspend-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -444,7 +444,7 @@ const AdminPanel = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/unsuspend-user`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/unsuspend-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -473,7 +473,7 @@ const AdminPanel = () => {
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users/${userId}`, {
+      const response = await fetch(`${ADMIN_API_BASE_URL}/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -529,8 +529,8 @@ const AdminPanel = () => {
 
       const token = localStorage.getItem('token');
       const endpoint = creditForm.action === 'add' 
-        ? `${ADMIN_API_BASE_URL}/api/admin/users/${selectedUserForCredit.id}/add-credits`
-        : `${ADMIN_API_BASE_URL}/api/admin/users/${selectedUserForCredit.id}/remove-credits`;
+        ? `${ADMIN_API_BASE_URL}/admin/users/${selectedUserForCredit.id}/add-credits`
+        : `${ADMIN_API_BASE_URL}/admin/users/${selectedUserForCredit.id}/remove-credits`;
 
       console.log('🔧 Credit Management Request:', {
         action: creditForm.action,
@@ -632,7 +632,7 @@ const AdminPanel = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         
-        const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/delete-records`, {
+        const response = await fetch(`${ADMIN_API_BASE_URL}/admin/delete-records`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -746,7 +746,7 @@ Created: ${new Date(session.createdAt).toLocaleString()}
     try {
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${API_BASE_URL}/api/admin/complete-session/${sessionId}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/complete-session/${sessionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

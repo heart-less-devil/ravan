@@ -80,7 +80,7 @@ const Login = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      const healthCheck = await fetch(`${API_BASE_URL}/api/health`, {
+      const healthCheck = await fetch(`${API_BASE_URL}/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
