@@ -133,13 +133,13 @@ const Signup = () => {
     
     try {
       console.log('Making API call to send verification code...');
-      console.log('Server URL:', `${API_BASE_URL}/api/auth/send-verification`);
+      console.log('Server URL:', `${API_BASE_URL}/auth/send-verification`);
       
       // Call real API to send verification code
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-              const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
+              const response = await fetch(`${API_BASE_URL}/auth/send-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -229,7 +229,7 @@ const Signup = () => {
     
     try {
       // Call real API to verify code
-              const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
+              const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +255,7 @@ const Signup = () => {
         console.log('Verification successful, creating account...');
         
         // Create the account
-        const accountResponse = await fetch(`${API_BASE_URL}/api/auth/create-account`, {
+        const accountResponse = await fetch(`${API_BASE_URL}/auth/create-account`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
