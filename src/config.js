@@ -69,9 +69,10 @@ export const isDevelopment = process.env.NODE_ENV === 'development';
 export const isProduction = process.env.NODE_ENV === 'production';
 
 // Debug logging
-console.log('🔧 API Configuration Debug:');
+console.log('🔧 API Configuration Debug (Updated):');
 console.log('  - NODE_ENV:', process.env.NODE_ENV);
 console.log('  - API_BASE_URL:', API_BASE_URL);
 console.log('  - REACT_APP_API_BASE_URL:', process.env.REACT_APP_API_BASE_URL);
 console.log('  - isDevelopment:', isDevelopment);
-console.log('  - isProduction:', isProduction); 
+console.log('  - isProduction:', isProduction);
+console.log('  - Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'server-side'); 
