@@ -4888,7 +4888,26 @@ app.put('/api/auth/update-profile', authenticateToken, async (req, res) => {
 // Get user invoices endpoint - Fetch from Stripe
 app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
   try {
-    const user = mockDB.users.find(u => u.email === req.user.email);
+    let user = mockDB.users.find(u => u.email === req.user.email);
+    
+    // If not found in mockDB, try MongoDB
+    if (!user) {
+      try {
+        const mongoUser = await User.findOne({ email: req.user.email });
+        if (mongoUser) {
+          // Convert MongoDB user to mockDB format
+          user = {
+            email: mongoUser.email,
+            name: `${mongoUser.firstName} ${mongoUser.lastName}`.trim(),
+            invoices: mongoUser.invoices || [],
+            paymentHistory: mongoUser.paymentHistory || []
+          };
+          console.log('✅ Found user in MongoDB:', user.email);
+        }
+      } catch (mongoError) {
+        console.log('❌ MongoDB not available, using file-based storage only');
+      }
+    }
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
