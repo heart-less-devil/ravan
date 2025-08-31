@@ -4572,7 +4572,7 @@ const PricingManagementPage = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/admin/pricing-plans`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -4598,8 +4598,8 @@ const PricingManagementPage = () => {
     try {
       const token = localStorage.getItem('token');
       const url = editingPlan 
-        ? `${API_BASE_URL}/admin/pricing-plans/${editingPlan._id}`
-        : `${API_BASE_URL}/admin/pricing-plans`;
+        ? `${API_BASE_URL}/api/admin/pricing-plans/${editingPlan._id}`
+        : `${API_BASE_URL}/api/admin/pricing-plans`;
       
       const method = editingPlan ? 'PUT' : 'POST';
       
@@ -4642,7 +4642,7 @@ const PricingManagementPage = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/admin/pricing-plans/${planId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans/${planId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -30,9 +30,9 @@ const PDFManagement = () => {
       setLoading(true);
       const token = localStorage.getItem('token');
       console.log('🔍 API_BASE_URL:', API_BASE_URL);
-      console.log('🔍 Full URL:', `${API_BASE_URL}/admin/pdfs`);
+      console.log('🔍 Full URL:', `${API_BASE_URL}/api/admin/pdfs`);
       
-      const response = await fetch(`${API_BASE_URL}/admin/pdfs`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -83,9 +83,9 @@ const PDFManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      console.log('🌐 Making API call to:', `${API_BASE_URL}/admin/pdfs/upload`);
+      console.log('🌐 Making API call to:', `${API_BASE_URL}/api/admin/pdfs/upload`);
       
-      const response = await fetch(`${API_BASE_URL}/admin/pdfs/upload`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -124,7 +124,7 @@ const PDFManagement = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/admin/pdfs/${pdfId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/admin/pdfs/${pdfId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

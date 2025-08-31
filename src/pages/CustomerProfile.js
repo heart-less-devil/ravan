@@ -101,7 +101,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
       if (!token) return;
 
       // Get user profile
-      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+      const profileResponse = await fetch(`${API_BASE_URL}/auth/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -124,14 +124,14 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
       }
 
       // Get payment status
-      const paymentResponse = await fetch(`${API_BASE_URL}/api/auth/payment-status`, {
+      const paymentResponse = await fetch(`${API_BASE_URL}/auth/payment-status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       // Get user invoices
-      const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
+      const invoicesResponse = await fetch(`${API_BASE_URL}/auth/invoices`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -319,7 +319,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
   const handleDownloadInvoice = async (invoice) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/download-invoice/${invoice.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -347,7 +347,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
   const handleDownloadAllInvoices = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/api/auth/download-all-invoices`, {
+      const response = await fetch(`${API_BASE_URL}/auth/download-all-invoices`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -391,7 +391,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
       console.log('Updating profile with:', editForm);
       console.log('Token:', token);
       
-      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
+      const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -58,7 +58,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
             if (u && u.email) customerEmail = u.email;
           } catch (_) {}
         }
-        response = await fetch(`${API_BASE_URL}/api/subscription/create-daily-12`, {
+        response = await fetch(`${API_BASE_URL}/subscription/create-daily-12`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -67,7 +67,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         });
       } else {
         // Default one-time payment intent
-        response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
+        response = await fetch(`${API_BASE_URL}/create-payment-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
