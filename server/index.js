@@ -4483,21 +4483,51 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
 // Duplicate webhook handler removed - this was causing syntax errors
 // All orphaned case statements and await statements have been removed
 
-// Admin endpoints for Gaurav Vij
+// Admin endpoints for Gaurav Vij - REAL MONGODB DATA
 app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
   try {
-    // Get user activity data (login/registration tracking)
-    const userActivity = mockDB.users.map(user => ({
-      userName: `${user.firstName} ${user.lastName}`,
-      email: user.email,
-      action: 'registration',
-      timestamp: user.createdAt || new Date().toISOString(),
-      ipAddress: 'N/A'
-    }));
+    console.log('🔍 Fetching real user activity from MongoDB...');
+    
+    // Get real user activity data from MongoDB
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    
+    const userActivity = users.map(user => {
+      const activities = [];
+      if (new Date(user.createdAt) > thirtyDaysAgo) {
+        activities.push('New Registration');
+      }
+      if (user.lastLogin && new Date(user.lastLogin) > thirtyDaysAgo) {
+        activities.push('Recent Login');
+      }
+      if (user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo) {
+        activities.push('Profile Updated');
+      }
+      
+      return {
+        userName: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        action: activities.length > 0 ? activities.join(', ') : 'No Recent Activity',
+        timestamp: user.createdAt || new Date().toISOString(),
+        lastLogin: user.lastLogin,
+        lastUpdate: user.updatedAt,
+        company: user.company,
+        role: user.role,
+        ipAddress: 'N/A'
+      };
+    });
 
     res.json({
       success: true,
-      data: userActivity
+      data: userActivity,
+      totalUsers: users.length,
+      recentActivity: users.filter(u => 
+        new Date(u.createdAt) > thirtyDaysAgo || 
+        (u.lastLogin && new Date(u.lastLogin) > thirtyDaysAgo) ||
+        (u.updatedAt && new Date(u.updatedAt) > thirtyDaysAgo)
+      ).length
     });
   } catch (error) {
     console.error('Error fetching user activity:', error);
@@ -4507,27 +4537,69 @@ app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
 
 app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
   try {
-    // Get trial data (start/end dates)
-    const trialData = mockDB.users.map(user => {
-      const registrationDate = new Date(user.createdAt || new Date());
-      const trialStart = registrationDate;
-      const trialEnd = new Date(registrationDate.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 days
-      const now = new Date();
-      const daysRemaining = Math.max(0, Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000)));
+    console.log('🔍 Fetching real trial data from MongoDB...');
+    
+    // Get real trial data from MongoDB
+    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    
+    const trialData = users.map(user => {
+      let trialInfo;
+      
+      if (user.currentPlan === 'test') {
+        trialInfo = {
+          status: 'Test Account',
+          daysRemaining: 'N/A',
+          trialStart: user.createdAt,
+          trialEnd: null
+        };
+      } else if (user.currentPlan === 'free' && !user.paymentCompleted) {
+        // Free trial: 30 days from registration
+        const trialStart = new Date(user.createdAt);
+        const trialEnd = new Date(trialStart.getTime() + (30 * 24 * 60 * 60 * 1000));
+        const now = new Date();
+        const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
+        
+        trialInfo = {
+          status: daysRemaining > 0 ? 'Active' : 'Expired',
+          daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
+          trialStart: trialStart,
+          trialEnd: trialEnd
+        };
+      } else if (user.paymentCompleted) {
+        trialInfo = {
+          status: 'Paid Customer',
+          daysRemaining: 'N/A',
+          trialStart: user.createdAt,
+          trialEnd: null
+        };
+      } else {
+        trialInfo = {
+          status: 'Inactive',
+          daysRemaining: 0,
+          trialStart: user.createdAt,
+          trialEnd: null
+        };
+      }
       
       return {
         userName: `${user.firstName} ${user.lastName}`,
         email: user.email,
-        trialStart: trialStart.toISOString(),
-        trialEnd: trialEnd.toISOString(),
-        status: daysRemaining > 0 ? 'active' : 'expired',
-        daysRemaining
+        trialStart: trialInfo.trialStart,
+        trialEnd: trialInfo.trialEnd,
+        status: trialInfo.status,
+        daysRemaining: trialInfo.daysRemaining,
+        currentPlan: user.currentPlan,
+        paymentStatus: user.paymentCompleted ? 'Completed' : 'Pending',
+        company: user.company
       };
     });
 
     res.json({
       success: true,
-      data: trialData
+      data: trialData,
+      totalUsers: users.length,
+      trialUsers: users.filter(u => u.currentPlan === 'free' || u.currentPlan === 'test').length,
+      paidUsers: users.filter(u => u.paymentCompleted).length
     });
   } catch (error) {
     console.error('Error fetching trial data:', error);
@@ -4537,20 +4609,45 @@ app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
 
 app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) => {
   try {
-    // Get potential customer details for follow-up
-    const potentialCustomers = mockDB.users.map(user => ({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      company: user.company || 'N/A',
-      phone: user.phone || 'N/A',
-      registrationDate: user.createdAt || new Date().toISOString(),
-      lastActivity: user.lastLogin || user.createdAt || new Date().toISOString()
-    }));
+    console.log('🔍 Fetching real potential customers from MongoDB...');
+    
+    // Get real potential customer data from MongoDB
+    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    
+    const potentialCustomers = users
+      .filter(user => !user.paymentCompleted && user.currentPlan !== 'test')
+      .map(user => {
+        const lastActivity = user.lastLogin || user.updatedAt || user.createdAt;
+        const daysSinceLastActivity = Math.ceil((new Date() - new Date(lastActivity)) / (24 * 60 * 60 * 1000));
+        
+        let priority = 'Low';
+        if (daysSinceLastActivity <= 7) priority = 'High';
+        else if (daysSinceLastActivity <= 30) priority = 'Medium';
+        
+        return {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          company: user.company || 'N/A',
+          phone: user.phone || 'N/A',
+          registrationDate: user.createdAt,
+          lastActivity: lastActivity,
+          daysSinceLastActivity: daysSinceLastActivity,
+          priority: priority,
+          isHotLead: daysSinceLastActivity <= 7,
+          role: user.role,
+          currentPlan: user.currentPlan
+        };
+      });
 
     res.json({
       success: true,
-      data: potentialCustomers
+      data: potentialCustomers,
+      totalPotentialCustomers: potentialCustomers.length,
+      hotLeads: potentialCustomers.filter(c => c.isHotLead).length,
+      highPriority: potentialCustomers.filter(c => c.priority === 'High').length,
+      mediumPriority: potentialCustomers.filter(c => c.priority === 'Medium').length,
+      lowPriority: potentialCustomers.filter(c => c.priority === 'Low').length
     });
   } catch (error) {
     console.error('Error fetching potential customers:', error);
@@ -4560,8 +4657,12 @@ app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) =>
 
 app.get('/api/admin/subscription-details', authenticateAdmin, async (req, res) => {
   try {
-    // Get subscription details for all users
-    const subscriptionDetails = mockDB.users.map(user => ({
+    console.log('🔍 Fetching real subscription details from MongoDB...');
+    
+    // Get real subscription details from MongoDB
+    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    
+    const subscriptionDetails = users.map(user => ({
       id: user.id || user._id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -4579,16 +4680,210 @@ app.get('/api/admin/subscription-details', authenticateAdmin, async (req, res) =
       paymentUpdatedAt: user.paymentUpdatedAt,
       createdAt: user.createdAt,
       invoices: user.invoices || [],
-      paymentHistory: user.paymentHistory || []
+      paymentHistory: user.paymentHistory || [],
+      status: user.paymentCompleted ? 'Active' : 'Inactive',
+      isVerified: user.isVerified,
+      isActive: user.isActive
     }));
 
     res.json({
       success: true,
-      subscriptions: subscriptionDetails
+      subscriptions: subscriptionDetails,
+      totalSubscriptions: subscriptionDetails.length,
+      activeSubscriptions: subscriptionDetails.filter(s => s.status === 'Active').length,
+      inactiveSubscriptions: subscriptionDetails.filter(s => s.status === 'Inactive').length,
+      verifiedUsers: subscriptionDetails.filter(s => s.isVerified).length,
+      activeUsers: subscriptionDetails.filter(s => s.isActive).length
     });
   } catch (error) {
     console.error('Error fetching subscription details:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch subscription details' });
+  }
+});
+
+// Comprehensive admin data endpoint - fetches all data from MongoDB Atlas
+app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => {
+  try {
+    console.log('🔍 Fetching comprehensive admin data from MongoDB Atlas...');
+    
+    // Fetch all data from MongoDB
+    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    const bdTrackers = await BDTracker.find({}).lean();
+    
+    // Calculate trial data
+    const trialUsers = users.filter(user => 
+      user.currentPlan === 'free' || user.currentPlan === 'test'
+    );
+    
+    // Calculate potential customers
+    const potentialCustomers = users.filter(user => 
+      !user.paymentCompleted && user.currentPlan !== 'test'
+    );
+    
+    // Calculate user activity (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentUsers = users.filter(user => 
+      new Date(user.createdAt) > thirtyDaysAgo || 
+      (user.lastLogin && new Date(user.lastLogin) > thirtyDaysAgo) ||
+      (user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo)
+    );
+    
+    // Format data for admin panel
+    const formattedData = {
+      summary: {
+        totalUsers: users.length,
+        activeUsers: users.filter(u => u.isActive).length,
+        verifiedUsers: users.filter(u => u.isVerified).length,
+        paidUsers: users.filter(u => u.paymentCompleted).length,
+        testUsers: users.filter(u => u.currentPlan === 'test').length,
+        trialUsers: trialUsers.length,
+        potentialCustomers: potentialCustomers.length,
+        suspendedUsers: users.filter(u => u.suspended && u.suspended.suspendedUntil && new Date() < new Date(u.suspended.suspendedUntil)).length,
+        totalBDProjects: bdTrackers.length,
+        uniqueCompanies: new Set(users.map(u => u.company)).size,
+        generatedAt: new Date().toISOString()
+      },
+      users: users.map(user => ({
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        company: user.company,
+        role: user.role,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        paymentCompleted: user.paymentCompleted,
+        currentPlan: user.currentPlan,
+        currentCredits: user.currentCredits || 0,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin,
+        updatedAt: user.updatedAt,
+        subscriptionId: user.subscriptionId,
+        subscriptionEndAt: user.subscriptionEndAt,
+        nextCreditRenewal: user.nextCreditRenewal,
+        status: user.suspended && user.suspended.suspendedUntil && new Date() < new Date(user.suspended.suspendedUntil) ? 'Suspended' : 'Active'
+      })),
+      userActivity: recentUsers.map(user => {
+        const activities = [];
+        if (new Date(user.createdAt) > thirtyDaysAgo) activities.push('New Registration');
+        if (user.lastLogin && new Date(user.lastLogin) > thirtyDaysAgo) activities.push('Recent Login');
+        if (user.updatedAt && new Date(user.updatedAt) > thirtyDaysAgo) activities.push('Profile Updated');
+        
+        return {
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          activities: activities.length > 0 ? activities.join(', ') : 'No Recent Activity',
+          registrationDate: user.createdAt,
+          lastLogin: user.lastLogin,
+          lastUpdate: user.updatedAt,
+          company: user.company,
+          role: user.role
+        };
+      }),
+      trialData: trialUsers.map(user => {
+        let trialInfo;
+        if (user.currentPlan === 'test') {
+          trialInfo = { status: 'Test Account', daysRemaining: 'N/A', trialEnd: null };
+        } else if (user.currentPlan === 'free' && !user.paymentCompleted) {
+          const trialStart = new Date(user.createdAt);
+          const trialEnd = new Date(trialStart.getTime() + (30 * 24 * 60 * 60 * 1000));
+          const now = new Date();
+          const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
+          trialInfo = {
+            status: daysRemaining > 0 ? 'Active' : 'Expired',
+            daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
+            trialEnd: trialEnd
+          };
+        } else {
+          trialInfo = { status: 'Paid Customer', daysRemaining: 'N/A', trialEnd: null };
+        }
+        
+        return {
+          userName: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          trialStart: user.createdAt,
+          trialEnd: trialInfo.trialEnd,
+          status: trialInfo.status,
+          daysRemaining: trialInfo.daysRemaining,
+          currentPlan: user.currentPlan,
+          paymentStatus: user.paymentCompleted ? 'Completed' : 'Pending',
+          company: user.company
+        };
+      }),
+      potentialCustomers: potentialCustomers.map(user => {
+        const lastActivity = user.lastLogin || user.updatedAt || user.createdAt;
+        const daysSinceLastActivity = Math.ceil((new Date() - new Date(lastActivity)) / (24 * 60 * 60 * 1000));
+        
+        let priority = 'Low';
+        if (daysSinceLastActivity <= 7) priority = 'High';
+        else if (daysSinceLastActivity <= 30) priority = 'Medium';
+        
+        return {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          company: user.company || 'N/A',
+          phone: user.phone || 'N/A',
+          registrationDate: user.createdAt,
+          lastActivity: lastActivity,
+          daysSinceLastActivity: daysSinceLastActivity,
+          priority: priority,
+          isHotLead: daysSinceLastActivity <= 7,
+          role: user.role,
+          currentPlan: user.currentPlan
+        };
+      }),
+      subscriptions: users.map(user => ({
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        company: user.company,
+        currentPlan: user.currentPlan || 'free',
+        paymentCompleted: user.paymentCompleted || false,
+        currentCredits: user.currentCredits || 0,
+        lastCreditRenewal: user.lastCreditRenewal,
+        nextCreditRenewal: user.nextCreditRenewal,
+        subscriptionId: user.subscriptionId,
+        subscriptionEndAt: user.subscriptionEndAt,
+        subscriptionOnHold: user.subscriptionOnHold || false,
+        paymentUpdatedAt: user.paymentUpdatedAt,
+        createdAt: user.createdAt,
+        invoices: user.invoices || [],
+        paymentHistory: user.paymentHistory || [],
+        status: user.paymentCompleted ? 'Active' : 'Inactive',
+        isVerified: user.isVerified,
+        isActive: user.isActive
+      })),
+      bdTrackers: bdTrackers.map(track => ({
+        id: track._id,
+        projectName: track.projectName,
+        company: track.company,
+        userId: track.userId,
+        status: track.status,
+        priority: track.priority,
+        contactPerson: track.contactPerson,
+        contactFunction: track.contactFunction,
+        createdAt: track.createdAt,
+        updatedAt: track.updatedAt
+      }))
+    };
+
+    res.json({
+      success: true,
+      message: 'Comprehensive admin data fetched successfully from MongoDB Atlas',
+      data: formattedData
+    });
+    
+  } catch (error) {
+    console.error('Error fetching comprehensive admin data:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch comprehensive admin data',
+      error: error.message 
+    });
   }
 });
 

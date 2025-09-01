@@ -48,6 +48,9 @@ const AdminPanel = () => {
   const [contactSubmissions, setContactSubmissions] = useState([]);
   const [subscriptionDetails, setSubscriptionDetails] = useState([]);
   const [showPasswords, setShowPasswords] = useState(false);
+  const [comprehensiveData, setComprehensiveData] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   
   // User Management State
@@ -72,12 +75,19 @@ const AdminPanel = () => {
     // Load data from backend
     fetchBiotechData();
     fetchUsers(); // Enable user fetching from MongoDB
-    fetchUserActivity();
-    fetchTrialData();
-    fetchPotentialCustomers();
-
+    fetchComprehensiveData(); // Fetch all data in one call
     fetchContactSubmissions();
     fetchSubscriptionDetails();
+  }, []);
+
+  // Auto-refresh data every 4 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing MongoDB data...');
+      fetchComprehensiveData();
+    }, 4 * 60 * 1000); // 4 minutes
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchBiotechData = async () => {
@@ -239,6 +249,67 @@ const AdminPanel = () => {
       console.error('Error fetching potential customers:', error);
       setError(error.message);
     }
+  };
+
+  // Fetch comprehensive data from MongoDB Atlas
+  const fetchComprehensiveData = async () => {
+    try {
+      setIsRefreshing(true);
+      const token = localStorage.getItem('token');
+      
+      console.log('🔍 Fetching comprehensive data from MongoDB Atlas...');
+      
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/comprehensive-data`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch comprehensive data');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Comprehensive data fetched successfully:', result.data);
+        setComprehensiveData(result.data);
+        
+        // Update individual state variables
+        setUserActivity(result.data.userActivity || []);
+        setTrialData(result.data.trialData || []);
+        setPotentialCustomers(result.data.potentialCustomers || []);
+        setSubscriptionDetails(result.data.subscriptions || []);
+        
+        // Update users if not already set
+        if (!users.length && result.data.users) {
+          setUsers(result.data.users);
+        }
+        
+        setLastRefresh(new Date());
+        console.log('🕒 Data refreshed at:', new Date().toLocaleString());
+      } else {
+        throw new Error(result.message || 'Failed to fetch comprehensive data');
+      }
+    } catch (error) {
+      console.error('Error fetching comprehensive data:', error);
+      setError(error.message);
+      
+      // Fallback to individual endpoints if comprehensive fails
+      console.log('🔄 Falling back to individual endpoints...');
+      fetchUserActivity();
+      fetchTrialData();
+      fetchPotentialCustomers();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Refresh all data
+  const refreshAllData = async () => {
+    await fetchComprehensiveData();
   };
 
 
@@ -811,16 +882,30 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {/* MongoDB Atlas Data Status */}
+              <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20">
+                <div className={`w-3 h-3 rounded-full ${comprehensiveData ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></div>
+                <span className="text-white text-sm font-medium">
+                  {comprehensiveData ? 'MongoDB Atlas' : 'Loading...'}
+                </span>
+                {lastRefresh && (
+                  <span className="text-gray-300 text-xs">
+                    {new Date(lastRefresh).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              
               <motion.button 
-                onClick={refreshData}
-                disabled={loading}
+                onClick={refreshAllData}
+                disabled={isRefreshing}
                 className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-lg"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <RefreshCw className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh Data
+                <RefreshCw className={`w-5 h-5 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh MongoDB Data'}
               </motion.button>
+              
               <motion.button 
                 onClick={handleExportData}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center shadow-lg"
@@ -836,7 +921,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Enhanced Stats Cards */}
+        {/* Enhanced Stats Cards - MongoDB Atlas Data */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -846,12 +931,14 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium mb-2">Total Records</p>
-                <p className="text-4xl font-bold text-white">{stats.totalRecords.toLocaleString()}</p>
-                <p className="text-blue-200 text-xs mt-2">Database entries</p>
+                <p className="text-blue-100 text-sm font-medium mb-2">Total Users</p>
+                <p className="text-4xl font-bold text-white">
+                  {comprehensiveData?.summary?.totalUsers || users.length || 0}
+                </p>
+                <p className="text-blue-200 text-xs mt-2">MongoDB Atlas users</p>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Database className="w-8 h-8 text-white" />
+                <Users className="w-8 h-8 text-white" />
               </div>
             </div>
           </motion.div>
@@ -864,12 +951,14 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm font-medium mb-2">Total Companies</p>
-                <p className="text-4xl font-bold text-white">{stats.totalCompanies.toLocaleString()}</p>
-                <p className="text-green-200 text-xs mt-2">Unique organizations</p>
+                <p className="text-green-100 text-sm font-medium mb-2">Active Users</p>
+                <p className="text-4xl font-bold text-white">
+                  {comprehensiveData?.summary?.activeUsers || users.filter(u => u.isActive).length || 0}
+                </p>
+                <p className="text-green-200 text-xs mt-2">Verified & active</p>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <BarChart3 className="w-8 h-8 text-white" />
+                <CheckCircle className="w-8 h-8 text-white" />
               </div>
             </div>
           </motion.div>
@@ -882,12 +971,14 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm font-medium mb-2">Total Contacts</p>
-                <p className="text-4xl font-bold text-white">{stats.totalContacts.toLocaleString()}</p>
-                <p className="text-purple-200 text-xs mt-2">BD professionals</p>
+                <p className="text-purple-100 text-sm font-medium mb-2">Potential Customers</p>
+                <p className="text-4xl font-bold text-white">
+                  {comprehensiveData?.summary?.potentialCustomers || potentialCustomers.length || 0}
+                </p>
+                <p className="text-purple-200 text-xs mt-2">Hot leads & prospects</p>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Users className="w-8 h-8 text-white" />
+                <AlertTriangle className="w-8 h-8 text-white" />
               </div>
             </div>
           </motion.div>
@@ -967,6 +1058,26 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
               </div>
             </div>
           </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 shadow-2xl border border-orange-400/20 backdrop-blur-sm"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-100 text-sm font-medium mb-2">Trial Users</p>
+                <p className="text-4xl font-bold text-white">
+                  {comprehensiveData?.summary?.trialUsers || trialData.length || 0}
+                </p>
+                <p className="text-orange-200 text-xs mt-2">Free & test accounts</p>
+              </div>
+              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <Clock className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </motion.div>
         </div>
 
         {/* Error Display */}
@@ -1018,6 +1129,78 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
               Upload Data
             </button>
           </motion.div>
+        )}
+
+        {/* MongoDB Atlas Connection Status */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-6 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <div className={`w-4 h-4 rounded-full ${comprehensiveData ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></div>
+                <span className="text-white font-medium">
+                  {comprehensiveData ? 'Connected to MongoDB Atlas' : 'Connecting to MongoDB Atlas...'}
+                </span>
+              </div>
+              {comprehensiveData && (
+                <div className="text-gray-300 text-sm">
+                  Database: <span className="text-white font-mono">bioping</span> | 
+                  Collection: <span className="text-white font-mono">users</span> | 
+                  Last Updated: <span className="text-white">{lastRefresh ? new Date(lastRefresh).toLocaleString() : 'Never'}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={refreshAllData}
+                disabled={isRefreshing}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh Now'}</span>
+              </button>
+              {comprehensiveData && (
+                <div className="text-green-400 text-sm font-medium">
+                  ✅ Live Data
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* MongoDB Atlas Data Summary */}
+        {comprehensiveData && (
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-6 p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">📊 MongoDB Atlas Data Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-white">{comprehensiveData.summary.totalUsers}</div>
+                <div className="text-gray-300 text-sm">Total Users</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-green-400">{comprehensiveData.summary.activeUsers}</div>
+                <div className="text-gray-300 text-sm">Active Users</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-blue-400">{comprehensiveData.summary.verifiedUsers}</div>
+                <div className="text-gray-300 text-sm">Verified Users</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-purple-400">{comprehensiveData.summary.paidUsers}</div>
+                <div className="text-gray-300 text-sm">Paid Users</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-orange-400">{comprehensiveData.summary.trialUsers}</div>
+                <div className="text-gray-300 text-sm">Trial Users</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-red-400">{comprehensiveData.summary.potentialCustomers}</div>
+                <div className="text-gray-300 text-sm">Potential Customers</div>
+              </div>
+            </div>
+            <div className="mt-4 text-center text-gray-300 text-sm">
+              🔄 Auto-refreshing every 4 minutes | 📍 Data source: MongoDB Atlas Cloud Database
+            </div>
+          </div>
         )}
 
         {/* Tabs */}
@@ -1359,46 +1542,93 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">User Activity & Registration</h3>
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-900">Login & Registration Tracking</h4>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {Array.isArray(userActivity) && userActivity.map((activity, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {activity.userName || 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{activity.email}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                activity.action === 'login' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {activity.action}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(activity.timestamp).toLocaleString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{activity.ipAddress || 'N/A'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">User Activity & Registration</h3>
+                  <div className="flex items-center space-x-2">
+                    {comprehensiveData && (
+                      <span className="text-sm text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                        📊 MongoDB Atlas Data
+                      </span>
+                    )}
+                    <button
+                      onClick={refreshAllData}
+                      disabled={isRefreshing}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
+                    >
+                      {isRefreshing ? '🔄' : '🔄'}
+                    </button>
                   </div>
                 </div>
+                
+                {isRefreshing ? (
+                  <div className="bg-white rounded-lg shadow p-8 text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Fetching latest data from MongoDB Atlas...</p>
+                  </div>
+                ) : !comprehensiveData ? (
+                  <div className="bg-white rounded-lg shadow p-8 text-center">
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <AlertTriangle className="w-8 h-8 text-yellow-600" />
+                    </div>
+                    <p className="text-gray-600 mb-2">Connecting to MongoDB Atlas...</p>
+                    <p className="text-sm text-gray-500">Click refresh to load data</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-900">Login & Registration Tracking (Last 30 Days)</h4>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Total Activities: {userActivity.length} | Last Updated: {lastRefresh ? new Date(lastRefresh).toLocaleString() : 'Never'}
+                      </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {Array.isArray(userActivity) && userActivity.length > 0 ? (
+                            userActivity.map((activity, index) => (
+                              <tr key={index} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  {activity.userName || activity.name || 'N/A'}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{activity.email}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    activity.action.includes('Login') ? 'bg-green-100 text-green-800' : 
+                                    activity.action.includes('Registration') ? 'bg-blue-100 text-blue-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {activity.action}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(activity.timestamp || activity.registrationDate).toLocaleString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{activity.company || 'N/A'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{activity.role || 'N/A'}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                                No recent user activity found
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 

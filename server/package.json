@@ -9,7 +9,14 @@
     "backup": "node backup.js",
     "backup-daily": "node backup.js && echo 'Daily backup completed'",
     "test-persistence": "node test-persistence.js",
-    "test-email": "node test-email.js"
+    "test-email": "node test-email.js",
+    "fetch-users": "node fetch-user-data.js",
+    "fetch-admin": "node fetch-admin-panel-data.js",
+    "fetch-exact": "node fetch-exact-admin-data.js",
+    "fetch-continuous": "node fetch-exact-admin-data.js --continuous",
+    "fetch-complete": "node fetch-complete-admin-data.js",
+    "fetch-complete-continuous": "node fetch-complete-admin-data.js --continuous",
+    "test-mongo": "node test-mongo-connection.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

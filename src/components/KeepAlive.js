@@ -25,7 +25,7 @@ export default function KeepAlive() {
     ping();
 
     // Regular ping while tab is open
-    intervalRef.current = setInterval(ping, 5 * 60 * 1000); // 5 minutes
+    intervalRef.current = setInterval(ping, 4 * 60 * 1000); // 4 minutes
 
     // Extra pings on visibility/focus events
     const onFocus = () => ping();
