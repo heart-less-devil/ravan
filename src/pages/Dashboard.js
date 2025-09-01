@@ -209,10 +209,15 @@ const Dashboard = () => {
           localStorage.setItem('userCurrentPlan', currentPlan);
         }
         
-        // Always trust backend for credits (enforce trial expiry)
-        if (typeof profileData.user.currentCredits === 'number') {
-          localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
-          setUserCredits(profileData.user.currentCredits);
+        // Only update credits from backend for paid users or if credits are not set locally
+        const userCurrentPlan = profileData.user.currentPlan || 'free';
+        const localCredits = localStorage.getItem('userCredits');
+        
+        if (userCurrentPlan !== 'free' || !localCredits) {
+          if (typeof profileData.user.currentCredits === 'number') {
+            localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
+            setUserCredits(profileData.user.currentCredits);
+          }
         }
         // Show backend days remaining for trial, if provided
         if (typeof profileData.user.daysRemaining === 'number') {
@@ -254,10 +259,15 @@ const Dashboard = () => {
           localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
           localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
         }
-        // Always trust backend for credits (enforce trial expiry)
-        if (typeof subscriptionData.currentCredits === 'number') {
-          localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
-          setUserCredits(subscriptionData.currentCredits);
+        // Only update credits from backend for paid users or if credits are not set locally
+        const userCurrentPlan = subscriptionData.currentPlan || 'free';
+        const localCredits = localStorage.getItem('userCredits');
+        
+        if (userCurrentPlan !== 'free' || !localCredits) {
+          if (typeof subscriptionData.currentCredits === 'number') {
+            localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
+            setUserCredits(subscriptionData.currentCredits);
+          }
         }
         // Show backend days remaining for trial, if provided
         if (typeof subscriptionData.daysRemaining === 'number') {
@@ -297,7 +307,17 @@ const Dashboard = () => {
   // Manual refresh function for the refresh button
   const handleManualRefresh = useCallback(() => {
     console.log('Manual refresh: fetching updated user data');
-    fetchUserData();
+    // Only fetch credits if user has a paid plan, otherwise use local storage
+    const userCurrentPlan = localStorage.getItem('userCurrentPlan');
+    if (userCurrentPlan && userCurrentPlan !== 'free') {
+      fetchUserData();
+    } else {
+      // For free users, just update the display without fetching from server
+      const storedCredits = localStorage.getItem('userCredits');
+      if (storedCredits) {
+        setUserCredits(parseInt(storedCredits));
+      }
+    }
   }, [fetchUserData]);
 
   useEffect(() => {
@@ -367,13 +387,20 @@ const Dashboard = () => {
       currentPlan: userCurrentPlan || 'free'
     });
 
-    // Load user credits - 5 credits for 3 days only
+    // Load user credits - ALWAYS respect used credits, NEVER reset them
     const savedCredits = localStorage.getItem('userCredits');
     const registrationDate = localStorage.getItem('registrationDate');
     const currentDate = new Date();
     
+    console.log('🔍 Credit Loading Debug:', {
+      savedCredits,
+      registrationDate,
+      currentDate: currentDate.toISOString()
+    });
+    
     // If no registration date, set it (first time user)
     if (!registrationDate) {
+      console.log('🆕 First time user - setting registration date and 5 credits');
       localStorage.setItem('registrationDate', currentDate.toISOString());
       setUserCredits(5);
       localStorage.setItem('userCredits', '5');
@@ -382,15 +409,26 @@ const Dashboard = () => {
       const regDate = new Date(registrationDate);
       const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
       
+      console.log('📅 Registration check:', {
+        regDate: regDate.toISOString(),
+        daysSinceRegistration,
+        trialExpired: daysSinceRegistration >= 3
+      });
+      
       if (daysSinceRegistration >= 3) {
         // 3 days passed - set credits to 0
+        console.log('⏰ Trial expired - setting credits to 0');
         setUserCredits(0);
         localStorage.setItem('userCredits', '0');
       } else {
-        // Still within 3 days - use saved credits
+        // Still within 3 days - ALWAYS use saved credits, never reset
         if (savedCredits !== null) {
+          // Use whatever credits are saved (5, 4, 3, 2, 1, 0)
+          console.log(`✅ Using saved credits: ${savedCredits} (not resetting to 5)`);
           setUserCredits(parseInt(savedCredits));
         } else {
+          // Only set to 5 if no credits are saved at all
+          console.log('🆕 No saved credits - setting to 5');
           setUserCredits(5);
           localStorage.setItem('userCredits', '5');
         }
@@ -404,9 +442,10 @@ const Dashboard = () => {
       localStorage.removeItem('isNewUser');
     }
 
-    // Fetch fresh user data from backend
-
-    fetchUserData();
+    // Fetch fresh user data from backend only if needed
+    if (userCurrentPlan && userCurrentPlan !== 'free') {
+      fetchUserData();
+    }
   }, [navigate]);
 
   // Clear search query and global search results when navigating to other pages
@@ -428,32 +467,33 @@ const Dashboard = () => {
       setGlobalSearchResults(null);
     }
     
-    // Refresh user data when navigating to search page to get updated credits from admin panel
-    if (currentPath === '/dashboard/search') {
-      console.log('Navigating to search page - refreshing user data to get updated credits');
-      fetchUserData();
-    }
+    // No more automatic refresh when navigating to search page
+    // Credits should persist from previous usage
+    // if (currentPath === '/dashboard/search') {
+    //   console.log('Navigating to search page - refreshing user data to get updated credits');
+    //   fetchUserData();
+    // }
   }, [location.pathname, globalSearchResults]);
 
-  // Periodic refresh of user data when on search page to get updated credits from admin panel
-  useEffect(() => {
-    let intervalId;
-    
-    if (location.pathname === '/dashboard/search') {
-      console.log('Setting up periodic refresh for user data on search page');
-      intervalId = setInterval(() => {
-        console.log('Periodic refresh: fetching updated user data');
-        fetchUserData();
-      }, 30000); // Refresh every 30 seconds
-    }
-    
-    return () => {
-      if (intervalId) {
-        console.log('Clearing periodic refresh interval');
-        clearInterval(intervalId);
-      }
-    };
-  }, [location.pathname]);
+  // No more periodic refresh - credits should persist
+  // useEffect(() => {
+  //   let intervalId;
+  //   
+  //   if (location.pathname === '/dashboard/search') {
+  //     console.log('Setting up periodic refresh for user data on search page');
+  //     intervalId = setInterval(() => {
+  //       console.log('Periodic refresh: fetching updated user data');
+  //       fetchUserData();
+  //     }, 30000); // Refresh every 30 seconds
+  //   }
+  //   
+  //   return () => {
+  //     if (intervalId) {
+  //       console.log('Clearing periodic refresh interval');
+  //       clearInterval(intervalId);
+  //     }
+  //   };
+  // }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -461,6 +501,9 @@ const Dashboard = () => {
   };
 
   const consumeCredit = async () => {
+    console.log('💳 consumeCredit called with current credits:', userCredits);
+    console.log('💳 localStorage userCredits before:', localStorage.getItem('userCredits'));
+    
     if (userCredits > 0) {
       try {
         const token = localStorage.getItem('token');
@@ -477,26 +520,36 @@ const Dashboard = () => {
         if (response.ok) {
           const data = await response.json();
           const newCredits = data.remainingCredits;
+          console.log(`✅ Backend credit update: ${userCredits} → ${newCredits}`);
           setUserCredits(newCredits);
           localStorage.setItem('userCredits', newCredits.toString());
+          
+          // Log credit usage for monitoring
+          console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
+          console.log('💳 localStorage userCredits after backend update:', localStorage.getItem('userCredits'));
           return true;
         } else {
-          console.error('Failed to use credit on backend');
+          console.error('❌ Failed to use credit on backend');
           // Fallback to frontend-only update
           const newCredits = userCredits - 1;
+          console.log(`🔄 Frontend fallback: ${userCredits} → ${newCredits}`);
           setUserCredits(newCredits);
           localStorage.setItem('userCredits', newCredits.toString());
+          console.log('💳 localStorage userCredits after frontend fallback:', localStorage.getItem('userCredits'));
           return true;
         }
       } catch (error) {
-        console.error('Error using credit:', error);
+        console.error('❌ Error using credit:', error);
         // Fallback to frontend-only update
         const newCredits = userCredits - 1;
+        console.log(`🔄 Frontend fallback (error): ${userCredits} → ${newCredits}`);
         setUserCredits(newCredits);
         localStorage.setItem('userCredits', newCredits.toString());
+        console.log('💳 localStorage userCredits after error fallback:', localStorage.getItem('userCredits'));
         return true;
       }
     } else {
+      console.log('❌ No credits remaining, showing popup');
       setShowCreditPopup(true);
       return false;
     }
@@ -687,6 +740,7 @@ const Dashboard = () => {
           globalSearchResults={globalSearchResults}
           setGlobalSearchResults={setGlobalSearchResults}
           handleManualRefresh={handleManualRefresh}
+          userPaymentStatus={userPaymentStatus}
         />;
       case '/dashboard/bd-tracker':
         // Check for suspension before allowing access to BD Tracker
@@ -1473,7 +1527,7 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
 };
 
 // Enhanced Search Page Component
-const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults, handleManualRefresh }) => {
+const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',
@@ -1666,17 +1720,37 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     });
   };
 
-  const handleRevealEmail = (companyId) => {
-    if (consumeCredit && consumeCredit()) {
-      setRevealedEmails(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(companyId)) {
-          newSet.delete(companyId);
-        } else {
-          newSet.add(companyId);
-        }
-        return newSet;
-      });
+  const handleRevealEmail = async (companyId) => {
+    console.log('🔍 handleRevealEmail called for company:', companyId);
+    
+    // Check if we have credits before proceeding
+    if (userCredits <= 0) {
+      console.log('❌ No credits remaining, showing alert');
+      alert('❌ No credits remaining! Please purchase more credits to view contact information.');
+      return;
+    }
+    
+    try {
+      // Consume credit first
+      const creditConsumed = await consumeCredit();
+      
+      if (creditConsumed) {
+        console.log('✅ Credit consumed successfully, revealing email');
+        // Only reveal email if credit was successfully consumed
+        setRevealedEmails(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(companyId)) {
+            newSet.delete(companyId);
+          } else {
+            newSet.add(companyId);
+          }
+          return newSet;
+        });
+      } else {
+        console.log('❌ Failed to consume credit');
+      }
+    } catch (error) {
+      console.error('❌ Error in handleRevealEmail:', error);
     }
   };
 
@@ -2150,20 +2224,19 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   </div>
                   <div>
                     <div className="text-sm font-medium text-gray-900">Credits Left</div>
-                    <div className="text-lg font-bold text-blue-600">{userCredits} / {daysRemaining} days</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {userPaymentStatus.hasPaid ? (
+                        `${userCredits} credits`
+                      ) : (
+                        daysRemaining > 0 ? `${userCredits} / ${daysRemaining} days` : '0 credits (trial expired)'
+                      )}
+                    </div>
+
                   </div>
                 </div>
               </div>
               
-              {/* Refresh Credits Button */}
-              <button
-                onClick={handleManualRefresh}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-600 p-2 rounded-lg transition-colors duration-200 flex items-center space-x-1"
-                title="Refresh credits from server"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span className="text-sm font-medium">Refresh</span>
-              </button>
+
             </div>
           </div>
 

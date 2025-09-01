@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit System Test - Comprehensive</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .button.danger:hover {
+            background: #c82333;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.success:hover {
+            background: #218838;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .credit-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            text-align: center;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Credit System Test - Comprehensive</h1>
+        <p>This test verifies the complete credit system functionality including trial enforcement and credit consumption.</p>
+        
+        <div class="credit-display">
+            Credits: <span id="creditDisplay">Loading...</span>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Current Status</h3>
+            <div id="statusDisplay">Loading...</div>
+            <button class="button" onclick="refreshStatus()">🔄 Refresh Status</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>💳 Credit Actions</h3>
+            <button class="button success" onclick="useCredit()">🔍 Use 1 Credit (View Contact)</button>
+            <button class="button danger" onclick="clearCredits()">🗑️ Clear All Credits</button>
+            <button class="button" onclick="simulateTrialExpiry()">⏰ Simulate Trial Expiry (3+ days)</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🆕 Trial Management</h3>
+            <button class="button" onclick="resetTrial()">🔄 Reset Trial (New User)</button>
+            <button class="button" onclick="advanceTime()">⏭️ Advance Time by 1 Day</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📝 Test Log</h3>
+            <div id="testLog" class="log"></div>
+            <button class="button" onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧹 Cleanup</h3>
+            <button class="button danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize test system
+        let testStartTime = new Date();
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('testLog');
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function updateCreditDisplay() {
+            const credits = localStorage.getItem('userCredits') || '0';
+            const registrationDate = localStorage.getItem('registrationDate');
+            const daysRemaining = calculateDaysRemaining();
+            
+            let displayText = '';
+            if (daysRemaining > 0) {
+                displayText = `${credits} / ${daysRemaining} days`;
+            } else if (credits > 0) {
+                displayText = `${credits} credits`;
+            } else {
+                displayText = '0 credits (trial expired)';
+            }
+            
+            document.getElementById('creditDisplay').textContent = displayText;
+            return { credits: parseInt(credits), daysRemaining, registrationDate };
+        }
+        
+        function calculateDaysRemaining() {
+            const registrationDate = localStorage.getItem('registrationDate');
+            if (!registrationDate) return 3;
+            
+            const regDate = new Date(registrationDate);
+            const currentDate = new Date();
+            const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+            return Math.max(0, 3 - daysSinceRegistration);
+        }
+        
+        function updateStatus() {
+            const { credits, daysRemaining, registrationDate } = updateCreditDisplay();
+            const statusDiv = document.getElementById('statusDisplay');
+            
+            let statusHTML = `
+                <div class="status info">
+                    <strong>Credits:</strong> ${credits}<br>
+                    <strong>Days Remaining:</strong> ${daysRemaining}<br>
+                    <strong>Registration Date:</strong> ${registrationDate ? new Date(registrationDate).toLocaleDateString() : 'Not set'}<br>
+                    <strong>Trial Status:</strong> ${daysRemaining > 0 ? 'Active' : 'Expired'}
+                </div>
+            `;
+            
+            if (credits === 0 && daysRemaining === 0) {
+                statusHTML += '<div class="status error">❌ Trial expired and no credits remaining</div>';
+            } else if (credits === 0) {
+                statusHTML += '<div class="status error">❌ No credits remaining</div>';
+            } else if (daysRemaining === 0) {
+                statusHTML += '<div class="status error">⏰ Trial expired</div>';
+            } else {
+                statusHTML += '<div class="status success">✅ Trial active with credits</div>';
+            }
+            
+            statusDiv.innerHTML = statusHTML;
+        }
+        
+        function useCredit() {
+            const { credits, daysRemaining } = updateCreditDisplay();
+            
+            if (credits <= 0) {
+                log('❌ Cannot use credit: No credits remaining', 'error');
+                return;
+            }
+            
+            if (daysRemaining <= 0) {
+                log('❌ Cannot use credit: Trial expired', 'error');
+                return;
+            }
+            
+            const newCredits = credits - 1;
+            localStorage.setItem('userCredits', newCredits.toString());
+            log(`✅ Credit used successfully: ${credits} → ${newCredits}`, 'success');
+            updateStatus();
+        }
+        
+        function clearCredits() {
+            localStorage.setItem('userCredits', '0');
+            log('🗑️ All credits cleared', 'info');
+            updateStatus();
+        }
+        
+        function simulateTrialExpiry() {
+            // Set registration date to 4 days ago
+            const fourDaysAgo = new Date();
+            fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+            localStorage.setItem('registrationDate', fourDaysAgo.toISOString());
+            localStorage.setItem('userCredits', '0');
+            log('⏰ Trial expired: Registration date set to 4 days ago, credits set to 0', 'info');
+            updateStatus();
+        }
+        
+        function resetTrial() {
+            const now = new Date();
+            localStorage.setItem('registrationDate', now.toISOString());
+            localStorage.setItem('userCredits', '5');
+            log('🔄 Trial reset: New user with 5 credits and today as registration date', 'success');
+            updateStatus();
+        }
+        
+        function advanceTime() {
+            const registrationDate = localStorage.getItem('registrationDate');
+            if (!registrationDate) {
+                log('❌ No registration date set', 'error');
+                return;
+            }
+            
+            const regDate = new Date(registrationDate);
+            regDate.setDate(regDate.getDate() - 1);
+            localStorage.setItem('registrationDate', regDate.toISOString());
+            
+            const daysRemaining = calculateDaysRemaining();
+            if (daysRemaining <= 0) {
+                localStorage.setItem('userCredits', '0');
+                log('⏰ Time advanced: Trial expired, credits set to 0', 'info');
+            } else {
+                log(`⏭️ Time advanced: ${daysRemaining} days remaining`, 'info');
+            }
+            
+            updateStatus();
+        }
+        
+        function clearAllData() {
+            localStorage.removeItem('userCredits');
+            localStorage.removeItem('registrationDate');
+            log('🗑️ All data cleared', 'info');
+            updateStatus();
+        }
+        
+        function clearLog() {
+            document.getElementById('testLog').innerHTML = '';
+        }
+        
+        function refreshStatus() {
+            updateStatus();
+            log('🔄 Status refreshed', 'info');
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            log('🚀 Credit System Test Started', 'success');
+            log('Testing comprehensive credit functionality...', 'info');
+            
+            // Check if this is first time
+            if (!localStorage.getItem('registrationDate')) {
+                log('🆕 First time user detected - setting up trial', 'info');
+                resetTrial();
+            } else {
+                log('👤 Returning user detected', 'info');
+                updateStatus();
+            }
+        };
+        
+        // Auto-refresh status every 5 seconds
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>

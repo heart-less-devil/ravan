@@ -3701,174 +3701,11 @@ app.get('/api/admin/blocked-emails', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Add credits to user (admin only)
-app.post('/api/admin/users/:id/add-credits', authenticateAdmin, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { credits, reason } = req.body;
-    
-    if (!credits || credits <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Credits must be a positive number'
-      });
-    }
+// ADMIN CREDIT MODIFICATION REMOVED - Credits can only be consumed, never restored
+// This ensures the integrity of the credit system
 
-    let user = null;
-    let userEmail = null;
-
-    // Try to find user in MongoDB first
-    try {
-      console.log(`🔍 Looking for user with ID: ${userId} (type: ${typeof userId})`);
-      user = await User.findById(userId);
-      if (user) {
-        userEmail = user.email;
-        const oldCredits = user.currentCredits || 0;
-        user.currentCredits = oldCredits + credits;
-        await user.save();
-        console.log(`✅ Added ${credits} credits to MongoDB user: ${userEmail} (${oldCredits} → ${user.currentCredits})`);
-      } else {
-        console.log(`❌ User not found in MongoDB with ID: ${userId}`);
-      }
-    } catch (dbError) {
-      console.log('❌ MongoDB not available, checking file-based storage...');
-      console.log('MongoDB Error:', dbError.message);
-    }
-
-    // If not found in MongoDB, check file-based storage
-    if (!user) {
-      const fileUserIndex = mockDB.users.findIndex(u => 
-        u.id === parseInt(userId) || 
-        u.id === userId || 
-        u._id === userId || 
-        u._id === parseInt(userId)
-      );
-      if (fileUserIndex !== -1) {
-        user = mockDB.users[fileUserIndex];
-        userEmail = user.email;
-        user.currentCredits = (user.currentCredits || 0) + credits;
-        saveDataToFiles('credits_added');
-        console.log(`✅ Added ${credits} credits to file user: ${userEmail} (Total: ${user.currentCredits})`);
-      }
-    }
-
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
-      });
-    }
-
-    res.json({
-      success: true,
-      message: `Successfully added ${credits} credits to ${userEmail}`,
-      data: {
-        userId: user.id || user._id,
-        email: userEmail,
-        newCredits: user.currentCredits,
-        creditsAdded: credits,
-        reason: reason || 'Admin credit addition'
-      }
-    });
-  } catch (error) {
-    console.error('Error adding credits:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error adding credits' 
-    });
-  }
-});
-
-// Remove credits from user (admin only)
-app.post('/api/admin/users/:id/remove-credits', authenticateAdmin, async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { credits, reason } = req.body;
-    
-    if (!credits || credits <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Credits must be a positive number'
-      });
-    }
-
-    let user = null;
-    let userEmail = null;
-
-    // Try to find user in MongoDB first
-    try {
-      console.log(`🔍 Looking for user with ID: ${userId} (type: ${typeof userId})`);
-      user = await User.findById(userId);
-      if (user) {
-        userEmail = user.email;
-        const currentCredits = user.currentCredits || 0;
-        if (currentCredits < credits) {
-          return res.status(400).json({
-            success: false,
-            message: `User only has ${currentCredits} credits, cannot remove ${credits} credits`
-          });
-        }
-        user.currentCredits = currentCredits - credits;
-        await user.save();
-        console.log(`✅ Removed ${credits} credits from MongoDB user: ${userEmail} (${currentCredits} → ${user.currentCredits})`);
-      } else {
-        console.log(`❌ User not found in MongoDB with ID: ${userId}`);
-      }
-    } catch (dbError) {
-      console.log('❌ MongoDB not available, checking file-based storage...');
-      console.log('MongoDB Error:', dbError.message);
-    }
-
-    // If not found in MongoDB, check file-based storage
-    if (!user) {
-      const fileUserIndex = mockDB.users.findIndex(u => 
-        u.id === parseInt(userId) || 
-        u.id === userId || 
-        u._id === userId || 
-        u._id === parseInt(userId)
-      );
-      if (fileUserIndex !== -1) {
-        user = mockDB.users[fileUserIndex];
-        userEmail = user.email;
-        const currentCredits = user.currentCredits || 0;
-        if (currentCredits < credits) {
-          return res.status(400).json({
-            success: false,
-            message: `User only has ${currentCredits} credits, cannot remove ${credits} credits`
-          });
-        }
-        user.currentCredits = currentCredits - credits;
-        saveDataToFiles('credits_removed');
-        console.log(`✅ Removed ${credits} credits from file user: ${userEmail} (Remaining: ${user.currentCredits})`);
-      }
-    }
-
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
-      });
-    }
-
-    res.json({
-      success: true,
-      message: `Successfully removed ${credits} credits from ${userEmail}`,
-      data: {
-        userId: user.id || user._id,
-        email: userEmail,
-        newCredits: user.currentCredits,
-        creditsRemoved: credits,
-        reason: reason || 'Admin credit removal'
-      }
-    });
-  } catch (error) {
-    console.error('Error removing credits:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error removing credits' 
-    });
-  }
-});
+// ADMIN CREDIT MODIFICATION REMOVED - Credits can only be consumed, never restored
+// This ensures the integrity of the credit system
 
 // Unblock email (admin only)
 app.post('/api/admin/unblock-email', authenticateAdmin, async (req, res) => {
@@ -6106,6 +5943,116 @@ app.get('/api/auth/payment-status', authenticateToken, (req, res) => {
 });
 
 // Subscription management endpoints
+app.get('/api/auth/subscription', authenticateToken, (req, res) => {
+  try {
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if subscription is active and when credits should renew
+    const now = new Date();
+    const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+    const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+    const trialDays = 3;
+    const trialExpired = daysSinceRegistration >= trialDays;
+    const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
+    const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
+    const nextRenewal = user.nextCreditRenewal ? new Date(user.nextCreditRenewal) : null;
+    
+    let shouldRenewCredits = false;
+    let creditsToGive = 0;
+
+    if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
+      // Check if it's time to renew credits based on plan type
+      if (!lastCreditRenewal || now >= nextRenewal) {
+        shouldRenewCredits = true;
+        
+        // Set credits based on plan
+        if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
+          creditsToGive = 50;
+        } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
+          creditsToGive = 100;
+        } else if (user.currentPlan === 'test') {
+          creditsToGive = 1;
+        }
+        
+        // Update user with new credits and renewal date
+        const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+        if (userIndex !== -1) {
+          mockDB.users[userIndex].currentCredits = creditsToGive;
+          mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
+          
+          // Set renewal period based on plan type
+          let renewalDays = 30; // Default monthly
+          if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
+            renewalDays = 30; // Annual plans have monthly EMI, so monthly renewal
+          }
+          // Monthly plans don't auto-renew, so no next renewal date
+          if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
+            mockDB.users[userIndex].nextCreditRenewal = null; // No auto-renewal for monthly
+          } else {
+            mockDB.users[userIndex].nextCreditRenewal = new Date(now.getTime() + renewalDays * 24 * 60 * 60 * 1000).toISOString();
+          }
+          saveDataToFiles();
+        }
+      }
+    } else {
+      // Enforce free-trial credits server-side
+      const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+      if (userIndex !== -1) {
+        if (trialExpired) {
+          // Trial expired → force credits to 0
+          if (mockDB.users[userIndex].currentCredits !== 0) {
+            mockDB.users[userIndex].currentCredits = 0;
+            saveDataToFiles('free_trial_expired');
+          }
+        } else if (
+          mockDB.users[userIndex].currentCredits === undefined ||
+          mockDB.users[userIndex].currentCredits === null
+        ) {
+          // Ensure default 5 credits during trial
+          mockDB.users[userIndex].currentCredits = 5;
+          saveDataToFiles('free_trial_defaulted');
+        }
+      }
+    }
+
+    // Return current credits (don't override if user has used some)
+    let currentCredits = user.currentCredits;
+    if (currentCredits === undefined || currentCredits === null) {
+      // Set default credits based on plan
+      if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
+        if (user.currentPlan === 'monthly') {
+          currentCredits = 50;
+        } else if (user.currentPlan === 'annual') {
+          currentCredits = 100;
+        } else if (user.currentPlan === 'test') {
+          currentCredits = 1;
+        }
+      } else {
+        currentCredits = trialExpired ? 0 : 5; // Free users with trial enforcement
+      }
+    }
+
+    res.json({
+      paymentCompleted: user.paymentCompleted || false,
+      currentPlan: user.currentPlan || 'free',
+      currentCredits: currentCredits,
+      lastCreditRenewal: user.lastCreditRenewal,
+      nextCreditRenewal: user.nextCreditRenewal,
+      shouldRenewCredits,
+      creditsToGive,
+      trialExpired,
+      daysRemaining: user.paymentCompleted && user.currentPlan !== 'free' ? null : trialDaysRemaining
+    });
+  } catch (error) {
+    console.error('Error fetching subscription status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
   try {
     const user = mockDB.users.find(u => u.email === req.user.email);
@@ -6226,6 +6173,7 @@ app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
     }
 
     const user = mockDB.users[userIndex];
+    
     // Enforce free trial expiry before allowing credit usage
     if (!user.paymentCompleted || user.currentPlan === 'free') {
       const now = new Date();
@@ -6241,13 +6189,32 @@ app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
     }
     
     if (user.currentCredits > 0) {
+      // Track credit usage with timestamp
+      if (!user.creditUsageHistory) {
+        user.creditUsageHistory = [];
+      }
+      
+      user.creditUsageHistory.push({
+        action: 'search',
+        timestamp: new Date().toISOString(),
+        creditsUsed: 1,
+        remainingCredits: user.currentCredits - 1
+      });
+      
+      // Keep only last 100 usage records
+      if (user.creditUsageHistory.length > 100) {
+        user.creditUsageHistory = user.creditUsageHistory.slice(-100);
+      }
+      
       user.currentCredits -= 1;
+      user.lastCreditUsage = new Date().toISOString();
       saveDataToFiles('credit_used');
       
       res.json({
         success: true,
         remainingCredits: user.currentCredits,
-        message: 'Credit used successfully'
+        message: 'Credit used successfully',
+        usageHistory: user.creditUsageHistory.length
       });
     } else {
       res.status(400).json({
@@ -6260,6 +6227,46 @@ app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 }); 
+
+// Credit monitoring endpoint for admins
+app.get('/api/admin/credit-monitoring', authenticateAdmin, (req, res) => {
+  try {
+    const users = mockDB.users.map(user => ({
+      email: user.email,
+      name: user.firstName + ' ' + user.lastName,
+      company: user.company,
+      currentPlan: user.currentPlan || 'free',
+      currentCredits: user.currentCredits || 0,
+      lastCreditUsage: user.lastCreditUsage,
+      lastCreditRenewal: user.lastCreditRenewal,
+      nextCreditRenewal: user.nextCreditRenewal,
+      paymentCompleted: user.paymentCompleted || false,
+      createdAt: user.createdAt,
+      creditUsageHistory: user.creditUsageHistory || [],
+      totalCreditsUsed: user.creditUsageHistory ? user.creditUsageHistory.reduce((sum, usage) => sum + usage.creditsUsed, 0) : 0
+    }));
+
+    // Sort by total credits used (descending)
+    users.sort((a, b) => b.totalCreditsUsed - a.totalCreditsUsed);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        summary: {
+          totalUsers: users.length,
+          paidUsers: users.filter(u => u.paymentCompleted).length,
+          freeUsers: users.filter(u => !u.paymentCompleted).length,
+          totalCreditsUsed: users.reduce((sum, u) => sum + u.totalCreditsUsed, 0),
+          averageCreditsPerUser: Math.round(users.reduce((sum, u) => sum + u.totalCreditsUsed, 0) / users.length)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching credit monitoring data:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 // Data export endpoint (for backup)
 app.get('/api/admin/export-data', authenticateAdmin, (req, res) => {

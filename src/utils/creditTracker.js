@@ -20,10 +20,39 @@ class CreditTracker {
   }
 
   // Use credits and notify listeners
-  useCredits(amount) {
+  async useCredits(amount) {
     const currentCredits = parseInt(localStorage.getItem('userCredits') || '5');
     const newCredits = Math.max(0, currentCredits - amount);
+    
+    // Update local storage immediately for better UX
     localStorage.setItem('userCredits', newCredits.toString());
+    
+    // Try to sync with backend
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await fetch('/api/auth/use-credit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Use backend credits if available
+          if (data.remainingCredits !== undefined) {
+            localStorage.setItem('userCredits', data.remainingCredits.toString());
+            this.notifyListeners(data.remainingCredits);
+            return data.remainingCredits;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sync credits with backend:', error);
+      // Continue with local credits if backend fails
+    }
     
     console.log(`Credits used: ${amount}, remaining: ${newCredits}`);
     this.notifyListeners(newCredits);
@@ -34,6 +63,35 @@ class CreditTracker {
   // Get current credits
   getCurrentCredits() {
     return parseInt(localStorage.getItem('userCredits') || '5');
+  }
+
+  // Get credits from backend without refreshing UI unnecessarily
+  async getCreditsFromBackend() {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+
+      const response = await fetch('/api/auth/subscription', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.currentCredits;
+      }
+    } catch (error) {
+      console.error('Failed to fetch credits from backend:', error);
+    }
+    return null;
+  }
+
+  // Check if credits need refresh (only for paid users)
+  shouldRefreshCredits() {
+    const userCurrentPlan = localStorage.getItem('userCurrentPlan');
+    return userCurrentPlan && userCurrentPlan !== 'free';
   }
 
   // Set credits (for admin or plan changes)

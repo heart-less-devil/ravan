@@ -248,14 +248,14 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     
     creditTracker.addListener(handleCreditChange);
     
-    // Set up periodic credit sync every 5 seconds
-    const creditSyncInterval = setInterval(() => {
-      syncCredits();
-    }, 5000);
+    // No more periodic credit sync - credits should persist
+    // const creditSyncInterval = setInterval(() => {
+    //   syncCredits();
+    // }, 5000);
     
     // Cleanup on component unmount
     return () => {
-      clearInterval(creditSyncInterval);
+      // clearInterval(creditSyncInterval); // No more interval to clear
       creditTracker.removeListener(handleCreditChange);
     };
   }, []);
