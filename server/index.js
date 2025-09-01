@@ -4980,7 +4980,7 @@ const generatePDFInvoice = (invoice, user) => {
       doc.fontSize(10)
          .font('Helvetica')
          .fillColor('#6b7280')
-         .text(`Date: ${new Date(invoice.date).toLocaleDateString('en-US', { 
+         .text(`Date: ${new Date(invoice.created || invoice.date || Date.now()).toLocaleDateString('en-US', { 
            year: 'numeric', 
            month: 'long', 
            day: 'numeric' 
@@ -5032,7 +5032,7 @@ const generatePDFInvoice = (invoice, user) => {
          .fillColor('#374151')
          .text(invoice.description || 'Subscription Plan', 50, doc.y);
       
-      doc.text(`$${invoice.amount.toFixed(2)}`, 400, doc.y);
+      doc.text(`$${(invoice.amount || 0).toFixed(2)}`, 400, doc.y);
       
       doc.moveDown(1);
       
@@ -5051,7 +5051,7 @@ const generatePDFInvoice = (invoice, user) => {
          .fillColor('#111827')
          .text('Total:', 350, doc.y);
       
-      doc.text(`$${invoice.amount.toFixed(2)}`, 400, doc.y);
+      doc.text(`$${(invoice.amount || 0).toFixed(2)}`, 400, doc.y);
       
       doc.moveDown(2);
 
@@ -5059,7 +5059,7 @@ const generatePDFInvoice = (invoice, user) => {
       doc.fontSize(12)
          .font('Helvetica-Bold')
          .fillColor('#059669')
-         .text(`Status: ${invoice.status.toUpperCase()}`, { align: 'center' });
+         .text(`Status: ${(invoice.status || invoice.paid ? 'PAID' : 'PENDING').toUpperCase()}`, { align: 'center' });
       
       doc.moveDown(2);
 
@@ -5081,6 +5081,48 @@ const generatePDFInvoice = (invoice, user) => {
     }
   });
 };
+
+// Test PDF generation endpoint
+app.get('/api/test-pdf', async (req, res) => {
+  try {
+    console.log('🧪 Testing PDF generation...');
+    
+    const testInvoice = {
+      id: 'TEST-001',
+      amount: 1.00,
+      description: 'Test Invoice',
+      created: new Date().toISOString(),
+      status: 'PAID'
+    };
+    
+    const testUser = {
+      name: 'Test User',
+      email: 'test@example.com',
+      company: 'Test Company'
+    };
+    
+    const pdfBuffer = await generatePDFInvoice(testInvoice, testUser);
+    
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      return res.status(500).json({ error: 'PDF generation failed - empty buffer' });
+    }
+    
+    console.log('✅ Test PDF generated successfully, size:', pdfBuffer.length, 'bytes');
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=test-invoice.pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('❌ Test PDF generation failed:', error);
+    res.status(500).json({ 
+      error: 'Test PDF generation failed',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
 
 // Download invoice endpoint - Support both Stripe and local invoices
 app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, res) => {
@@ -5142,6 +5184,22 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
     if (!invoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
+    
+    // Validate invoice object structure
+    if (!invoice.id) {
+      console.error('❌ Invalid invoice object - missing ID:', invoice);
+      return res.status(400).json({ message: 'Invalid invoice format - missing ID' });
+    }
+    
+    console.log('📋 Invoice object structure:', {
+      id: invoice.id,
+      amount: invoice.amount,
+      created: invoice.created,
+      date: invoice.date,
+      status: invoice.status,
+      paid: invoice.paid,
+      description: invoice.description
+    });
 
     // If it's a Stripe invoice and has a PDF URL, redirect to it
     if (isStripeInvoice && invoice.invoice_pdf) {
@@ -5150,7 +5208,15 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
     }
 
     // Otherwise, generate PDF invoice
+    console.log('📄 Generating PDF for invoice:', invoice);
     const pdfBuffer = await generatePDFInvoice(invoice, user);
+    
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      console.error('❌ Generated PDF buffer is empty');
+      return res.status(500).json({ message: 'Error: Generated PDF is empty' });
+    }
+    
+    console.log('✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes');
     
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
@@ -5159,8 +5225,12 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
     
     res.send(pdfBuffer);
   } catch (error) {
-    console.error('Error generating invoice:', error);
-    res.status(500).json({ message: 'Error generating invoice' });
+    console.error('❌ Error generating invoice:', error);
+    res.status(500).json({ 
+      message: 'Error generating invoice',
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

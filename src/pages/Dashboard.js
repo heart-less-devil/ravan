@@ -209,15 +209,11 @@ const Dashboard = () => {
           localStorage.setItem('userCurrentPlan', currentPlan);
         }
         
-        // Only update credits from backend for paid users or if credits are not set locally
-        const userCurrentPlan = profileData.user.currentPlan || 'free';
-        const localCredits = localStorage.getItem('userCredits');
-        
-        if (userCurrentPlan !== 'free' || !localCredits) {
-          if (typeof profileData.user.currentCredits === 'number') {
-            localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
-            setUserCredits(profileData.user.currentCredits);
-          }
+        // ALWAYS update credits from backend for real-time accuracy
+        if (typeof profileData.user.currentCredits === 'number') {
+          localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
+          setUserCredits(profileData.user.currentCredits);
+          console.log(`💳 Credits updated from backend: ${profileData.user.currentCredits}`);
         }
         // Show backend days remaining for trial, if provided
         if (typeof profileData.user.daysRemaining === 'number') {
@@ -259,15 +255,11 @@ const Dashboard = () => {
           localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
           localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
         }
-        // Only update credits from backend for paid users or if credits are not set locally
-        const userCurrentPlan = subscriptionData.currentPlan || 'free';
-        const localCredits = localStorage.getItem('userCredits');
-        
-        if (userCurrentPlan !== 'free' || !localCredits) {
-          if (typeof subscriptionData.currentCredits === 'number') {
-            localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
-            setUserCredits(subscriptionData.currentCredits);
-          }
+        // ALWAYS update credits from backend for real-time accuracy
+        if (typeof subscriptionData.currentCredits === 'number') {
+          localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
+          setUserCredits(subscriptionData.currentCredits);
+          console.log(`💳 Credits updated from subscription: ${subscriptionData.currentCredits}`);
         }
         // Show backend days remaining for trial, if provided
         if (typeof subscriptionData.daysRemaining === 'number') {
@@ -307,17 +299,8 @@ const Dashboard = () => {
   // Manual refresh function for the refresh button
   const handleManualRefresh = useCallback(() => {
     console.log('Manual refresh: fetching updated user data');
-    // Only fetch credits if user has a paid plan, otherwise use local storage
-    const userCurrentPlan = localStorage.getItem('userCurrentPlan');
-    if (userCurrentPlan && userCurrentPlan !== 'free') {
-      fetchUserData();
-    } else {
-      // For free users, just update the display without fetching from server
-      const storedCredits = localStorage.getItem('userCredits');
-      if (storedCredits) {
-        setUserCredits(parseInt(storedCredits));
-      }
-    }
+    // ALWAYS fetch from backend for real-time credit accuracy
+    fetchUserData();
   }, [fetchUserData]);
 
   useEffect(() => {
@@ -357,6 +340,14 @@ const Dashboard = () => {
     // Set up periodic suspension check (every 30 seconds)
     const suspensionInterval = setInterval(checkUserSuspension, 30000);
     
+    // Set up periodic credit refresh (every 60 seconds) for real-time updates
+    const creditRefreshInterval = setInterval(() => {
+      if (userCredits > 0) {
+        console.log('🔄 Periodic credit refresh...');
+        fetchUserData();
+      }
+    }, 60000);
+    
     // Also check suspension when user tries to access protected features
     const checkSuspensionOnAction = () => {
       checkUserSuspension();
@@ -377,6 +368,7 @@ const Dashboard = () => {
     // Cleanup interval and event listeners on component unmount
     return () => {
       clearInterval(suspensionInterval);
+      clearInterval(creditRefreshInterval);
       document.removeEventListener('click', checkSuspensionOnAction);
       document.removeEventListener('keydown', checkSuspensionOnAction);
     };
@@ -434,6 +426,9 @@ const Dashboard = () => {
         }
       }
     }
+    
+    // ALWAYS fetch fresh data from backend for real-time accuracy
+    fetchUserData();
 
     // Check if user is new (first time visiting dashboard)
     const isNewUser = localStorage.getItem('isNewUser');
@@ -442,10 +437,7 @@ const Dashboard = () => {
       localStorage.removeItem('isNewUser');
     }
 
-    // Fetch fresh user data from backend only if needed
-    if (userCurrentPlan && userCurrentPlan !== 'free') {
-      fetchUserData();
-    }
+    // Fresh data already fetched above for real-time accuracy
   }, [navigate]);
 
   // Clear search query and global search results when navigating to other pages
@@ -521,8 +513,15 @@ const Dashboard = () => {
           const data = await response.json();
           const newCredits = data.remainingCredits;
           console.log(`✅ Backend credit update: ${userCredits} → ${newCredits}`);
+          
+          // Immediately update both state and localStorage
           setUserCredits(newCredits);
           localStorage.setItem('userCredits', newCredits.toString());
+          
+          // Force dashboard refresh to show updated credits
+          setTimeout(() => {
+            fetchUserData();
+          }, 100);
           
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
@@ -1080,16 +1079,24 @@ const Dashboard = () => {
                       <Gift className="w-6 h-6 text-white" />
                     </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">🎁 Free Trial Credits</h3>
-                  <p className="text-gray-600 mb-3">You have <span className="font-bold text-blue-600">5 free credits</span> to explore our platform!</p>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {userPaymentStatus?.hasPaid ? '💎 Premium Credits' : '🎁 Free Trial Credits'}
+                  </h3>
+                  <p className="text-gray-600 mb-3">
+                    {userPaymentStatus?.hasPaid ? (
+                      `You have <span className="font-bold text-blue-600">${userCredits} premium credits</span> to explore our platform!`
+                    ) : (
+                      `You have <span className="font-bold text-blue-600">${userCredits || 5} free credits</span> to explore our platform!`
+                    )}
+                  </p>
                   <div className="bg-white rounded-lg p-3 border border-blue-200">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Credits Remaining:</span>
-                      <span className="text-lg font-bold text-blue-600">5</span>
+                      <span className="text-lg font-bold text-blue-600">{userCredits || 5}</span>
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-sm text-gray-600">Expires in:</span>
-                      <span className="text-sm font-medium text-orange-600">3 days</span>
+                      <span className="text-sm font-medium text-orange-600">{daysRemaining || 3} days</span>
                     </div>
                   </div>
                 </div>
@@ -1252,10 +1259,38 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
   ];
 
   const quickActions = [
-    { name: 'Search Database', icon: Search, path: '/dashboard/search', color: 'blue', gradient: 'from-blue-500 to-blue-600' },
-    { name: 'Quick Guide', icon: FileText, path: '/dashboard/resources/quick-guide', color: 'purple', gradient: 'from-purple-500 to-purple-600' },
-    { name: 'Free Resources', icon: Heart, path: '/dashboard/resources/free-content', color: 'pink', gradient: 'from-pink-500 to-pink-600' },
-    { name: 'Request Demo', icon: Zap, path: '/request-demo', color: 'yellow', gradient: 'from-yellow-500 to-yellow-600' }
+    { 
+      name: 'Search Database', 
+      description: 'Find biotech companies and contacts',
+      icon: Search, 
+      path: '/dashboard/search', 
+      color: 'blue', 
+      gradient: 'from-blue-500 to-blue-600' 
+    },
+    { 
+      name: 'Quick Guide', 
+      description: 'Learn how to use the platform',
+      icon: FileText, 
+      path: '/dashboard/resources/quick-guide', 
+      color: 'purple', 
+      gradient: 'from-purple-500 to-purple-600' 
+    },
+    { 
+      name: 'Free Resources', 
+      description: 'Access free BD materials',
+      icon: Heart, 
+      path: '/dashboard/resources/free-content', 
+      color: 'pink', 
+      gradient: 'from-pink-500 to-pink-600' 
+    },
+    { 
+      name: 'Request Demo', 
+      description: 'Get personalized walkthrough',
+      icon: Zap, 
+      path: '/request-demo', 
+      color: 'yellow', 
+      gradient: 'from-yellow-500 to-yellow-600' 
+    }
   ];
 
   return (
@@ -1270,9 +1305,20 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'User'} 👋</h1>
-            <div className="flex items-center space-x-3 mt-4 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2 inline-block w-[350px]">
-              <Calendar className="w-5 h-5" />
-                              <span className="font-medium">Current Plan: Free</span>
+            <div className="flex items-center space-x-6 mt-4">
+              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
+                <Calendar className="w-5 h-5" />
+                <span className="font-medium">
+                  Current Plan: {userPaymentStatus?.hasPaid ? userPaymentStatus.currentPlan : 'Free Trial'}
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
+                <Gift className="w-5 h-5" />
+                <span className="font-medium">
+                  Credits: {userPaymentStatus?.hasPaid ? `${userCredits} premium` : `${userCredits || 5} / ${daysRemaining || 3} days`}
+                </span>
+              </div>
             </div>
             
             {/* Upgrade Banner - Only show if user hasn't paid */}
@@ -1381,8 +1427,9 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
                 >
                   <div className={`w-12 h-12 bg-gradient-to-br ${action.gradient} rounded-2xl flex items-center justify-center mx-auto mb-3`}>
                     <action.icon className="w-6 h-6 text-white" />
-      </div>
-                  <p className="font-semibold text-gray-900">{action.name}</p>
+                  </div>
+                  <p className="font-semibold text-gray-900 mb-1">{action.name}</p>
+                  <p className="text-xs text-gray-600">{action.description}</p>
                 </motion.div>
               </Link>
             ))}
@@ -1396,36 +1443,71 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
           transition={{ duration: 0.6, delay: 0.6 }}
           className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
         >
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
+                      <div className="flex items-center space-x-4 mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                <span className="text-white font-bold text-xl">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h3>
+                <p className="text-gray-600">{user?.email || 'user@example.com'}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Member since: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h3>
-              <p className="text-gray-600">{user?.email || 'user@example.com'}</p>
-            </div>
-          </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
               <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div className={`w-3 h-3 rounded-full ${userPaymentStatus?.hasPaid ? 'bg-green-500' : 'bg-orange-500'}`}></div>
                 <span className="text-sm font-medium text-gray-700">Current Plan</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Gift className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-semibold text-green-700">Free</span>
+                {userPaymentStatus?.hasPaid ? (
+                  <>
+                    <CreditCard className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-700">{userPaymentStatus.currentPlan || 'Premium'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Gift className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-semibold text-orange-700">Free Trial</span>
+                  </>
+                )}
               </div>
             </div>
             
             <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
-              <span className="text-sm font-medium text-gray-700">Credits Remaining</span>
-              <span className="text-lg font-bold text-blue-600">{userCredits}</span>
+              <span className="text-sm font-medium text-gray-700">Credits Status</span>
+              <span className="text-lg font-bold text-blue-600">
+                {userPaymentStatus?.hasPaid ? (
+                  `${userCredits} credits`
+                ) : (
+                  daysRemaining > 0 ? `${userCredits} / ${daysRemaining} days` : '0 credits (trial expired)'
+                )}
+              </span>
             </div>
             
             <div className="flex items-center justify-between p-4 bg-orange-50 rounded-xl">
-              <span className="text-sm font-medium text-gray-700">Trial Expires</span>
-              <span className="text-sm font-semibold text-orange-600">{daysRemaining} days</span>
+              <span className="text-sm font-medium text-gray-700">Trial Status</span>
+              <span className="text-sm font-semibold text-orange-600">
+                {userPaymentStatus?.hasPaid ? (
+                  'Paid Plan'
+                ) : (
+                  daysRemaining > 0 ? `${daysRemaining} days left` : 'Trial Expired'
+                )}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl">
+              <span className="text-sm font-medium text-gray-700">Credits Used</span>
+              <span className="text-sm font-semibold text-purple-600">
+                {userPaymentStatus?.hasPaid ? (
+                  `${Math.max(0, (userPaymentStatus.currentPlan === 'monthly' ? 50 : 100) - userCredits)} / ${userPaymentStatus.currentPlan === 'monthly' ? 50 : 100}`
+                ) : (
+                  `${Math.max(0, 5 - userCredits)} / 5`
+                )}
+              </span>
             </div>
           </div>
           
@@ -1492,8 +1574,16 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
                             fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
                               headers: { 'Authorization': `Bearer ${token}` }
                             })
-                            .then(response => response.blob())
+                            .then(response => {
+                              if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                              }
+                              return response.blob();
+                            })
                             .then(blob => {
+                              if (blob.size === 0) {
+                                throw new Error('Downloaded file is empty');
+                              }
                               const url = window.URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
@@ -1501,7 +1591,10 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
                               a.click();
                               window.URL.revokeObjectURL(url);
                             })
-                            .catch(error => console.error('Error downloading invoice:', error));
+                            .catch(error => {
+                              console.error('❌ Error downloading invoice:', error);
+                              alert(`❌ Failed to download invoice: ${error.message}`);
+                            });
                           }
                         }}
                         className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1553,6 +1646,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
   const [daysRemaining, setDaysRemaining] = useState(3);
+  const [showCreditPopup, setShowCreditPopup] = useState(false);
 
   // Load search results from global state, localStorage and location state on component mount
   useEffect(() => {
@@ -1725,8 +1819,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     
     // Check if we have credits before proceeding
     if (userCredits <= 0) {
-      console.log('❌ No credits remaining, showing alert');
-      alert('❌ No credits remaining! Please purchase more credits to view contact information.');
+      console.log('❌ No credits remaining, showing popup');
+      setShowCreditPopup(true);
       return;
     }
     
@@ -1783,6 +1877,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+  
+  const closeCreditPopup = () => {
+    setShowCreditPopup(false);
   };
 
   // Calculate days remaining based on registration date
@@ -2516,6 +2614,89 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           </div>
         </div>
       )}
+      
+      {/* Credit Exhausted Popup */}
+      <AnimatePresence>
+        {showCreditPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Free Credits Exhausted!</h2>
+                <p className="text-gray-600 mb-6">
+                  You've used all your free credits. Upgrade to a paid plan to continue accessing contact details and other premium features.
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-blue-700">
+                      Current Status: {userCredits} credits remaining
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-center mb-2">
+                    <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span className="text-sm font-medium text-orange-700">Premium Features Locked</span>
+                  </div>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Access to unlimited contacts</li>
+                    <li>• Advanced search filters</li>
+                    <li>• Priority support</li>
+                    <li>• Export capabilities</li>
+                  </ul>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Link
+                    to="/dashboard/pricing"
+                    onClick={closeCreditPopup}
+                    className="flex-1 bg-gradient-to-r from-orange-600 to-red-600 text-white py-3 px-6 rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition-all duration-200 text-center"
+                  >
+                    Upgrade Now
+                  </Link>
+                  <button
+                    onClick={closeCreditPopup}
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-all duration-200"
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </div>
+              
+              {/* Close Button */}
+              <button
+                onClick={closeCreditPopup}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
