@@ -303,34 +303,205 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       
     case 'customer.subscription.created':
       console.log('✅ Customer subscription created');
+      
+      // Handle daily-12 subscription creation
+      const subscription = event.data.object;
+      if (subscription.metadata?.planId === 'daily-12') {
+        console.log('🔄 Daily-12 subscription created, setting up daily billing...');
+        
+        // Update user with subscription details
+        try {
+          const customer = await stripe.customers.retrieve(subscription.customer);
+          if (customer.email) {
+            // Try MongoDB first
+            try {
+              const User = require('./models/User');
+              await User.findOneAndUpdate(
+                { email: customer.email },
+                {
+                  subscriptionId: subscription.id,
+                  stripeCustomerId: subscription.customer,
+                  currentPlan: 'daily-12',
+                  subscriptionStatus: subscription.status,
+                  subscriptionCreatedAt: new Date(subscription.created * 1000),
+                  subscriptionEndAt: new Date(subscription.current_period_end * 1000),
+                  lastCreditRenewal: new Date(),
+                  nextCreditRenewal: new Date(Date.now() + 24 * 60 * 60 * 1000)
+                }
+              );
+              console.log('✅ MongoDB daily subscription updated for:', customer.email);
+            } catch (dbError) {
+              console.log('❌ MongoDB update failed, updating file storage...');
+              // Fallback to file storage
+              const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+              if (userIndex !== -1) {
+                mockDB.users[userIndex].subscriptionId = subscription.id;
+                mockDB.users[userIndex].stripeCustomerId = subscription.customer;
+                mockDB.users[userIndex].currentPlan = 'daily-12';
+                mockDB.users[userIndex].subscriptionStatus = subscription.status;
+                mockDB.users[userIndex].subscriptionCreatedAt = new Date(subscription.created * 1000).toISOString();
+                mockDB.users[userIndex].subscriptionEndAt = new Date(subscription.current_period_end * 1000).toISOString();
+                mockDB.users[userIndex].lastCreditRenewal = new Date().toISOString();
+                mockDB.users[userIndex].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+                saveDataToFiles('daily_subscription_created');
+                console.log('✅ File storage daily subscription updated for:', customer.email);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error updating user for daily subscription:', error);
+        }
+      }
       break;
       
     case 'customer.subscription.updated':
       console.log('✅ Customer subscription updated');
+      
+      // Handle daily-12 subscription updates
+      const updatedSubscription = event.data.object;
+      if (updatedSubscription.metadata?.planId === 'daily-12') {
+        console.log('🔄 Daily-12 subscription updated...');
+        
+        try {
+          const customer = await stripe.customers.retrieve(updatedSubscription.customer);
+          if (customer.email) {
+            // Update subscription status
+            try {
+              const User = require('./models/User');
+              await User.findOneAndUpdate(
+                { email: customer.email },
+                {
+                  subscriptionStatus: updatedSubscription.status,
+                  subscriptionEndAt: new Date(updatedSubscription.current_period_end * 1000)
+                }
+              );
+              console.log('✅ MongoDB daily subscription status updated for:', customer.email);
+            } catch (dbError) {
+              console.log('❌ MongoDB update failed, updating file storage...');
+              const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+              if (userIndex !== -1) {
+                mockDB.users[userIndex].subscriptionStatus = updatedSubscription.status;
+                mockDB.users[userIndex].subscriptionEndAt = new Date(updatedSubscription.current_period_end * 1000).toISOString();
+                saveDataToFiles('daily_subscription_updated');
+                console.log('✅ File storage daily subscription status updated for:', customer.email);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error updating daily subscription status:', error);
+        }
+      }
       break;
       
     case 'customer.subscription.deleted':
       console.log('❌ Customer subscription deleted');
+      
+      // Handle daily-12 subscription cancellation
+      const deletedSubscription = event.data.object;
+      if (deletedSubscription.metadata?.planId === 'daily-12') {
+        console.log('🔄 Daily-12 subscription cancelled...');
+        
+        try {
+          const customer = await stripe.customers.retrieve(deletedSubscription.customer);
+          if (customer.email) {
+            // Update subscription status
+            try {
+              const User = require('./models/User');
+              await User.findOneAndUpdate(
+                { email: customer.email },
+                {
+                  subscriptionStatus: 'cancelled',
+                  subscriptionOnHold: true,
+                  currentPlan: 'free'
+                }
+              );
+              console.log('✅ MongoDB daily subscription cancelled for:', customer.email);
+            } catch (dbError) {
+              console.log('❌ MongoDB update failed, updating file storage...');
+              const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+              if (userIndex !== -1) {
+                mockDB.users[userIndex].subscriptionStatus = 'cancelled';
+                mockDB.users[userIndex].subscriptionOnHold = true;
+                mockDB.users[userIndex].currentPlan = 'free';
+                saveDataToFiles('daily_subscription_cancelled');
+                console.log('✅ File storage daily subscription cancelled for:', customer.email);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error cancelling daily subscription:', error);
+        }
+      }
       break;
       
     case 'invoice.payment_succeeded':
       const invoice = event.data.object;
       console.log('✅ Invoice payment succeeded:', invoice.id);
       
-      // Update user's payment status when invoice is paid
-      try {
-        const customer = await stripe.customers.retrieve(invoice.customer);
-        if (customer.email) {
-          const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
-          if (userIndex !== -1) {
-            mockDB.users[userIndex].paymentCompleted = true;
-            mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
-            saveDataToFiles('invoice_payment_succeeded');
-            console.log('✅ User payment status updated for invoice:', invoice.id);
+      // Handle daily subscription invoice payments
+      if (invoice.subscription && invoice.metadata?.planId === 'daily-12') {
+        console.log('🔄 Daily-12 subscription invoice paid...');
+        
+        try {
+          const customer = await stripe.customers.retrieve(invoice.customer);
+          if (customer.email) {
+            // Renew daily credits for successful payment
+            try {
+              const User = require('./models/User');
+              const user = await User.findOne({ email: customer.email });
+              if (user) {
+                const newCredits = (user.currentCredits || 0) + 50;
+                const now = new Date();
+                const nextRenewal = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                
+                await User.findByIdAndUpdate(user._id, {
+                  currentCredits: newCredits,
+                  lastCreditRenewal: now.toISOString(),
+                  nextCreditRenewal: nextRenewal.toISOString(),
+                  lastDailyPayment: now.toISOString(),
+                  dailyPaymentsCount: (user.dailyPaymentsCount || 0) + 1
+                });
+                
+                console.log(`✅ MongoDB daily credits renewed for ${customer.email}: ${newCredits} credits`);
+              }
+            } catch (dbError) {
+              console.log('❌ MongoDB update failed, updating file storage...');
+              const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+              if (userIndex !== -1) {
+                const newCredits = (mockDB.users[userIndex].currentCredits || 0) + 50;
+                const now = new Date();
+                const nextRenewal = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                
+                mockDB.users[userIndex].currentCredits = newCredits;
+                mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
+                mockDB.users[userIndex].nextCreditRenewal = nextRenewal.toISOString();
+                mockDB.users[userIndex].lastDailyPayment = now.toISOString();
+                mockDB.users[userIndex].dailyPaymentsCount = (mockDB.users[userIndex].dailyPaymentsCount || 0) + 1;
+                
+                saveDataToFiles('daily_invoice_payment_succeeded');
+                console.log(`✅ File storage daily credits renewed for ${customer.email}: ${newCredits} credits`);
+              }
+            }
           }
+        } catch (error) {
+          console.error('❌ Error processing daily subscription invoice:', error);
         }
-      } catch (error) {
-        console.error('❌ Error updating user for invoice payment:', error);
+      } else {
+        // Handle regular invoice payments
+        try {
+          const customer = await stripe.customers.retrieve(invoice.customer);
+          if (customer.email) {
+            const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+            if (userIndex !== -1) {
+              mockDB.users[userIndex].paymentCompleted = true;
+              mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+              saveDataToFiles('invoice_payment_succeeded');
+              console.log('✅ User payment status updated for invoice:', invoice.id);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error updating user for invoice payment:', error);
+        }
       }
       break;
       
@@ -6795,3 +6966,343 @@ app.delete('/api/admin/pdfs/:id', authenticateToken, async (req, res) => {
 });
 
 // PDF Management Routes added successfully
+
+// Add node-cron for daily billing
+const cron = require('node-cron');
+
+// Daily Subscription Processing System
+async function processDailySubscriptions() {
+  console.log('🔄 Starting daily subscription processing...');
+  
+  try {
+    // Find all daily-12 subscribers
+    let dailySubscribers = [];
+    
+    // Try MongoDB first
+    try {
+      const mongoUsers = await User.find({ 
+        currentPlan: 'daily-12',
+        subscriptionEndAt: { $gt: new Date() } // Still active
+      }).lean();
+      
+      dailySubscribers = mongoUsers.map(user => ({
+        ...user,
+        source: 'mongodb'
+      }));
+      console.log(`✅ Found ${dailySubscribers.length} daily subscribers in MongoDB`);
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, checking file storage...');
+    }
+    
+    // Fallback to file storage
+    if (dailySubscribers.length === 0) {
+      dailySubscribers = mockDB.users.filter(user => 
+        user.currentPlan === 'daily-12' && 
+        user.subscriptionEndAt && 
+        new Date(user.subscriptionEndAt) > new Date()
+      ).map(user => ({
+        ...user,
+        source: 'file'
+      }));
+      console.log(`✅ Found ${dailySubscribers.length} daily subscribers in file storage`);
+    }
+    
+    if (dailySubscribers.length === 0) {
+      console.log('ℹ️ No active daily subscribers found');
+      return;
+    }
+    
+    // Process each daily subscriber
+    for (const subscriber of dailySubscribers) {
+      try {
+        await processDailySubscriber(subscriber);
+      } catch (error) {
+        console.error(`❌ Error processing subscriber ${subscriber.email}:`, error.message);
+      }
+    }
+    
+    console.log('✅ Daily subscription processing completed');
+  } catch (error) {
+    console.error('❌ Daily subscription processing failed:', error);
+  }
+}
+
+// Process individual daily subscriber
+async function processDailySubscriber(subscriber) {
+  console.log(`🔄 Processing daily subscriber: ${subscriber.email}`);
+  
+  try {
+    // Check if it's time for daily renewal
+    const lastRenewal = new Date(subscriber.lastCreditRenewal || subscriber.createdAt);
+    const now = new Date();
+    const hoursSinceRenewal = (now - lastRenewal) / (1000 * 60 * 60);
+    
+    if (hoursSinceRenewal < 24) {
+      console.log(`⏰ ${subscriber.email} - Not yet time for daily renewal (${Math.floor(hoursSinceRenewal)}h ago)`);
+      return;
+    }
+    
+    // Check if subscription is still active
+    if (subscriber.subscriptionEndAt && new Date(subscriber.subscriptionEndAt) <= now) {
+      console.log(`⏰ ${subscriber.email} - Subscription expired, skipping daily renewal`);
+      return;
+    }
+    
+    // Process daily payment and credit renewal
+    await processDailyPaymentAndCredits(subscriber);
+    
+  } catch (error) {
+    console.error(`❌ Error processing daily subscriber ${subscriber.email}:`, error);
+  }
+}
+
+// Process daily payment and credit renewal
+async function processDailyPaymentAndCredits(subscriber) {
+  console.log(`💳 Processing daily payment for: ${subscriber.email}`);
+  
+  try {
+    // Get customer from Stripe
+    let customer = null;
+    if (subscriber.stripeCustomerId) {
+      customer = await stripe.customers.retrieve(subscriber.stripeCustomerId);
+    } else {
+      // Find customer by email
+      const customers = await stripe.customers.list({ 
+        email: subscriber.email, 
+        limit: 1 
+      });
+      customer = customers.data[0];
+    }
+    
+    if (!customer) {
+      console.log(`⚠️ No Stripe customer found for ${subscriber.email}`);
+      return;
+    }
+    
+    // Create daily payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: 100, // $1.00 in cents
+      currency: 'usd',
+      customer: customer.id,
+      metadata: {
+        planId: 'daily-12',
+        customerEmail: subscriber.email,
+        dailyRenewal: 'true',
+        renewalDate: new Date().toISOString()
+      },
+      automatic_payment_methods: { enabled: true },
+      confirm: true, // Auto-confirm for daily billing
+      off_session: true // Allow charging without user interaction
+    });
+    
+    if (paymentIntent.status === 'succeeded') {
+      console.log(`✅ Daily payment succeeded for ${subscriber.email}: $${paymentIntent.amount / 100}`);
+      
+      // Renew credits and update user
+      await renewDailyCredits(subscriber, paymentIntent);
+      
+      // Generate daily invoice
+      await generateDailyInvoice(subscriber, paymentIntent);
+      
+    } else {
+      console.log(`❌ Daily payment failed for ${subscriber.email}: ${paymentIntent.status}`);
+      
+      // Handle failed payment
+      await handleFailedDailyPayment(subscriber, paymentIntent);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Daily payment processing failed for ${subscriber.email}:`, error.message);
+    
+    // Handle payment error
+    await handleDailyPaymentError(subscriber, error);
+  }
+}
+
+// Renew daily credits for user
+async function renewDailyCredits(subscriber, paymentIntent) {
+  console.log(`🔄 Renewing daily credits for: ${subscriber.email}`);
+  
+  try {
+    const newCredits = (subscriber.currentCredits || 0) + 50;
+    const now = new Date();
+    const nextRenewal = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+    
+    // Update in MongoDB if available
+    if (subscriber.source === 'mongodb') {
+      try {
+        await User.findByIdAndUpdate(subscriber._id, {
+          currentCredits: newCredits,
+          lastCreditRenewal: now.toISOString(),
+          nextCreditRenewal: nextRenewal.toISOString(),
+          lastDailyPayment: now.toISOString(),
+          dailyPaymentsCount: (subscriber.dailyPaymentsCount || 0) + 1
+        });
+        console.log(`✅ MongoDB credits renewed for ${subscriber.email}: ${newCredits} credits`);
+      } catch (dbError) {
+        console.log('❌ MongoDB update failed, using file storage...');
+      }
+    }
+    
+    // Update in file storage
+    const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+    if (userIndex !== -1) {
+      mockDB.users[userIndex].currentCredits = newCredits;
+      mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
+      mockDB.users[userIndex].nextCreditRenewal = nextRenewal.toISOString();
+      mockDB.users[userIndex].lastDailyPayment = now.toISOString();
+      mockDB.users[userIndex].dailyPaymentsCount = (mockDB.users[userIndex].dailyPaymentsCount || 0) + 1;
+      
+      saveDataToFiles('daily_credits_renewed');
+      console.log(`✅ File storage credits renewed for ${subscriber.email}: ${newCredits} credits`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error renewing credits for ${subscriber.email}:`, error);
+  }
+}
+
+// Generate daily invoice
+async function generateDailyInvoice(subscriber, paymentIntent) {
+  console.log(`📄 Generating daily invoice for: ${subscriber.email}`);
+  
+  try {
+    const invoiceId = `DAILY-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date();
+    
+    const dailyInvoice = {
+      id: invoiceId,
+      date: now.toISOString(),
+      amount: paymentIntent.amount / 100, // $1.00
+      currency: paymentIntent.currency || 'usd',
+      status: 'paid',
+      description: 'Daily-12 Plan - Daily Renewal',
+      plan: 'Daily-12',
+      paymentIntentId: paymentIntent.id,
+      customerEmail: subscriber.email,
+      type: 'daily_renewal',
+      renewalNumber: (subscriber.dailyPaymentsCount || 0) + 1,
+      creditsAdded: 50
+    };
+    
+    // Add to MongoDB if available
+    if (subscriber.source === 'mongodb') {
+      try {
+        await User.findByIdAndUpdate(subscriber._id, {
+          $push: { invoices: dailyInvoice }
+        });
+        console.log(`✅ MongoDB daily invoice generated for ${subscriber.email}: ${invoiceId}`);
+      } catch (dbError) {
+        console.log('❌ MongoDB invoice update failed, using file storage...');
+      }
+    }
+    
+    // Add to file storage
+    const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+    if (userIndex !== -1) {
+      if (!mockDB.users[userIndex].invoices) {
+        mockDB.users[userIndex].invoices = [];
+      }
+      mockDB.users[userIndex].invoices.push(dailyInvoice);
+      
+      saveDataToFiles('daily_invoice_generated');
+      console.log(`✅ File storage daily invoice generated for ${subscriber.email}: ${invoiceId}`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error generating daily invoice for ${subscriber.email}:`, error);
+  }
+}
+
+// Handle failed daily payment
+async function handleFailedDailyPayment(subscriber, paymentIntent) {
+  console.log(`❌ Handling failed daily payment for: ${subscriber.email}`);
+  
+  try {
+    // Update payment failure status
+    const now = new Date();
+    
+    if (subscriber.source === 'mongodb') {
+      try {
+        await User.findByIdAndUpdate(subscriber._id, {
+          lastPaymentFailure: now.toISOString(),
+          paymentFailureCount: (subscriber.paymentFailureCount || 0) + 1,
+          subscriptionOnHold: true
+        });
+      } catch (dbError) {
+        console.log('❌ MongoDB failure update failed, using file storage...');
+      }
+    }
+    
+    // Update file storage
+    const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+    if (userIndex !== -1) {
+      mockDB.users[userIndex].lastPaymentFailure = now.toISOString();
+      mockDB.users[userIndex].paymentFailureCount = (mockDB.users[userIndex].paymentFailureCount || 0) + 1;
+      mockDB.users[userIndex].subscriptionOnHold = true;
+      
+      saveDataToFiles('daily_payment_failed');
+    }
+    
+    // Send notification email (if email system is available)
+    console.log(`⚠️ Daily payment failed for ${subscriber.email} - subscription on hold`);
+    
+  } catch (error) {
+    console.error(`❌ Error handling failed payment for ${subscriber.email}:`, error);
+  }
+}
+
+// Handle daily payment error
+async function handleDailyPaymentError(subscriber, error) {
+  console.log(`❌ Handling daily payment error for: ${subscriber.email}`);
+  
+  try {
+    const now = new Date();
+    
+    // Update error status
+    if (subscriber.source === 'mongodb') {
+      try {
+                 await User.findByIdAndUpdate(subscriber._id, {
+           lastPaymentError: now.toISOString(),
+           paymentErrorCount: (subscriber.paymentErrorCount || 0) + 1,
+           lastPaymentErrorMessage: error.message
+         });
+       } catch (dbError) {
+         console.log('❌ MongoDB error update failed, using file storage...');
+       }
+     }
+     
+     // Update file storage
+     const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+     if (userIndex !== -1) {
+       mockDB.users[userIndex].lastPaymentError = now.toISOString();
+       mockDB.users[userIndex].paymentErrorCount = (mockDB.users[userIndex].paymentErrorCount || 0) + 1;
+       mockDB.users[userIndex].lastPaymentErrorMessage = error.message;
+       
+       saveDataToFiles('daily_payment_error');
+     }
+     
+     console.log(`⚠️ Daily payment error for ${subscriber.email}: ${error.message}`);
+     
+   } catch (updateError) {
+     console.error(`❌ Error updating error status for ${subscriber.email}:`, updateError);
+   }
+ }
+
+// Schedule daily subscription processing
+// Run every hour to check for daily renewals
+cron.schedule('0 * * * *', async () => {
+  console.log('⏰ Hourly cron job triggered - checking daily subscriptions...');
+  await processDailySubscriptions();
+});
+
+// Also run at midnight for daily summary
+cron.schedule('0 0 * * *', async () => {
+  console.log('🌅 Midnight cron job triggered - daily subscription summary...');
+  await processDailySubscriptions();
+  
+  // Log daily summary
+  console.log('📊 Daily Subscription Summary Completed');
+});
+
+console.log('✅ Daily subscription system initialized');
