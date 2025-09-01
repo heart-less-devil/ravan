@@ -4558,6 +4558,40 @@ app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) =>
   }
 });
 
+app.get('/api/admin/subscription-details', authenticateAdmin, async (req, res) => {
+  try {
+    // Get subscription details for all users
+    const subscriptionDetails = mockDB.users.map(user => ({
+      id: user.id || user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      name: user.name,
+      email: user.email,
+      company: user.company,
+      currentPlan: user.currentPlan || 'free',
+      paymentCompleted: user.paymentCompleted || false,
+      currentCredits: user.currentCredits || 0,
+      lastCreditRenewal: user.lastCreditRenewal,
+      nextCreditRenewal: user.nextCreditRenewal,
+      subscriptionId: user.subscriptionId,
+      subscriptionEndAt: user.subscriptionEndAt,
+      subscriptionOnHold: user.subscriptionOnHold || false,
+      paymentUpdatedAt: user.paymentUpdatedAt,
+      createdAt: user.createdAt,
+      invoices: user.invoices || [],
+      paymentHistory: user.paymentHistory || []
+    }));
+
+    res.json({
+      success: true,
+      subscriptions: subscriptionDetails
+    });
+  } catch (error) {
+    console.error('Error fetching subscription details:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch subscription details' });
+  }
+});
+
 // Function to generate PDF invoice
 const generatePDFInvoice = (invoice, user) => {
   return new Promise((resolve, reject) => {

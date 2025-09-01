@@ -44,8 +44,9 @@ const AdminPanel = () => {
   const [userActivity, setUserActivity] = useState([]);
   const [trialData, setTrialData] = useState([]);
   const [potentialCustomers, setPotentialCustomers] = useState([]);
-  const [consultingSessions, setConsultingSessions] = useState([]);
+
   const [contactSubmissions, setContactSubmissions] = useState([]);
+  const [subscriptionDetails, setSubscriptionDetails] = useState([]);
   const [showPasswords, setShowPasswords] = useState(false);
 
   
@@ -74,8 +75,9 @@ const AdminPanel = () => {
     fetchUserActivity();
     fetchTrialData();
     fetchPotentialCustomers();
-    fetchConsultingSessions();
+
     fetchContactSubmissions();
+    fetchSubscriptionDetails();
   }, []);
 
   const fetchBiotechData = async () => {
@@ -239,35 +241,7 @@ const AdminPanel = () => {
     }
   };
 
-  const fetchConsultingSessions = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_BASE_URL}/api/admin/consulting-sessions`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to fetch consulting sessions'}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setConsultingSessions(Array.isArray(result.sessions) ? result.sessions : []);
-      } else {
-        throw new Error(result.message || 'Failed to fetch consulting sessions');
-      }
-    } catch (error) {
-      console.error('Error fetching consulting sessions:', error);
-      setError(error.message);
-    }
-  };
 
   const fetchContactSubmissions = async () => {
     try {
@@ -295,6 +269,36 @@ const AdminPanel = () => {
       }
     } catch (error) {
       console.error('Error fetching contact submissions:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchSubscriptionDetails = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_BASE_URL}/api/admin/subscription-details`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to fetch subscription details'}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubscriptionDetails(Array.isArray(result.subscriptions) ? result.subscriptions : []);
+      } else {
+        throw new Error(result.message || 'Failed to fetch subscription details');
+      }
+    } catch (error) {
+      console.error('Error fetching subscription details:', error);
       setError(error.message);
     }
   };
@@ -725,54 +729,67 @@ const AdminPanel = () => {
     // In a real application, you would save the settings to the backend
   };
 
-  const handleViewSession = (session) => {
-    const sessionDetails = `
-Session Details:
----------------
-User: ${session.userName}
-Email: ${session.userEmail}
-Company: ${session.userCompany}
-Date: ${new Date(session.date).toLocaleDateString()}
-Time: ${session.time}
-Topic: ${session.topic}
-Notes: ${session.notes || 'No notes'}
-Status: ${session.status}
-Created: ${new Date(session.createdAt).toLocaleString()}
+  const handleViewSubscription = (subscription) => {
+    const subscriptionDetails = `
+Subscription Details:
+-------------------
+User: ${subscription.name || `${subscription.firstName} ${subscription.lastName}`}
+Email: ${subscription.email}
+Plan: ${subscription.currentPlan}
+Status: ${subscription.paymentCompleted ? 'Active' : 'Inactive'}
+Credits: ${subscription.currentCredits || 0}
+Next Renewal: ${subscription.nextCreditRenewal ? new Date(subscription.nextCreditRenewal).toLocaleDateString() : 'N/A'}
+Subscription ID: ${subscription.subscriptionId || 'N/A'}
+Subscription End: ${subscription.subscriptionEndAt ? new Date(subscription.subscriptionEndAt).toLocaleDateString() : 'N/A'}
+On Hold: ${subscription.subscriptionOnHold ? 'Yes' : 'No'}
+Created: ${new Date(subscription.createdAt).toLocaleString()}
     `;
-    alert(sessionDetails);
+    alert(subscriptionDetails);
   };
 
-  const handleCompleteSession = async (sessionId) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_BASE_URL}/api/admin/complete-session/${sessionId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to complete session'}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('Session marked as completed!');
-        // Refresh the sessions list
-        fetchConsultingSessions();
-      } else {
-        throw new Error(result.message || 'Failed to complete session');
-      }
-    } catch (error) {
-      console.error('Error completing session:', error);
-      alert('Error completing session: ' + error.message);
+  const handleEditSubscription = (subscription) => {
+    const newPlan = prompt(`Edit subscription for ${subscription.email}:\n\nCurrent Plan: ${subscription.currentPlan}\nEnter new plan (free, daily-12, monthly, annual):`, subscription.currentPlan);
+    
+    if (newPlan && newPlan !== subscription.currentPlan) {
+      // In a real application, you would make an API call to update the subscription
+      alert(`Subscription plan updated to: ${newPlan}\n\nNote: This is a demo. In production, this would update the database and Stripe.`);
     }
   };
+
+  const handleCancelSubscription = async (subscription) => {
+    if (window.confirm(`Are you sure you want to cancel the subscription for ${subscription.email}?`)) {
+      try {
+        const token = localStorage.getItem('token');
+        
+        const response = await fetch(`${API_BASE_URL}/api/admin/cancel-subscription/${subscription.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`HTTP ${response.status}: ${errorData.message || 'Failed to cancel subscription'}`);
+        }
+
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('Subscription cancelled successfully!');
+          fetchSubscriptionDetails(); // Refresh the list
+        } else {
+          throw new Error(result.message || 'Failed to cancel subscription');
+        }
+      } catch (error) {
+        console.error('Error cancelling subscription:', error);
+        alert('Error cancelling subscription: ' + error.message);
+      }
+    }
+  };
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -1015,8 +1032,9 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                 { id: 'activity', name: 'User Activity', icon: BarChart3 },
                 { id: 'trials', name: 'Trial Data', icon: RefreshCw },
                 { id: 'customers', name: 'Potential Customers', icon: Users },
-                { id: 'consulting', name: 'Consulting Sessions', icon: Users },
+
                 { id: 'contacts', name: 'Contact Submissions', icon: Mail },
+                { id: 'subscriptions', name: 'Subscription Details', icon: DollarSign },
                 { id: 'settings', name: 'Settings', icon: Settings }
               ].map((tab) => (
                 <button
@@ -1492,73 +1510,7 @@ Created: ${new Date(session.createdAt).toLocaleString()}
               </motion.div>
             )}
 
-            {activeTab === 'consulting' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">BD Consulting Sessions</h3>
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-900">Scheduled and Completed Sessions</h4>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {Array.isArray(consultingSessions) && consultingSessions.map((session, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {session.userName}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{session.userCompany}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(session.date).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.time}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{session.topic}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                session.status === 'scheduled' 
-                                  ? 'bg-yellow-100 text-yellow-800' 
-                                  : 'bg-green-100 text-green-800'
-                              }`}>
-                                {session.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <button 
-                                onClick={() => handleViewSession(session)}
-                                className="text-blue-600 hover:text-blue-800 mr-2"
-                              >
-                                View
-                              </button>
-                              <button 
-                                onClick={() => handleCompleteSession(session.id)}
-                                className="text-green-600 hover:text-green-800"
-                              >
-                                Complete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </motion.div>
-            )}
+
 
             {activeTab === 'user-management' && (
               <motion.div
@@ -1810,6 +1762,108 @@ Created: ${new Date(session.createdAt).toLocaleString()}
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'subscriptions' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Subscription Details</h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-900">User Subscription Information</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Credits</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Next Renewal</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription ID</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {Array.isArray(subscriptionDetails) && subscriptionDetails.map((subscription, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {subscription.name || `${subscription.firstName} ${subscription.lastName}`}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{subscription.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                subscription.currentPlan === 'free' 
+                                  ? 'bg-gray-100 text-gray-800' 
+                                  : subscription.currentPlan === 'daily-12'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {subscription.currentPlan}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                subscription.paymentCompleted 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {subscription.paymentCompleted ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {subscription.currentCredits || 0}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {subscription.nextCreditRenewal 
+                                ? new Date(subscription.nextCreditRenewal).toLocaleDateString()
+                                : 'N/A'
+                              }
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                              {subscription.subscriptionId ? subscription.subscriptionId.substring(0, 20) + '...' : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                <button 
+                                  onClick={() => handleViewSubscription(subscription)}
+                                  className="text-blue-600 hover:text-blue-900 transition-colors duration-200 cursor-pointer"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button 
+                                  onClick={() => handleEditSubscription(subscription)}
+                                  className="text-green-600 hover:text-green-900 transition-colors duration-200 cursor-pointer"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                {subscription.paymentCompleted && (
+                                  <button 
+                                    onClick={() => handleCancelSubscription(subscription)}
+                                    className="text-red-600 hover:text-red-900 transition-colors duration-200 cursor-pointer"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {(!subscriptionDetails || subscriptionDetails.length === 0) && (
+                      <div className="text-center py-8 text-gray-500">
+                        No subscription details found
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>

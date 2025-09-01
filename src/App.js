@@ -32,6 +32,7 @@ import Privacy from './pages/Privacy';
 import CookiePolicy from './pages/CookiePolicy';
 import ScrollToTop from './components/ScrollToTop';
 import './App.css';
+import KeepAlive from './components/KeepAlive';
 
 // Cache busting component
 const CacheBuster = ({ children }) => {
@@ -63,6 +64,7 @@ function App() {
         <ScrollToTop />
         <CacheBuster>
           <div className="App min-h-screen bg-gray-50">
+            <KeepAlive />
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={
