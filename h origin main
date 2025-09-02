@@ -1,0 +1,5 @@
+[33md4f35e0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix payment system and credit management - Complete overhaul
+[33m2d1e8ec[m[33m ([m[1;31morigin/main[m[33m)[m Fix single invoice download issues - PDF generation errors resolved
+[33m3ea89ba[m 🚀 Complete Credit System Overhaul - Admin modification removed, trial enforcement fixed, credits never reset
+[33m3f04e57[m Complete Daily Subscription System + 24/7 Keepalive + Multiple Platforms
+[33m47c6855[m Add invisible keepalive system to BioPing logo - automatic render wake every 4 minutes

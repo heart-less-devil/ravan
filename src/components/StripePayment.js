@@ -5,7 +5,7 @@ import { Shield, Lock, CreditCard, CheckCircle, AlertCircle, X, Star, Users, Tar
 import { API_BASE_URL } from '../config';
 
 // Load Stripe with correct publishable key
-const stripePromise = loadStripe('pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT');
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE');
 
 // Validate Stripe is loaded
 if (!stripePromise) {

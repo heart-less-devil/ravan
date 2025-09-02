@@ -76,8 +76,8 @@
     "subscriptionId": "sub_1S0zusLf1iznKy11yxNSf5E5",
     "subscriptionEndAt": "2025-09-09T07:06:31.834Z",
     "subscriptionOnHold": false,
-    "lastPaymentError": "2025-09-01T15:30:02.532Z",
-    "paymentErrorCount": 1,
+    "lastPaymentError": "2025-09-02T19:30:01.298Z",
+    "paymentErrorCount": 6,
     "lastPaymentErrorMessage": "You cannot confirm this PaymentIntent because it's missing a payment method. You can either update the PaymentIntent with a payment method and then confirm it again, or confirm it again directly with a payment method or ConfirmationToken."
   },
   {

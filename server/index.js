@@ -25,7 +25,11 @@ const PORT = process.env.PORT || 3005;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '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';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  console.error('❌ STRIPE_SECRET_KEY environment variable is required for production');
+  process.exit(1);
+}
 const stripe = require('stripe')(stripeSecretKey);
 
 // Log Stripe configuration
@@ -127,7 +131,8 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
               paymentCompleted: true,
               currentPlan: paymentIntent.metadata.planId || 'monthly',
               paymentUpdatedAt: new Date(),
-              currentCredits: paymentIntent.metadata.planId === 'basic' ? 50 : 
+              currentCredits: paymentIntent.metadata.planId === 'daily-12' ? 50 : 
+                             paymentIntent.metadata.planId === 'basic' ? 50 : 
                              paymentIntent.metadata.planId === 'premium' ? 100 : 5
             },
             { new: true }
@@ -143,6 +148,10 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
               mockDB.users[userIndex].paymentCompleted = true;
               mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
               mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+              // Set credits based on plan
+              if (paymentIntent.metadata.planId === 'daily-12') {
+                mockDB.users[userIndex].currentCredits = 50;
+              }
               saveDataToFiles('payment_succeeded');
               console.log('✅ User payment status updated in file storage');
             }
@@ -155,6 +164,10 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             mockDB.users[userIndex].paymentCompleted = true;
             mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
             mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
+            // Set credits based on plan
+            if (paymentIntent.metadata.planId === 'daily-12') {
+              mockDB.users[userIndex].currentCredits = 50;
+            }
             saveDataToFiles('payment_succeeded');
             console.log('✅ User payment status updated in file storage (fallback)');
           }
@@ -4291,20 +4304,24 @@ app.post('/api/create-payment-intent', async (req, res) => {
         customerType: customer ? 'registered' : 'guest',
         integration_check: 'accept_a_payment'
       },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      // Use payment_method_types instead of automatic_payment_methods for better compatibility
+      payment_method_types: ['card'],
+      // Don't confirm immediately - let frontend handle confirmation
+      confirm: false,
     });
 
     console.log('✅ Payment intent created successfully:', {
       id: paymentIntent.id,
       amount: paymentIntent.amount,
       status: paymentIntent.status,
-      clientSecret: !!paymentIntent.client_secret
+      clientSecret: !!paymentIntent.client_secret,
+      paymentMethodTypes: paymentIntent.payment_method_types
     });
 
     res.json({
-      clientSecret: paymentIntent.client_secret
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      status: paymentIntent.status
     });
   } catch (error) {
     console.error('Payment intent error:', error);
@@ -4358,7 +4375,10 @@ app.post('/api/create-subscription', async (req, res) => {
       customer: customer.id,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
+      payment_settings: { 
+        save_default_payment_method: 'on_subscription',
+        payment_method_types: ['card']
+      },
       expand: ['latest_invoice.payment_intent']
     });
 
@@ -4431,14 +4451,18 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
         planId: 'daily-12',
         customerEmail: customerEmail
       },
-      automatic_payment_methods: { enabled: true }
+      // Use payment_method_types instead of automatic_payment_methods for better compatibility
+      payment_method_types: ['card'],
+      // Don't confirm immediately - let frontend handle confirmation
+      confirm: false,
     });
 
-    console.log('Payment intent created successfully:', {
+    console.log('✅ Daily subscription payment intent created successfully:', {
       id: paymentIntent.id,
       amount: paymentIntent.amount,
       status: paymentIntent.status,
-      hasClientSecret: !!paymentIntent.client_secret
+      hasClientSecret: !!paymentIntent.client_secret,
+      paymentMethodTypes: paymentIntent.payment_method_types
     });
 
     // Create subscription separately
@@ -4446,7 +4470,10 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
       customer: customer.id,
       items: [{ price: priceId }],
       payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' }
+      payment_settings: { 
+        save_default_payment_method: 'on_subscription',
+        payment_method_types: ['card']
+      }
     });
 
     console.log('Subscription created successfully:', {
@@ -6279,6 +6306,8 @@ app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
       user.currentCredits -= 1;
       user.lastCreditUsage = new Date().toISOString();
       saveDataToFiles('credit_used');
+      
+      console.log(`💳 Credit consumed for ${user.email}: ${user.currentCredits + 1} → ${user.currentCredits}`);
       
       res.json({
         success: true,

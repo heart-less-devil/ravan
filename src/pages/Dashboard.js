@@ -209,15 +209,42 @@ const Dashboard = () => {
           localStorage.setItem('userCurrentPlan', currentPlan);
         }
         
-        // ALWAYS update credits from backend for real-time accuracy
-        if (typeof profileData.user.currentCredits === 'number') {
-          localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
-          setUserCredits(profileData.user.currentCredits);
-          console.log(`💳 Credits updated from backend: ${profileData.user.currentCredits}`);
-        }
-        // Show backend days remaining for trial, if provided
-        if (typeof profileData.user.daysRemaining === 'number') {
-          setDaysRemaining(profileData.user.daysRemaining);
+        // CRITICAL: Handle trial expiration and credits from backend
+        const registrationDate = localStorage.getItem('registrationDate');
+        const currentDate = new Date();
+        
+        if (registrationDate) {
+          const regDate = new Date(registrationDate);
+          const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+          const trialExpired = daysSinceRegistration >= 3;
+          
+          console.log('📅 Trial check:', {
+            daysSinceRegistration,
+            trialExpired,
+            backendCredits: profileData.user.currentCredits
+          });
+          
+          if (trialExpired) {
+            // Trial expired - force credits to 0 regardless of backend
+            console.log('⏰ Trial expired - forcing credits to 0');
+            setUserCredits(0);
+            localStorage.setItem('userCredits', '0');
+            setDaysRemaining(0);
+          } else {
+            // Trial active - use backend credits or default to 5
+            const credits = profileData.user.currentCredits ?? 5;
+            setUserCredits(credits);
+            localStorage.setItem('userCredits', credits.toString());
+            setDaysRemaining(3 - daysSinceRegistration);
+            console.log(`💳 Trial credits set: ${credits} (${3 - daysSinceRegistration} days remaining)`);
+          }
+        } else {
+          // No registration date - use backend credits
+          if (typeof profileData.user.currentCredits === 'number') {
+            setUserCredits(profileData.user.currentCredits);
+            localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
+            console.log(`💳 Credits updated from backend: ${profileData.user.currentCredits}`);
+          }
         }
         
         console.log('✅ User data updated from backend');
@@ -255,16 +282,15 @@ const Dashboard = () => {
           localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
           localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
         }
-        // ALWAYS update credits from backend for real-time accuracy
-        if (typeof subscriptionData.currentCredits === 'number') {
-          localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
-          setUserCredits(subscriptionData.currentCredits);
-          console.log(`💳 Credits updated from subscription: ${subscriptionData.currentCredits}`);
+        // For paid users, update credits from subscription data
+        if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
+          if (typeof subscriptionData.currentCredits === 'number') {
+            setUserCredits(subscriptionData.currentCredits);
+            localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
+            console.log(`💳 Paid user credits updated: ${subscriptionData.currentCredits}`);
+          }
         }
-        // Show backend days remaining for trial, if provided
-        if (typeof subscriptionData.daysRemaining === 'number') {
-          setDaysRemaining(subscriptionData.daysRemaining);
-        }
+        // Trial users are handled in profile data section above
         
         console.log('✅ Subscription data updated from backend');
       } else {
@@ -346,7 +372,7 @@ const Dashboard = () => {
         console.log('🔄 Periodic credit refresh...');
         fetchUserData();
       }
-    }, 60000);
+    }, 60000); // Refresh every 60 seconds
     
     // Also check suspension when user tries to access protected features
     const checkSuspensionOnAction = () => {
@@ -379,53 +405,18 @@ const Dashboard = () => {
       currentPlan: userCurrentPlan || 'free'
     });
 
-    // Load user credits - ALWAYS respect used credits, NEVER reset them
-    const savedCredits = localStorage.getItem('userCredits');
+    // Set registration date if first time user
     const registrationDate = localStorage.getItem('registrationDate');
     const currentDate = new Date();
     
-    console.log('🔍 Credit Loading Debug:', {
-      savedCredits,
-      registrationDate,
-      currentDate: currentDate.toISOString()
-    });
-    
-    // If no registration date, set it (first time user)
     if (!registrationDate) {
-      console.log('🆕 First time user - setting registration date and 5 credits');
+      console.log('🆕 First time user - setting registration date');
       localStorage.setItem('registrationDate', currentDate.toISOString());
-      setUserCredits(5);
-      localStorage.setItem('userCredits', '5');
-    } else {
-      // Check if 3 days have passed since registration
-      const regDate = new Date(registrationDate);
-      const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      console.log('📅 Registration check:', {
-        regDate: regDate.toISOString(),
-        daysSinceRegistration,
-        trialExpired: daysSinceRegistration >= 3
-      });
-      
-      if (daysSinceRegistration >= 3) {
-        // 3 days passed - set credits to 0
-        console.log('⏰ Trial expired - setting credits to 0');
-        setUserCredits(0);
-        localStorage.setItem('userCredits', '0');
-      } else {
-        // Still within 3 days - ALWAYS use saved credits, never reset
-        if (savedCredits !== null) {
-          // Use whatever credits are saved (5, 4, 3, 2, 1, 0)
-          console.log(`✅ Using saved credits: ${savedCredits} (not resetting to 5)`);
-          setUserCredits(parseInt(savedCredits));
-        } else {
-          // Only set to 5 if no credits are saved at all
-          console.log('🆕 No saved credits - setting to 5');
-          setUserCredits(5);
-          localStorage.setItem('userCredits', '5');
-        }
-      }
     }
+    
+    // CRITICAL FIX: Don't set credits from localStorage here
+    // Let fetchUserData() handle ALL credit management from backend
+    console.log('🔍 Credit Loading: Waiting for backend data...');
     
     // ALWAYS fetch fresh data from backend for real-time accuracy
     fetchUserData();
@@ -518,10 +509,13 @@ const Dashboard = () => {
           setUserCredits(newCredits);
           localStorage.setItem('userCredits', newCredits.toString());
           
+          console.log('💳 Frontend credits updated immediately:', newCredits);
+          
           // Force dashboard refresh to show updated credits
           setTimeout(() => {
+            console.log('🔄 Forcing dashboard refresh after credit consumption...');
             fetchUserData();
-          }, 100);
+          }, 500); // Increased delay to ensure backend processes the update
           
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
@@ -1840,6 +1834,9 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           }
           return newSet;
         });
+        
+        // Force immediate UI update to show reduced credits
+        console.log('🔄 Credit consumed, email revealed, waiting for backend refresh...');
       } else {
         console.log('❌ Failed to consume credit');
       }
