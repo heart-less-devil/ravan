@@ -25,12 +25,182 @@ const PORT = process.env.PORT || 3005;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-if (!stripeSecretKey) {
-  console.error('❌ STRIPE_SECRET_KEY environment variable is required for production');
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_51RlErgLf1iznKy11YOUR_TEST_KEY_HERE';
+if (!stripeSecretKey || stripeSecretKey.includes('YOUR_TEST_KEY_HERE')) {
+  console.error('❌ STRIPE_SECRET_KEY environment variable is required');
+  console.error('💡 Create a .env file with your Stripe secret key');
+  console.error('💡 Or set STRIPE_SECRET_KEY=sk_live_your_key_here');
   process.exit(1);
 }
 const stripe = require('stripe')(stripeSecretKey);
+
+// ============================================================================
+// AUTO-CUT SUBSCRIPTION FUNCTIONS
+// ============================================================================
+
+// 1. CREATE CUSTOMER WITH PAYMENT METHOD
+async function createCustomerWithPaymentMethod(customerData) {
+  try {
+    console.log('🔧 Creating customer with payment method...');
+    
+    const customer = await stripe.customers.create({
+      email: customerData.email,
+      name: customerData.name,
+      metadata: {
+        userId: customerData.userId,
+        planId: customerData.planId
+      }
+    });
+    
+    console.log('✅ Customer created:', customer.id);
+    return customer;
+  } catch (error) {
+    console.error('❌ Error creating customer:', error);
+    throw error;
+  }
+}
+
+// 2. ATTACH PAYMENT METHOD TO CUSTOMER
+async function attachPaymentMethodToCustomer(customerId, paymentMethodId) {
+  try {
+    console.log('🔧 Attaching payment method to customer...');
+    
+    // Attach payment method to customer
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    });
+    
+    // Set as default payment method
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+    
+    console.log('✅ Payment method attached and set as default');
+    return true;
+  } catch (error) {
+    console.error('❌ Error attaching payment method:', error);
+    throw error;
+  }
+}
+
+// 3. CREATE SUBSCRIPTION WITH AUTO-RENEWAL
+async function createSubscriptionWithAutoRenewal(customerId, priceId) {
+  try {
+    console.log('🔧 Creating subscription with auto-renewal...');
+    
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: {
+        save_default_payment_method: 'on_subscription',
+      },
+      expand: ['latest_invoice.payment_intent'],
+    });
+    
+    console.log('✅ Subscription created:', subscription.id);
+    console.log('📊 Subscription status:', subscription.status);
+    
+    return subscription;
+  } catch (error) {
+    console.error('❌ Error creating subscription:', error);
+    throw error;
+  }
+}
+
+// 4. COMPLETE SUBSCRIPTION SETUP
+async function completeSubscriptionSetup(subscriptionId) {
+  try {
+    console.log('🔧 Completing subscription setup...');
+    
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    
+    if (subscription.status === 'incomplete') {
+      // If subscription is incomplete, we need to handle the payment
+      const latestInvoice = subscription.latest_invoice;
+      
+      if (latestInvoice && latestInvoice.payment_intent) {
+        const paymentIntent = latestInvoice.payment_intent;
+        
+        if (paymentIntent.status === 'requires_payment_method') {
+          console.log('⚠️ Payment method required for subscription');
+          return { status: 'requires_payment_method', subscription };
+        }
+        
+        if (paymentIntent.status === 'requires_confirmation') {
+          await stripe.paymentIntents.confirm(paymentIntent.id);
+          console.log('✅ Payment intent confirmed for subscription');
+        }
+      }
+    }
+    
+    console.log('✅ Subscription setup completed');
+    return subscription;
+  } catch (error) {
+    console.error('❌ Error completing subscription setup:', error);
+    throw error;
+  }
+}
+
+// 5. MAIN FUNCTION - COMPLETE AUTO-CUT SETUP
+async function setupAutoCutSubscription(userData, paymentMethodId, priceId) {
+  try {
+    console.log('🚀 Starting Auto-Cut Subscription Setup...');
+    console.log('==========================================');
+    
+    // Step 1: Create customer
+    const customer = await createCustomerWithPaymentMethod({
+      email: userData.email,
+      name: userData.name,
+      userId: userData.id,
+      planId: userData.planId
+    });
+    
+    // Step 2: Attach payment method
+    await attachPaymentMethodToCustomer(customer.id, paymentMethodId);
+    
+    // Step 3: Create subscription
+    const subscription = await createSubscriptionWithAutoRenewal(customer.id, priceId);
+    
+    // Step 4: Complete subscription if needed
+    if (subscription.status === 'incomplete') {
+      const completedSubscription = await completeSubscriptionSetup(subscription.id);
+      
+      if (completedSubscription.status === 'requires_payment_method') {
+        console.log('⚠️ Customer needs to provide payment method');
+        return {
+          success: false,
+          message: 'Payment method required',
+          subscription: completedSubscription.subscription,
+          customer: customer
+        };
+      }
+    }
+    
+    console.log('🎉 Auto-Cut Setup Complete!');
+    console.log('============================');
+    console.log('✅ Customer created and payment method attached');
+    console.log('✅ Subscription created with auto-renewal');
+    console.log('✅ Future payments will be automatic');
+    
+    return {
+      success: true,
+      customer: customer,
+      subscription: subscription,
+      message: 'Auto-cut setup completed successfully'
+    };
+    
+  } catch (error) {
+    console.error('❌ Auto-Cut Setup Failed:', error);
+    return {
+      success: false,
+      error: error.message,
+      message: 'Auto-cut setup failed'
+    };
+  }
+}
 
 // Log Stripe configuration
 console.log('🔧 Stripe configuration:');
@@ -115,51 +285,90 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
     case 'payment_intent.succeeded':
       const paymentIntent = event.data.object;
       console.log('✅ Payment succeeded:', paymentIntent.id);
+      console.log('Payment details:', {
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        customer: paymentIntent.customer,
+        customerEmail: paymentIntent.metadata?.customerEmail,
+        planId: paymentIntent.metadata?.planId,
+        status: paymentIntent.status
+      });
       
-      // Handle guest vs registered customer
-      const customerType = paymentIntent.metadata?.customerType || 'guest';
-      console.log('Customer type:', customerType);
+      // Get customer email from metadata or retrieve from Stripe
+      let customerEmail = paymentIntent.metadata?.customerEmail;
       
-      // Update user payment status in database if registered customer
-      if (customerType === 'registered' && paymentIntent.metadata?.userEmail) {
+      if (!customerEmail && paymentIntent.customer) {
+        try {
+          const customer = await stripe.customers.retrieve(paymentIntent.customer);
+          customerEmail = customer.email;
+          console.log('📧 Retrieved customer email from Stripe:', customerEmail);
+        } catch (error) {
+          console.log('⚠️ Could not retrieve customer email:', error.message);
+        }
+      }
+      
+      if (customerEmail) {
+        console.log('📧 Processing payment for customer:', customerEmail);
+        
         try {
           // Try to update in MongoDB first
           const User = require('./models/User');
+          const planId = paymentIntent.metadata?.planId || 'monthly';
+          
+          // Calculate credits based on plan
+          let credits = 5; // default
+          if (planId === 'daily-12') {
+            credits = 50;
+          } else if (planId === 'basic') {
+            credits = 50;
+          } else if (planId === 'premium') {
+            credits = 100;
+          }
+          
           const updatedUser = await User.findOneAndUpdate(
-            { email: paymentIntent.metadata.userEmail },
+            { email: customerEmail },
             {
               paymentCompleted: true,
-              currentPlan: paymentIntent.metadata.planId || 'monthly',
+              currentPlan: planId,
               paymentUpdatedAt: new Date(),
-              currentCredits: paymentIntent.metadata.planId === 'daily-12' ? 50 : 
-                             paymentIntent.metadata.planId === 'basic' ? 50 : 
-                             paymentIntent.metadata.planId === 'premium' ? 100 : 5
+              currentCredits: credits,
+              lastPaymentIntent: paymentIntent.id,
+              lastPaymentAmount: paymentIntent.amount,
+              lastPaymentDate: new Date()
             },
             { new: true }
           );
           
           if (updatedUser) {
-            console.log('✅ User payment status updated in MongoDB:', paymentIntent.metadata.userEmail);
+            console.log('✅ User payment status updated in MongoDB:', customerEmail);
+            console.log('📝 Updated user details:', {
+              email: updatedUser.email,
+              currentPlan: updatedUser.currentPlan,
+              currentCredits: updatedUser.currentCredits,
+              paymentCompleted: updatedUser.paymentCompleted
+            });
           } else {
             console.log('⚠️ User not found in MongoDB, updating file storage...');
             // Fallback to file-based storage
-            const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
+            const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
             if (userIndex !== -1) {
               mockDB.users[userIndex].paymentCompleted = true;
-              mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
+              mockDB.users[userIndex].currentPlan = planId;
               mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
-              // Set credits based on plan
-              if (paymentIntent.metadata.planId === 'daily-12') {
-                mockDB.users[userIndex].currentCredits = 50;
-              }
+              mockDB.users[userIndex].currentCredits = credits;
+              mockDB.users[userIndex].lastPaymentIntent = paymentIntent.id;
+              mockDB.users[userIndex].lastPaymentAmount = paymentIntent.amount;
+              mockDB.users[userIndex].lastPaymentDate = new Date().toISOString();
               saveDataToFiles('payment_succeeded');
               console.log('✅ User payment status updated in file storage');
+            } else {
+              console.log('⚠️ User not found in database:', customerEmail);
             }
           }
         } catch (error) {
           console.error('❌ Error updating user payment status:', error);
           // Fallback to file-based storage
-          const userIndex = mockDB.users.findIndex(u => u.email === paymentIntent.metadata.userEmail);
+          const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
           if (userIndex !== -1) {
             mockDB.users[userIndex].paymentCompleted = true;
             mockDB.users[userIndex].currentPlan = paymentIntent.metadata.planId || 'monthly';
@@ -290,46 +499,115 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
     case 'invoice.payment_failed':
       const failedInvoice = event.data.object;
       console.log('❌ Invoice payment failed:', failedInvoice.id);
+      console.log('Invoice details:', {
+        customer: failedInvoice.customer,
+        customerEmail: failedInvoice.customer_email,
+        amount: failedInvoice.amount_due,
+        billingReason: failedInvoice.billing_reason,
+        attemptCount: failedInvoice.attempt_count
+      });
+      
       try {
-        const subId = failedInvoice.subscription;
-        if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId);
-          const cust = await stripe.customers.retrieve(sub.customer);
-          const email = cust.email;
+        const email = failedInvoice.customer_email;
+        const customerId = failedInvoice.customer;
+        
+        if (email) {
+          // Find user by email
           const idx = mockDB.users.findIndex(u => u.email === email);
+          
           if (idx !== -1) {
-            mockDB.users[idx].subscriptionOnHold = true;
-            saveDataToFiles('subscription_on_hold');
+            // Handle subscription-based invoices
+            const subId = failedInvoice.subscription;
+            if (subId) {
+              mockDB.users[idx].subscriptionOnHold = true;
+              saveDataToFiles('subscription_on_hold');
+              console.log('✅ Subscription put on hold for user:', email);
+            } else {
+              // Handle manual invoices (like daily plans)
+              console.log('📋 Manual invoice payment failed for user:', email);
+              
+              // Check if this is a daily plan invoice
+              const lineItems = failedInvoice.lines?.data || [];
+              const isDailyPlan = lineItems.some(item => 
+                item.description && item.description.includes('Daily')
+              );
+              
+              if (isDailyPlan) {
+                // For daily plans, we might want to suspend access or send notification
+                mockDB.users[idx].paymentFailed = true;
+                mockDB.users[idx].lastPaymentFailure = new Date().toISOString();
+                saveDataToFiles('daily_plan_payment_failed');
+                console.log('⚠️ Daily plan payment failed for user:', email);
+              }
+            }
+          } else {
+            console.log('⚠️ User not found for email:', email);
           }
-          if (email) {
-            const mailOptions = {
-              from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-              to: email,
-              subject: 'Payment Issue - Action Required',
-              html: `<p>Your recent payment failed. Please update your payment method to continue your subscription.</p>`
-            };
-            try { await transporter.sendMail(mailOptions); } catch (e) { console.log('Mail error:', e.message); }
+          
+          // Send notification email
+          const mailOptions = {
+            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+            to: email,
+            subject: 'Payment Issue - Action Required',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #e74c3c;">Payment Failed</h2>
+                <p>We were unable to process your payment for the following invoice:</p>
+                <ul>
+                  <li><strong>Invoice ID:</strong> ${failedInvoice.id}</li>
+                  <li><strong>Amount:</strong> $${(failedInvoice.amount_due / 100).toFixed(2)} USD</li>
+                  <li><strong>Attempts:</strong> ${failedInvoice.attempt_count}</li>
+                </ul>
+                <p>Please update your payment method or contact support to resolve this issue.</p>
+                <p>Best regards,<br>The BioPing Team</p>
+              </div>
+            `
+          };
+          
+          try { 
+            await transporter.sendMail(mailOptions); 
+            console.log('✅ Payment failure notification sent to:', email);
+          } catch (e) { 
+            console.log('❌ Mail error:', e.message); 
           }
+        } else {
+          console.log('⚠️ No customer email found in invoice');
         }
-      } catch (e) { console.log('on-hold update error:', e.message); }
+      } catch (e) { 
+        console.log('❌ Payment failure handling error:', e.message); 
+      }
       break;
       
     case 'customer.subscription.created':
       console.log('✅ Customer subscription created');
       
-      // Handle daily-12 subscription creation
       const subscription = event.data.object;
-      if (subscription.metadata?.planId === 'daily-12') {
-        console.log('🔄 Daily-12 subscription created, setting up daily billing...');
+      console.log('Subscription details:', {
+        id: subscription.id,
+        customer: subscription.customer,
+        status: subscription.status,
+        plan: subscription.plan?.id,
+        interval: subscription.plan?.interval,
+        amount: subscription.plan?.amount
+      });
+      
+      // Check if this is a daily subscription (either by metadata or plan details)
+      const isDailySubscription = subscription.metadata?.planId === 'daily-12' || 
+                                 (subscription.plan?.interval === 'day' && subscription.plan?.amount === 100);
+      
+      if (isDailySubscription) {
+        console.log('🔄 Daily subscription created, setting up daily billing...');
         
         // Update user with subscription details
         try {
           const customer = await stripe.customers.retrieve(subscription.customer);
           if (customer.email) {
+            console.log('📧 Found customer email:', customer.email);
+            
             // Try MongoDB first
             try {
               const User = require('./models/User');
-              await User.findOneAndUpdate(
+              const updatedUser = await User.findOneAndUpdate(
                 { email: customer.email },
                 {
                   subscriptionId: subscription.id,
@@ -339,12 +617,21 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                   subscriptionCreatedAt: new Date(subscription.created * 1000),
                   subscriptionEndAt: new Date(subscription.current_period_end * 1000),
                   lastCreditRenewal: new Date(),
-                  nextCreditRenewal: new Date(Date.now() + 24 * 60 * 60 * 1000)
-                }
+                  nextCreditRenewal: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                  autoRenewal: true,
+                  paymentMethodSaved: true
+                },
+                { new: true }
               );
-              console.log('✅ MongoDB daily subscription updated for:', customer.email);
+              
+              if (updatedUser) {
+                console.log('✅ MongoDB daily subscription updated for:', customer.email);
+                console.log('🎉 Auto-cut subscription setup complete!');
+              } else {
+                console.log('⚠️ User not found in MongoDB for:', customer.email);
+              }
             } catch (dbError) {
-              console.log('❌ MongoDB update failed, updating file storage...');
+              console.log('❌ MongoDB update failed, updating file storage...', dbError.message);
               // Fallback to file storage
               const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
               if (userIndex !== -1) {
@@ -356,13 +643,126 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                 mockDB.users[userIndex].subscriptionEndAt = new Date(subscription.current_period_end * 1000).toISOString();
                 mockDB.users[userIndex].lastCreditRenewal = new Date().toISOString();
                 mockDB.users[userIndex].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+                mockDB.users[userIndex].autoRenewal = true;
+                mockDB.users[userIndex].paymentMethodSaved = true;
                 saveDataToFiles('daily_subscription_created');
                 console.log('✅ File storage daily subscription updated for:', customer.email);
+                console.log('🎉 Auto-cut subscription setup complete!');
+              } else {
+                console.log('⚠️ User not found in file storage for:', customer.email);
               }
             }
+          } else {
+            console.log('⚠️ No customer email found for subscription:', subscription.id);
           }
         } catch (error) {
           console.error('❌ Error updating user for daily subscription:', error);
+        }
+      } else {
+        console.log('📋 Non-daily subscription created, no special handling needed');
+      }
+      break;
+      
+    case 'invoice.payment_succeeded':
+      console.log('💰 Invoice payment succeeded - Auto-renewal working!');
+      
+      const paymentSucceededInvoice = event.data.object;
+      console.log('Invoice details:', {
+        id: paymentSucceededInvoice.id,
+        customer: paymentSucceededInvoice.customer,
+        subscription: paymentSucceededInvoice.subscription,
+        amount: paymentSucceededInvoice.amount_paid,
+        status: paymentSucceededInvoice.status
+      });
+      
+      // Handle successful auto-renewal
+      if (paymentSucceededInvoice.subscription) {
+        try {
+          const customer = await stripe.customers.retrieve(paymentSucceededInvoice.customer);
+          if (customer.email) {
+            console.log('🔄 Processing auto-renewal for:', customer.email);
+            
+            // Try MongoDB first
+            try {
+              const User = require('./models/User');
+              const updatedUser = await User.findOneAndUpdate(
+                { email: customer.email },
+                {
+                  lastPaymentDate: new Date(),
+                  subscriptionStatus: 'active',
+                  autoRenewalWorking: true,
+                  lastAutoRenewal: new Date()
+                },
+                { new: true }
+              );
+              
+              if (updatedUser) {
+                console.log('✅ Auto-renewal processed in MongoDB for:', customer.email);
+              }
+            } catch (dbError) {
+              console.log('❌ MongoDB update failed, updating file storage...');
+              // Fallback to file storage
+              const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
+              if (userIndex !== -1) {
+                mockDB.users[userIndex].lastPaymentDate = new Date().toISOString();
+                mockDB.users[userIndex].subscriptionStatus = 'active';
+                mockDB.users[userIndex].autoRenewalWorking = true;
+                mockDB.users[userIndex].lastAutoRenewal = new Date().toISOString();
+                saveDataToFiles('auto_renewal_success');
+                console.log('✅ Auto-renewal processed in file storage for:', customer.email);
+              }
+            }
+            
+            // Send renewal confirmation email
+            try {
+              const mailOptions = {
+                from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+                to: customer.email,
+                subject: '🔄 Subscription Renewed - BioPing',
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); padding: 20px; text-align: center; color: white;">
+                      <h1 style="margin: 0; font-size: 28px;">🔄 Subscription Renewed!</h1>
+                      <p style="margin: 10px 0 0 0; font-size: 16px;">Auto-renewal successful</p>
+                    </div>
+                    
+                    <div style="padding: 30px; background: #f8f9fa;">
+                      <h2 style="color: #333; margin-bottom: 20px;">Your subscription has been automatically renewed!</h2>
+                      
+                      <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 style="color: #4caf50; margin-top: 0;">Renewal Details:</h3>
+                        <ul style="list-style: none; padding: 0;">
+                          <li style="margin: 10px 0;"><strong>Amount:</strong> $${(paymentSucceededInvoice.amount_paid / 100).toFixed(2)} USD</li>
+                          <li style="margin: 10px 0;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</li>
+                          <li style="margin: 10px 0;"><strong>Status:</strong> Active</li>
+                          <li style="margin: 10px 0;"><strong>Invoice ID:</strong> ${paymentSucceededInvoice.id}</li>
+                        </ul>
+                      </div>
+                      
+                      <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50;">
+                        <p style="margin: 0; color: #2e7d32;"><strong>✅ Auto-Renewal Working Perfectly!</strong> Your subscription will continue to renew automatically.</p>
+                      </div>
+                      
+                      <p style="color: #666; margin-top: 20px;">
+                        Thank you for your continued subscription. Your access to premium features remains active.
+                      </p>
+                    </div>
+                    
+                    <div style="background: #333; color: white; padding: 20px; text-align: center;">
+                      <p style="margin: 0;">© 2024 BioPing. All rights reserved.</p>
+                    </div>
+                  </div>
+                `
+              };
+              
+              await transporter.sendMail(mailOptions);
+              console.log('✅ Auto-renewal confirmation email sent to:', customer.email);
+            } catch (emailError) {
+              console.error('❌ Email sending error:', emailError);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error processing auto-renewal:', error);
         }
       }
       break;
@@ -447,76 +847,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       }
       break;
       
-    case 'invoice.payment_succeeded':
-      const invoice = event.data.object;
-      console.log('✅ Invoice payment succeeded:', invoice.id);
-      
-      // Handle daily subscription invoice payments
-      if (invoice.subscription && invoice.metadata?.planId === 'daily-12') {
-        console.log('🔄 Daily-12 subscription invoice paid...');
-        
-        try {
-          const customer = await stripe.customers.retrieve(invoice.customer);
-          if (customer.email) {
-            // Renew daily credits for successful payment
-            try {
-              const User = require('./models/User');
-              const user = await User.findOne({ email: customer.email });
-              if (user) {
-                const newCredits = (user.currentCredits || 0) + 50;
-                const now = new Date();
-                const nextRenewal = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-                
-                await User.findByIdAndUpdate(user._id, {
-                  currentCredits: newCredits,
-                  lastCreditRenewal: now.toISOString(),
-                  nextCreditRenewal: nextRenewal.toISOString(),
-                  lastDailyPayment: now.toISOString(),
-                  dailyPaymentsCount: (user.dailyPaymentsCount || 0) + 1
-                });
-                
-                console.log(`✅ MongoDB daily credits renewed for ${customer.email}: ${newCredits} credits`);
-              }
-            } catch (dbError) {
-              console.log('❌ MongoDB update failed, updating file storage...');
-              const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
-              if (userIndex !== -1) {
-                const newCredits = (mockDB.users[userIndex].currentCredits || 0) + 50;
-                const now = new Date();
-                const nextRenewal = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-                
-                mockDB.users[userIndex].currentCredits = newCredits;
-                mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
-                mockDB.users[userIndex].nextCreditRenewal = nextRenewal.toISOString();
-                mockDB.users[userIndex].lastDailyPayment = now.toISOString();
-                mockDB.users[userIndex].dailyPaymentsCount = (mockDB.users[userIndex].dailyPaymentsCount || 0) + 1;
-                
-                saveDataToFiles('daily_invoice_payment_succeeded');
-                console.log(`✅ File storage daily credits renewed for ${customer.email}: ${newCredits} credits`);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error processing daily subscription invoice:', error);
-        }
-      } else {
-        // Handle regular invoice payments
-        try {
-          const customer = await stripe.customers.retrieve(invoice.customer);
-          if (customer.email) {
-            const userIndex = mockDB.users.findIndex(u => u.email === customer.email);
-            if (userIndex !== -1) {
-              mockDB.users[userIndex].paymentCompleted = true;
-              mockDB.users[userIndex].paymentUpdatedAt = new Date().toISOString();
-              saveDataToFiles('invoice_payment_succeeded');
-              console.log('✅ User payment status updated for invoice:', invoice.id);
-            }
-          }
-        } catch (error) {
-          console.error('❌ Error updating user for invoice payment:', error);
-        }
-      }
-      break;
+
       
     case 'invoice.created':
       const newInvoice = event.data.object;
@@ -1750,6 +2081,181 @@ app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
     email: "universalx0242@gmail.com",
     message: "Please contact us via email if you find any discrepancies."
   });
+});
+
+// ============================================================================
+// AUTO-CUT SUBSCRIPTION ENDPOINT
+// ============================================================================
+
+// Create subscription with auto-cut functionality
+app.post('/api/create-subscription', async (req, res) => {
+  try {
+    console.log('🚀 Creating subscription with auto-cut...');
+    
+    const { paymentMethodId, customerEmail, planId, customerName } = req.body;
+    
+    // Validate required fields
+    if (!paymentMethodId || !customerEmail || !planId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment method ID, customer email, and plan ID are required'
+      });
+    }
+    
+    // Determine price ID based on plan
+    let priceId;
+    switch (planId) {
+      case 'daily-12':
+        priceId = 'price_1Ry3VCLf1iznKy11PtmX3JJE'; // Your daily plan price ID
+        break;
+      case 'basic':
+        priceId = 'price_basic_plan'; // Replace with your basic plan price ID
+        break;
+      case 'premium':
+        priceId = 'price_premium_plan'; // Replace with your premium plan price ID
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid plan ID'
+        });
+    }
+    
+    console.log('📊 Subscription details:', {
+      customerEmail,
+      planId,
+      priceId,
+      paymentMethodId: paymentMethodId.substring(0, 10) + '...'
+    });
+    
+    // Setup auto-cut subscription
+    const result = await setupAutoCutSubscription(
+      {
+        email: customerEmail,
+        name: customerName || 'Customer',
+        id: 'user_' + Date.now(), // You can get this from your user database
+        planId: planId
+      },
+      paymentMethodId,
+      priceId
+    );
+    
+    if (result.success) {
+      // Update user in database
+      try {
+        // Try MongoDB first
+        const User = require('./models/User');
+        const updatedUser = await User.findOneAndUpdate(
+          { email: customerEmail },
+          {
+            stripeCustomerId: result.customer.id,
+            subscriptionId: result.subscription.id,
+            currentPlan: planId,
+            subscriptionStatus: 'active',
+            paymentCompleted: true,
+            subscriptionCreatedAt: new Date(),
+            lastPaymentDate: new Date()
+          },
+          { new: true }
+        );
+        
+        if (updatedUser) {
+          console.log('✅ User updated in MongoDB:', customerEmail);
+        } else {
+          console.log('⚠️ User not found in MongoDB, updating file storage...');
+          // Fallback to file storage
+          const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
+          if (userIndex !== -1) {
+            mockDB.users[userIndex].stripeCustomerId = result.customer.id;
+            mockDB.users[userIndex].subscriptionId = result.subscription.id;
+            mockDB.users[userIndex].currentPlan = planId;
+            mockDB.users[userIndex].subscriptionStatus = 'active';
+            mockDB.users[userIndex].paymentCompleted = true;
+            mockDB.users[userIndex].subscriptionCreatedAt = new Date().toISOString();
+            mockDB.users[userIndex].lastPaymentDate = new Date().toISOString();
+            saveDataToFiles('subscription_created');
+            console.log('✅ User updated in file storage');
+          }
+        }
+      } catch (dbError) {
+        console.error('❌ Database update error:', dbError);
+        // Continue with response even if database update fails
+      }
+      
+      // Send confirmation email
+      try {
+        const mailOptions = {
+          from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+          to: customerEmail,
+          subject: '🎉 Subscription Activated - BioPing',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; color: white;">
+                <h1 style="margin: 0; font-size: 28px;">🎉 Subscription Activated!</h1>
+                <p style="margin: 10px 0 0 0; font-size: 16px;">Welcome to BioPing Premium</p>
+              </div>
+              
+              <div style="padding: 30px; background: #f8f9fa;">
+                <h2 style="color: #333; margin-bottom: 20px;">Your subscription is now active!</h2>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                  <h3 style="color: #667eea; margin-top: 0;">Subscription Details:</h3>
+                  <ul style="list-style: none; padding: 0;">
+                    <li style="margin: 10px 0;"><strong>Plan:</strong> ${planId}</li>
+                    <li style="margin: 10px 0;"><strong>Status:</strong> Active</li>
+                    <li style="margin: 10px 0;"><strong>Auto-Renewal:</strong> Enabled</li>
+                    <li style="margin: 10px 0;"><strong>Subscription ID:</strong> ${result.subscription.id}</li>
+                  </ul>
+                </div>
+                
+                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50;">
+                  <p style="margin: 0; color: #2e7d32;"><strong>✅ Auto-Cut Enabled:</strong> Your subscription will automatically renew. No manual payments required!</p>
+                </div>
+                
+                <p style="color: #666; margin-top: 20px;">
+                  You can now access all premium features. If you have any questions, feel free to contact our support team.
+                </p>
+              </div>
+              
+              <div style="background: #333; color: white; padding: 20px; text-align: center;">
+                <p style="margin: 0;">© 2024 BioPing. All rights reserved.</p>
+              </div>
+            </div>
+          `
+        };
+        
+        await transporter.sendMail(mailOptions);
+        console.log('✅ Subscription confirmation email sent to:', customerEmail);
+      } catch (emailError) {
+        console.error('❌ Email sending error:', emailError);
+        // Continue even if email fails
+      }
+      
+      res.json({
+        success: true,
+        message: 'Subscription created successfully with auto-cut enabled',
+        subscriptionId: result.subscription.id,
+        customerId: result.customer.id,
+        planId: planId,
+        autoRenewal: true
+      });
+      
+    } else {
+      console.error('❌ Subscription creation failed:', result.message);
+      res.status(400).json({
+        success: false,
+        message: result.message || 'Subscription creation failed'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ API Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
 });
 
 // Contact form endpoint
@@ -4329,68 +4835,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
   }
 });
 
-// Create subscription (for future use)
-app.post('/api/create-subscription', async (req, res) => {
-  try {
-    const { planId, isAnnual, customerEmail } = req.body;
 
-    // Define price IDs for different plans and billing cycles
-    const priceIds = {
-      'test': {
-        monthly: 'price_test_monthly', // Replace with actual Stripe price ID
-        annual: 'price_test_annual'    // Replace with actual Stripe price ID
-      },
-      'basic': {
-        monthly: 'price_basic_monthly', // Replace with actual Stripe price ID
-        annual: 'price_basic_annual'    // Replace with actual Stripe price ID
-      },
-      'premium': {
-        monthly: 'price_premium_monthly', // Replace with actual Stripe price ID
-        annual: 'price_premium_annual'    // Replace with actual Stripe price ID
-      }
-    };
-
-    const priceId = priceIds[planId]?.[isAnnual ? 'annual' : 'monthly'];
-    
-    if (!priceId) {
-      return res.status(400).json({ error: 'Invalid plan or billing cycle' });
-    }
-
-    // Create or get customer
-    let customer = await stripe.customers.list({
-      email: customerEmail,
-      limit: 1
-    });
-
-    if (customer.data.length === 0) {
-      customer = await stripe.customers.create({
-        email: customerEmail
-      });
-    } else {
-      customer = customer.data[0];
-    }
-
-    // Create subscription
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { 
-        save_default_payment_method: 'on_subscription',
-        payment_method_types: ['card']
-      },
-      expand: ['latest_invoice.payment_intent']
-    });
-
-    res.json({
-      subscriptionId: subscription.id,
-      clientSecret: subscription.latest_invoice.payment_intent.client_secret
-    });
-  } catch (error) {
-    console.error('Subscription error:', error);
-    res.status(500).json({ error: 'Subscription failed' });
-  }
-});
 
 // Experimental: Create 12-day $1/day metered subscription (Test Plan)
 // Requires env STRIPE_DAILY_1USD_PRICE_ID
