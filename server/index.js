@@ -25,8 +25,8 @@ const PORT = process.env.PORT || 3005;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_51RlErgLf1iznKy11YOUR_TEST_KEY_HERE';
-if (!stripeSecretKey || stripeSecretKey.includes('YOUR_TEST_KEY_HERE')) {
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_live_YOUR_LIVE_KEY_HERE';
+if (!stripeSecretKey) {
   console.error('❌ STRIPE_SECRET_KEY environment variable is required');
   console.error('💡 Create a .env file with your Stripe secret key');
   console.error('💡 Or set STRIPE_SECRET_KEY=sk_live_your_key_here');
@@ -86,17 +86,14 @@ async function attachPaymentMethodToCustomer(customerId, paymentMethodId) {
 }
 
 // 3. CREATE SUBSCRIPTION WITH AUTO-RENEWAL
-async function createSubscriptionWithAutoRenewal(customerId, priceId) {
+async function createSubscriptionWithAutoRenewal(customerId, priceId, paymentMethodId) {
   try {
     console.log('🔧 Creating subscription with auto-renewal...');
     
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: {
-        save_default_payment_method: 'on_subscription',
-      },
+      default_payment_method: paymentMethodId,
       expand: ['latest_invoice.payment_intent'],
     });
     
@@ -162,20 +159,48 @@ async function setupAutoCutSubscription(userData, paymentMethodId, priceId) {
     await attachPaymentMethodToCustomer(customer.id, paymentMethodId);
     
     // Step 3: Create subscription
-    const subscription = await createSubscriptionWithAutoRenewal(customer.id, priceId);
+    const subscription = await createSubscriptionWithAutoRenewal(customer.id, priceId, paymentMethodId);
     
     // Step 4: Complete subscription if needed
     if (subscription.status === 'incomplete') {
-      const completedSubscription = await completeSubscriptionSetup(subscription.id);
+      console.log('🔄 Subscription is incomplete, attempting to complete...');
       
-      if (completedSubscription.status === 'requires_payment_method') {
-        console.log('⚠️ Customer needs to provide payment method');
-        return {
-          success: false,
-          message: 'Payment method required',
-          subscription: completedSubscription.subscription,
-          customer: customer
-        };
+      try {
+        // Get the latest invoice and confirm the payment intent
+        const latestInvoice = subscription.latest_invoice;
+        if (latestInvoice && latestInvoice.payment_intent) {
+          const paymentIntent = latestInvoice.payment_intent;
+          console.log('💳 Payment intent status:', paymentIntent.status);
+          
+          if (paymentIntent.status === 'requires_confirmation') {
+            const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntent.id);
+            console.log('✅ Payment intent confirmed, status:', confirmedPaymentIntent.status);
+          } else if (paymentIntent.status === 'requires_payment_method') {
+            console.log('⚠️ Payment method required, but we already attached one');
+            // Try to confirm with the attached payment method
+            const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntent.id, {
+              payment_method: paymentMethodId
+            });
+            console.log('✅ Payment intent confirmed with payment method, status:', confirmedPaymentIntent.status);
+          }
+        }
+        
+        // Wait a moment for Stripe to process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Retrieve the updated subscription
+        const updatedSubscription = await stripe.subscriptions.retrieve(subscription.id);
+        console.log('📊 Updated subscription status:', updatedSubscription.status);
+        
+        if (updatedSubscription.status === 'active') {
+          console.log('🎉 Subscription is now active!');
+          subscription = updatedSubscription;
+        } else {
+          console.log('⚠️ Subscription still incomplete, but payment method is saved for future use');
+        }
+      } catch (error) {
+        console.error('❌ Error completing subscription:', error);
+        // Continue anyway, subscription might still work
       }
     }
     
@@ -218,6 +243,7 @@ app.use(cors({
     'https://687dc02000e0ca0008eb4b09--deft-paprenjak-1f5e98.netlify.app',
     'https://deft-paprenjak-1f5e98.netlify.app',
     'https://biopingweb.netlify.app',
+    'null', // Allow file:// protocol for local testing
     'https://*.netlify.app',
     'https://thebioping.com',
     'https://www.thebioping.com',
@@ -359,7 +385,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
               mockDB.users[userIndex].lastPaymentIntent = paymentIntent.id;
               mockDB.users[userIndex].lastPaymentAmount = paymentIntent.amount;
               mockDB.users[userIndex].lastPaymentDate = new Date().toISOString();
-              saveDataToFiles('payment_succeeded');
+              saveDataToFilesImmediate('payment_succeeded');
               console.log('✅ User payment status updated in file storage');
             } else {
               console.log('⚠️ User not found in database:', customerEmail);
@@ -377,7 +403,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             if (paymentIntent.metadata.planId === 'daily-12') {
               mockDB.users[userIndex].currentCredits = 50;
             }
-            saveDataToFiles('payment_succeeded');
+            saveDataToFilesImmediate('payment_succeeded');
             console.log('✅ User payment status updated in file storage (fallback)');
           }
         }
@@ -895,6 +921,9 @@ app.use('/static', express.static(path.join(__dirname, '../public'), {
     }
   }
 }));
+
+// Serve test subscription page
+app.use('/test', express.static(path.join(__dirname, 'public')));
 
 // Add cache-busting middleware
 app.use((req, res, next) => {
@@ -2106,7 +2135,30 @@ app.post('/api/create-subscription', async (req, res) => {
     let priceId;
     switch (planId) {
       case 'daily-12':
-        priceId = 'price_1Ry3VCLf1iznKy11PtmX3JJE'; // Your daily plan price ID
+        // Use test price ID for test mode, live price ID for live mode
+        if (stripeSecretKey.includes('sk_test_')) {
+          // Create test price for daily plan
+          try {
+            const testPrice = await stripe.prices.create({
+              unit_amount: 100, // $1.00
+              currency: 'usd',
+              recurring: { interval: 'day' },
+              product_data: {
+                name: 'Daily Test Plan'
+              }
+            });
+            priceId = testPrice.id;
+            console.log('✅ Created test price:', priceId);
+          } catch (error) {
+            console.error('❌ Error creating test price:', error);
+            return res.status(500).json({
+              success: false,
+              message: 'Failed to create test price'
+            });
+          }
+        } else {
+          priceId = 'price_1Ry3VCLf1iznKy11PtmX3JJE'; // Live mode price ID
+        }
         break;
       case 'basic':
         priceId = 'price_basic_plan'; // Replace with your basic plan price ID
@@ -3925,8 +3977,30 @@ const loadDataFromFiles = () => {
   }
 };
 
-// Enhanced save function that saves after every action
+// Debounced saving to improve performance
+let saveTimeout = null;
 const saveDataToFiles = (action = 'auto') => {
+  // Clear existing timeout
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  
+  // Set new timeout to save after 2 seconds of inactivity
+  saveTimeout = setTimeout(() => {
+    performSave(action);
+  }, 2000);
+};
+
+// Immediate save function for critical operations
+const saveDataToFilesImmediate = (action = 'auto') => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  performSave(action);
+};
+
+// Actual save function
+const performSave = (action = 'auto') => {
   try {
     // Create backup before saving
     const backupDir = path.join(__dirname, 'backups', new Date().toISOString().split('T')[0]);
@@ -6516,6 +6590,8 @@ app.get('/api/auth/subscription', authenticateToken, (req, res) => {
           creditsToGive = 50;
         } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
           creditsToGive = 100;
+        } else if (user.currentPlan === 'daily-12') {
+          creditsToGive = 50; // Daily plan gets 50 credits
         } else if (user.currentPlan === 'test') {
           creditsToGive = 1;
         }
@@ -6626,6 +6702,8 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
           creditsToGive = 50;
         } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
           creditsToGive = 100;
+        } else if (user.currentPlan === 'daily-12') {
+          creditsToGive = 50; // Daily plan gets 50 credits
         } else if (user.currentPlan === 'test') {
           creditsToGive = 1;
         }

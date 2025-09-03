@@ -127,10 +127,11 @@
         </div>
 
         <div class="plan-info">
-            <h3>Daily Premium Plan <span class="auto-cut-badge">AUTO-CUT ENABLED</span></h3>
+            <h3>Daily Premium Plan <span class="auto-cut-badge">LIVE MODE</span></h3>
             <p><strong>Price:</strong> $1.00 USD per day</p>
             <p><strong>Features:</strong> Unlimited access to premium content, daily updates, priority support</p>
             <p><strong>Auto-Renewal:</strong> ✅ Enabled - Your subscription will automatically renew daily</p>
+            <p><strong>Mode:</strong> 🚀 LIVE MODE - Real payments will be processed!</p>
         </div>
 
         <form id="subscription-form">
@@ -171,7 +172,7 @@
 
     <script>
         // Initialize Stripe
-        const stripe = Stripe('pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT'); // Your complete publishable key
+        const stripe = Stripe('pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT'); // LIVE KEYS - Real payments!
         
         // Create an instance of Elements
         const elements = stripe.elements();
@@ -242,7 +243,7 @@
                 console.log('✅ Payment method created:', paymentMethod.id);
                 
                 // Send to backend
-                const response = await fetch('/api/create-subscription', {
+                const response = await fetch('http://localhost:3005/api/create-subscription', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
