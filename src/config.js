@@ -62,7 +62,7 @@ const getBackendURL = () => {
 };
 
 // Stripe Configuration
-export const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT';
+export const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE';
 
 // Environment check
 export const isDevelopment = process.env.NODE_ENV === 'development';

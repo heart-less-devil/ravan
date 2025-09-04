@@ -5,7 +5,7 @@ import { Shield, Lock, CreditCard, CheckCircle, AlertCircle, X, Star, Users, Tar
 import { API_BASE_URL } from '../config';
 
 // Load Stripe with correct publishable key
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT');
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE');
 
 // Validate Stripe is loaded
 if (!stripePromise) {
@@ -58,11 +58,30 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
             if (u && u.email) customerEmail = u.email;
           } catch (_) {}
         }
-        response = await fetch(`${API_BASE_URL}/api/subscription/create-daily-12`, {
+        
+        // Create payment method first
+        const cardElement = elements.getElement(CardElement);
+        const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: cardElement,
+        });
+
+        if (pmError) {
+          console.error('❌ Payment method creation failed:', pmError);
+          throw new Error(pmError.message);
+        }
+
+        console.log('✅ Payment method created:', paymentMethod.id);
+        
+        // Now create subscription with payment method
+        response = await fetch(`${API_BASE_URL}/api/create-subscription`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            customerEmail
+            customerEmail,
+            customerName: localStorage.getItem('userName') || 'Customer',
+            planId: 'daily-12',
+            paymentMethodId: paymentMethod.id
           }),
         });
       } else {
@@ -92,6 +111,35 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
       const responseData = await response.json();
       console.log('Payment intent response data:', responseData);
+
+      // Handle different response types
+      if (plan.id === 'daily-12') {
+        // Daily-12 subscription response
+        if (responseData.success) {
+          console.log('✅ Daily-12 subscription created successfully!');
+          setError(null);
+          onSuccess && onSuccess({
+            subscriptionId: responseData.subscriptionId,
+            customerId: responseData.customerId,
+            status: responseData.status,
+            message: responseData.message
+          });
+          
+          console.log('🎉 Daily-12 subscription with auto-cut billing created!');
+          // Show success message and close modal
+          setTimeout(() => {
+            onClose && onClose();
+          }, 2000);
+          setLoading(false);
+          return;
+        } else {
+          console.error('❌ Daily-12 subscription creation failed:', responseData.message);
+          setError(responseData.message || 'Subscription creation failed');
+          onError && onError(responseData.message || 'Subscription creation failed');
+          setLoading(false);
+          return;
+        }
+      }
 
       if (!responseData.clientSecret) {
         throw new Error('No client secret received from server');
@@ -124,6 +172,14 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
           amount: paymentIntent.amount,
           status: paymentIntent.status
         });
+        
+        // For daily-12 plan, show success message and close modal
+        if (plan.id === 'daily-12') {
+          console.log('🎉 Daily-12 subscription payment completed successfully!');
+          // The webhook will handle the subscription activation
+          // We just need to show success and close the modal
+        }
+        
         onSuccess && onSuccess(paymentIntent);
       }
     } catch (err) {

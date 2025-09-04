@@ -25,13 +25,7 @@ const PORT = process.env.PORT || 3005;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_live_YOUR_LIVE_KEY_HERE';
-if (!stripeSecretKey) {
-  console.error('❌ STRIPE_SECRET_KEY environment variable is required');
-  console.error('💡 Create a .env file with your Stripe secret key');
-  console.error('💡 Or set STRIPE_SECRET_KEY=sk_live_your_key_here');
-  process.exit(1);
-}
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_live_YOUR_STRIPE_SECRET_KEY_HERE';
 const stripe = require('stripe')(stripeSecretKey);
 
 // ============================================================================
@@ -155,13 +149,37 @@ async function setupAutoCutSubscription(userData, paymentMethodId, priceId) {
       planId: userData.planId
     });
     
-    // Step 2: Attach payment method
-    await attachPaymentMethodToCustomer(customer.id, paymentMethodId);
+    // Step 2: Create price if not provided
+    if (!priceId) {
+      console.log('📝 Creating price for daily-12 plan...');
+      const product = await stripe.products.create({
+        name: 'Daily Test Plan (12 days)',
+        description: '12-day subscription with daily $1 charges'
+      });
+      
+      const price = await stripe.prices.create({
+        product: product.id,
+        unit_amount: 100, // $1.00 in cents
+        currency: 'usd',
+        recurring: {
+          interval: 'day',
+          interval_count: 1
+        }
+      });
+      
+      priceId = price.id;
+      console.log('✅ Price created:', priceId);
+    }
     
-    // Step 3: Create subscription
+    // Step 3: Attach payment method (if provided)
+    if (paymentMethodId) {
+      await attachPaymentMethodToCustomer(customer.id, paymentMethodId);
+    }
+    
+    // Step 4: Create subscription
     const subscription = await createSubscriptionWithAutoRenewal(customer.id, priceId, paymentMethodId);
     
-    // Step 4: Complete subscription if needed
+    // Step 5: Complete subscription if needed
     if (subscription.status === 'incomplete') {
       console.log('🔄 Subscription is incomplete, attempting to complete...');
       
@@ -295,12 +313,20 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_ygLySaPSLLs4S4xpWuXWvblGsqA4nhV7';
 
+  console.log('🔔 Webhook received - Debug Info:');
+  console.log('📧 Signature:', sig ? 'Present' : 'Missing');
+  console.log('🔑 Endpoint Secret:', endpointSecret ? 'Set' : 'Missing');
+  console.log('📦 Body length:', req.body ? req.body.length : 'No body');
+
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log('✅ Webhook signature verification successful');
   } catch (err) {
     console.log('❌ Webhook signature verification failed:', err.message);
+    console.log('🔍 Debug - Expected secret:', endpointSecret);
+    console.log('🔍 Debug - Received signature:', sig);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -887,6 +913,22 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
   res.json({ received: true });
 });
 
+// Debug webhook endpoint - for testing
+app.post('/api/webhook-debug', express.raw({ type: 'application/json' }), async (req, res) => {
+  console.log('🔍 Webhook Debug Endpoint Hit');
+  console.log('📧 Headers:', req.headers);
+  console.log('📦 Body:', req.body.toString());
+  console.log('🔑 Stripe Signature:', req.headers['stripe-signature']);
+  console.log('🔑 Environment Secret:', process.env.STRIPE_WEBHOOK_SECRET);
+  
+  res.status(200).json({ 
+    message: 'Debug webhook received',
+    hasSignature: !!req.headers['stripe-signature'],
+    hasSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+    bodyLength: req.body ? req.body.length : 0
+  });
+});
+
 // Add express.json() middleware AFTER webhook route
 app.use(express.json());
 
@@ -1150,29 +1192,36 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 // Email configuration with better Gmail setup
 let transporter = null;
 
-try {
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-      pass: process.env.EMAIL_PASS || ''
-    }
-  });
+// Only initialize email if credentials are provided
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  try {
+    transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
 
-  // Verify transporter configuration
-  transporter.verify(function(error, success) {
-    if (error) {
-      console.log('❌ Email configuration error:', error.message);
-      console.log('🔧 Email functionality will be disabled');
-      transporter = null; // Disable email functionality
-    } else {
-      console.log('✅ Email server is ready to send messages');
-    }
-  });
-} catch (error) {
-  console.log('❌ Email configuration failed:', error.message);
-  console.log('🔧 Email functionality will be disabled');
-  transporter = null; // Disable email functionality
+    // Verify transporter configuration
+    transporter.verify(function(error, success) {
+      if (error) {
+        console.log('❌ Email configuration error:', error.message);
+        console.log('🔧 Email functionality will be disabled');
+        transporter = null; // Disable email functionality
+      } else {
+        console.log('✅ Email server is ready to send messages');
+      }
+    });
+  } catch (error) {
+    console.log('❌ Email configuration failed:', error.message);
+    console.log('🔧 Email functionality will be disabled');
+    transporter = null; // Disable email functionality
+  }
+} else {
+  console.log('📧 Email credentials not provided - Email functionality disabled');
+  console.log('💡 To enable email, set EMAIL_USER and EMAIL_PASS in .env file');
+  transporter = null;
 }
 
 // Email templates
@@ -4911,125 +4960,59 @@ app.post('/api/create-payment-intent', async (req, res) => {
 
 
 
-// Experimental: Create 12-day $1/day metered subscription (Test Plan)
-// Requires env STRIPE_DAILY_1USD_PRICE_ID
+// Fixed: Create 12-day $1/day subscription with proper auto-cut payment flow
 app.post('/api/subscription/create-daily-12', async (req, res) => {
   try {
-    const { customerEmail } = req.body;
+    const { customerEmail, paymentMethodId, customerName } = req.body;
 
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return res.status(400).json({ error: 'Stripe not configured' });
-    }
-
-    // Resolve or create daily $1 price automatically if not provided via env
-    let priceId = process.env.STRIPE_DAILY_1USD_PRICE_ID || '';
-    try {
-      if (!priceId) {
-        // Try to find by lookup_key first
-        const priceList = await stripe.prices.list({ active: true, limit: 100 });
-        const existing = priceList.data.find(p => p.lookup_key === 'daily_1usd_12days');
-        if (existing) {
-          priceId = existing.id;
-        } else {
-          // Create product and price
-          const product = await stripe.products.create({ name: 'Daily Test Plan (12 days)' });
-          const newPrice = await stripe.prices.create({
-            unit_amount: 100,
-            currency: 'usd',
-            recurring: { interval: 'day' },
-            product: product.id,
-            lookup_key: 'daily_1usd_12days'
-          });
-          priceId = newPrice.id;
-        }
-      }
-    } catch (e) {
-      console.log('Auto-create daily price failed:', e.message);
-      return res.status(400).json({ error: 'Unable to provision daily price in Stripe. Please set STRIPE_DAILY_1USD_PRICE_ID.' });
-    }
-
-    // Create or get customer
-    let customer = null;
-    if (customerEmail) {
-      const existing = await stripe.customers.list({ email: customerEmail, limit: 1 });
-      customer = existing.data[0] || await stripe.customers.create({ email: customerEmail });
-    } else {
-      // Create an anonymous customer to proceed in test flows
-      customer = await stripe.customers.create({
-        metadata: { note: 'Created without email for daily-12 plan' }
+    // Validate required fields for auto-cut functionality
+    if (!customerEmail) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer email is required'
       });
     }
 
-    // Create a simple payment intent for $1
-    console.log('Creating payment intent for daily subscription...');
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 100, // $1.00 in cents
-      currency: 'usd',
-      customer: customer.id,
-      metadata: {
-        planId: 'daily-12',
-        customerEmail: customerEmail
+    console.log('🚀 Creating 12-day subscription with auto-cut functionality...');
+
+    // Use the existing auto-cut subscription setup
+    const result = await setupAutoCutSubscription(
+      {
+        email: customerEmail,
+        name: customerName || 'Customer',
+        id: 'user_' + Date.now(),
+        planId: 'daily-12'
       },
-      // Use payment_method_types instead of automatic_payment_methods for better compatibility
-      payment_method_types: ['card'],
-      // Don't confirm immediately - let frontend handle confirmation
-      confirm: false,
-    });
+      paymentMethodId, // This will be null if not provided, but setupAutoCutSubscription handles it
+      null // Will create price dynamically
+    );
 
-    console.log('✅ Daily subscription payment intent created successfully:', {
-      id: paymentIntent.id,
-      amount: paymentIntent.amount,
-      status: paymentIntent.status,
-      hasClientSecret: !!paymentIntent.client_secret,
-      paymentMethodTypes: paymentIntent.payment_method_types
-    });
-
-    // Create subscription separately
-    const subscription = await stripe.subscriptions.create({
-      customer: customer.id,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { 
-        save_default_payment_method: 'on_subscription',
-        payment_method_types: ['card']
-      }
-    });
-
-    console.log('Subscription created successfully:', {
-      id: subscription.id,
-      status: subscription.status
-    });
-
-    // Return the client secret from our payment intent
-    const clientSecret = paymentIntent.client_secret;
-
-    const endAt = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000);
-
-    // Persist minimal state for demo users
-    const uidx = customerEmail ? mockDB.users.findIndex(u => u.email === customerEmail) : -1;
-    if (uidx !== -1) {
-      mockDB.users[uidx].paymentCompleted = true;
-      mockDB.users[uidx].currentPlan = 'daily-12';
-      mockDB.users[uidx].currentCredits = 50;
-      mockDB.users[uidx].subscriptionId = subscription.id;
-      mockDB.users[uidx].subscriptionEndAt = endAt.toISOString();
-      mockDB.users[uidx].subscriptionOnHold = false;
-      mockDB.users[uidx].lastCreditRenewal = new Date().toISOString();
-      mockDB.users[uidx].nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      saveDataToFiles('daily_subscription_started');
+    if (result.success) {
+      console.log('✅ 12-day subscription with auto-cut created successfully!');
+      
+      res.json({
+        success: true,
+        subscriptionId: result.subscription.id,
+        customerId: result.customer.id,
+        status: result.subscription.status,
+        message: '12-day subscription created with automatic daily billing setup',
+        endAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString()
+      });
+    } else {
+      console.log('❌ Auto-cut subscription setup failed');
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create auto-cut subscription',
+        details: result.error
+      });
     }
 
-    res.json({
-      subscriptionId: subscription.id,
-      clientSecret: clientSecret,
-      endAt: endAt.toISOString()
-    });
   } catch (error) {
     console.error('Create daily subscription error:', error);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to create daily subscription', 
-      details: error.message,
-      stack: error.stack 
+      details: error.message
     });
   }
 });
@@ -6457,7 +6440,7 @@ app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 Server URL: http://localhost:${PORT}`);
-  console.log(`📧 Email server status: ${transporter.verify() ? 'Ready' : 'Not ready'}`);
+  console.log(`📧 Email server status: ${transporter ? 'Ready' : 'Not configured'}`);
   console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 MongoDB: Connected`);
