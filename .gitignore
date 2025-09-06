@@ -15,6 +15,11 @@ dist/
 .env.test.local
 .env.production.local
 
+# Stripe keys and sensitive data
+*stripe*key*
+*secret*key*
+*api*key*
+
 # IDE files
 .vscode/
 .idea/

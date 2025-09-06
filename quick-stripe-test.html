@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Stripe Test</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .container { background: #f9f9f9; padding: 30px; border-radius: 10px; }
+        .error { color: red; background: #ffe6e6; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .success { color: green; background: #e6ffe6; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .warning { color: orange; background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #card-element { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Quick Stripe Keys Test</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Current Issue:</strong> Your Stripe keys are not set up properly!
+        </div>
+
+        <h3>Step 1: Enter Your Stripe Keys</h3>
+        <input type="text" id="publishable-key" placeholder="Enter your Stripe Publishable Key (pk_live_...)" style="width: 100%;">
+        <br><br>
+        <button onclick="testStripeKey()">Test Stripe Key</button>
+        
+        <div id="key-test-result"></div>
+
+        <h3>Step 2: Test Payment</h3>
+        <div id="payment-section" style="display: none;">
+            <div id="card-element">
+                <!-- Stripe Elements will create form elements here -->
+            </div>
+            <div id="card-errors" role="alert"></div>
+            <button id="submit-payment" disabled>Test Payment ($1.00)</button>
+        </div>
+
+        <div id="payment-result"></div>
+
+        <h3>Step 3: Test Cards</h3>
+        <div style="background: #e8f4fd; padding: 15px; border-radius: 5px;">
+            <strong>Use these test cards:</strong><br>
+            ✅ Success: <code>4242 4242 4242 4242</code><br>
+            ❌ Declined: <code>4000 0000 0000 0002</code><br>
+            🔐 3D Secure: <code>4000 0025 0000 3155</code><br>
+            <br>
+            <strong>Expiry:</strong> Any future date (e.g., 12/25)<br>
+            <strong>CVC:</strong> Any 3 digits (e.g., 123)
+        </div>
+    </div>
+
+    <script>
+        let stripe, elements, cardElement;
+
+        function testStripeKey() {
+            const publishableKey = document.getElementById('publishable-key').value.trim();
+            const resultDiv = document.getElementById('key-test-result');
+            
+            if (!publishableKey) {
+                resultDiv.innerHTML = '<div class="error">❌ Please enter a Stripe publishable key</div>';
+                return;
+            }
+
+            if (!publishableKey.startsWith('pk_')) {
+                resultDiv.innerHTML = '<div class="error">❌ Invalid key format. Should start with "pk_"</div>';
+                return;
+            }
+
+            try {
+                // Test if Stripe can be initialized with this key
+                stripe = Stripe(publishableKey);
+                elements = stripe.elements();
+                
+                // Create card element
+                cardElement = elements.create('card', {
+                    style: {
+                        base: {
+                            fontSize: '16px',
+                            color: '#424770',
+                            '::placeholder': {
+                                color: '#aab7c4',
+                            },
+                        },
+                        invalid: {
+                            color: '#9e2146',
+                        },
+                    },
+                });
+
+                cardElement.mount('#card-element');
+
+                // Handle real-time validation errors
+                cardElement.on('change', function(event) {
+                    const displayError = document.getElementById('card-errors');
+                    if (event.error) {
+                        displayError.textContent = event.error.message;
+                        document.getElementById('submit-payment').disabled = true;
+                    } else {
+                        displayError.textContent = '';
+                        document.getElementById('submit-payment').disabled = false;
+                    }
+                });
+
+                // Show payment section
+                document.getElementById('payment-section').style.display = 'block';
+                
+                resultDiv.innerHTML = '<div class="success">✅ Stripe key is valid! You can now test payments.</div>';
+                
+                // Set up payment test
+                setupPaymentTest();
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function setupPaymentTest() {
+            document.getElementById('submit-payment').addEventListener('click', async function(ev) {
+                ev.preventDefault();
+                
+                const submitButton = document.getElementById('submit-payment');
+                const resultDiv = document.getElementById('payment-result');
+                
+                submitButton.disabled = true;
+                submitButton.textContent = 'Processing...';
+                
+                resultDiv.innerHTML = '<div class="warning">🔄 Testing payment method creation...</div>';
+
+                try {
+                    // Test creating payment method
+                    const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
+                        type: 'card',
+                        card: cardElement,
+                        billing_details: {
+                            name: 'Test User',
+                            email: 'test@example.com',
+                        }
+                    });
+
+                    if (pmError) {
+                        resultDiv.innerHTML = `<div class="error">❌ Payment Method Error: ${pmError.message}</div>`;
+                        resultDiv.innerHTML += `<div class="error">Error Type: ${pmError.type}</div>`;
+                        resultDiv.innerHTML += `<div class="error">Error Code: ${pmError.code || 'N/A'}</div>`;
+                    } else {
+                        resultDiv.innerHTML = `<div class="success">✅ Payment Method Created Successfully!</div>`;
+                        resultDiv.innerHTML += `<div class="success">ID: ${paymentMethod.id}</div>`;
+                        resultDiv.innerHTML += `<div class="success">Card Type: ${paymentMethod.card.brand.toUpperCase()}</div>`;
+                        resultDiv.innerHTML += `<div class="success">Last 4: ****${paymentMethod.card.last4}</div>`;
+                        resultDiv.innerHTML += `<div class="success">🎉 Your Stripe integration is working!</div>`;
+                    }
+
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ Unexpected Error: ${error.message}</div>`;
+                }
+
+                submitButton.disabled = false;
+                submitButton.textContent = 'Test Payment ($1.00)';
+            });
+        }
+
+        // Add instructions
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('key-test-result').innerHTML = `
+                <div class="warning">
+                    <strong>Instructions:</strong><br>
+                    1. Get your Stripe keys from <a href="https://dashboard.stripe.com/apikeys" target="_blank">Stripe Dashboard</a><br>
+                    2. Enter your publishable key above<br>
+                    3. Click "Test Stripe Key"<br>
+                    4. Use test card numbers to test payment
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>

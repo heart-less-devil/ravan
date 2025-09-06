@@ -5,11 +5,18 @@ import { Shield, Lock, CreditCard, CheckCircle, AlertCircle, X, Star, Users, Tar
 import { API_BASE_URL } from '../config';
 
 // Load Stripe with correct publishable key
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE');
+const stripePublishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT';
+
+console.log('🔧 Stripe Key Debug:');
+console.log('  - Environment variable:', process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+console.log('  - Using key:', stripePublishableKey ? 'FOUND' : 'NOT FOUND');
+console.log('  - Key length:', stripePublishableKey ? stripePublishableKey.length : 0);
+
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null;
 
 // Validate Stripe is loaded
 if (!stripePromise) {
-  console.error('❌ Failed to load Stripe');
+  console.error('❌ Failed to load Stripe - check your publishable key');
 }
 
 const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
@@ -17,6 +24,20 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
   const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [stripeReady, setStripeReady] = useState(false);
+
+  // Debug Stripe loading
+  useEffect(() => {
+    console.log('🔧 Stripe Debug Info:');
+    console.log('  - Stripe object:', !!stripe);
+    console.log('  - Elements object:', !!elements);
+    console.log('  - Stripe ready:', stripe?.ready);
+    
+    if (stripe && elements) {
+      setStripeReady(true);
+      console.log('✅ Stripe Elements ready!');
+    }
+  }, [stripe, elements]);
 
   const amount = isAnnual ? plan.annualPrice : plan.monthlyPrice;
   const savings = isAnnual ? (plan.monthlyPrice * 12) - plan.annualPrice : 0;
@@ -59,11 +80,15 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
           } catch (_) {}
         }
         
-        // Create payment method first
+        // Create payment method first with enhanced billing details
         const cardElement = elements.getElement(CardElement);
         const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
+          billing_details: {
+            name: localStorage.getItem('userName') || 'Customer',
+            email: customerEmail,
+          }
         });
 
         if (pmError) {
@@ -132,6 +157,14 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
           }, 2000);
           setLoading(false);
           return;
+        } else if (responseData.needsPayment || responseData.subscriptionStatus === 'incomplete') {
+          // Subscription created but payment incomplete (3D Secure required)
+          console.log('⚠️ Subscription created but payment incomplete - 3D Secure required');
+          console.log('📊 Subscription status:', responseData.subscriptionStatus);
+          setError('⚠️ Payment incomplete: 3D Secure authentication required. Your subscription is created but payment needs to be completed. Please try again or contact support.');
+          onError && onError('Payment incomplete: 3D Secure authentication required');
+          setLoading(false);
+          return;
         } else {
           console.error('❌ Daily-12 subscription creation failed:', responseData.message);
           setError(responseData.message || 'Subscription creation failed');
@@ -149,11 +182,17 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
       console.log('Confirming payment with client secret...');
 
-      // Confirm payment
+      // Confirm payment with enhanced 3D Secure support
       const { error: paymentError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardElement),
+          billing_details: {
+            name: localStorage.getItem('userName') || 'Customer',
+            email: localStorage.getItem('userEmail') || null,
+          }
         },
+        // Enable 3D Secure redirects
+        redirect: 'if_required'
       });
 
       console.log('💳 Payment confirmation result:', { 
@@ -164,8 +203,41 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
       if (paymentError) {
         console.error('❌ Payment confirmation error:', paymentError);
-        setError(paymentError.message);
-        onError && onError(paymentError.message);
+        
+        // Enhanced error handling for different error types
+        let errorMessage = paymentError.message;
+        
+        if (paymentError.type === 'card_error') {
+          switch (paymentError.code) {
+            case 'card_declined':
+              errorMessage = 'Your card was declined. Please try a different card or contact your bank.';
+              break;
+            case 'insufficient_funds':
+              errorMessage = 'Insufficient funds. Please try a different card.';
+              break;
+            case 'expired_card':
+              errorMessage = 'Your card has expired. Please use a different card.';
+              break;
+            case 'incorrect_cvc':
+              errorMessage = 'Your card\'s security code is incorrect. Please try again.';
+              break;
+            case 'processing_error':
+              errorMessage = 'An error occurred while processing your card. Please try again.';
+              break;
+            case 'authentication_required':
+              errorMessage = 'Your card requires additional authentication. Please complete the verification process.';
+              break;
+            default:
+              errorMessage = `Card error: ${paymentError.message}`;
+          }
+        } else if (paymentError.type === 'validation_error') {
+          errorMessage = 'Please check your card details and try again.';
+        } else if (paymentError.type === 'api_error') {
+          errorMessage = 'Payment service temporarily unavailable. Please try again in a few minutes.';
+        }
+        
+        setError(errorMessage);
+        onError && onError(errorMessage);
       } else {
         console.log('✅ Payment successful:', {
           id: paymentIntent.id,
@@ -297,23 +369,38 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
                 Payment Information
               </label>
               <div className="border-2 border-gray-200 rounded-lg p-4 focus-within:border-primary-500 transition-colors">
-                <CardElement
-                  options={{
-                    style: {
-                      base: {
-                        fontSize: '16px',
-                        color: '#374151',
-                        fontFamily: 'Inter, system-ui, sans-serif',
-                        '::placeholder': {
-                          color: '#9CA3AF',
+                {!stripeReady ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-3"></div>
+                    <span className="text-gray-600">Loading payment form...</span>
+                  </div>
+                ) : (
+                  <CardElement
+                    options={{
+                      style: {
+                        base: {
+                          fontSize: '16px',
+                          color: '#374151',
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          '::placeholder': {
+                            color: '#9CA3AF',
+                          },
+                          iconColor: '#6B7280',
+                        },
+                        invalid: {
+                          color: '#EF4444',
+                          iconColor: '#EF4444',
+                        },
+                        complete: {
+                          color: '#10B981',
+                          iconColor: '#10B981',
                         },
                       },
-                      invalid: {
-                        color: '#EF4444',
-                      },
-                    },
-                  }}
-                />
+                      hidePostalCode: false,
+                      disabled: false,
+                    }}
+                  />
+                )}
               </div>
             </div>
 
@@ -342,7 +429,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
             <button
               type="submit"
-              disabled={!stripe || loading}
+              disabled={!stripe || !elements || loading || !stripeReady}
               className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
             >
               {loading ? (
@@ -379,6 +466,31 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 };
 
 const StripePayment = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
+  // Check if Stripe is properly loaded
+  if (!stripePromise) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment System Error</h2>
+            <p className="text-gray-600 mb-4">
+              Stripe payment system is not properly configured. Please check your environment variables.
+            </p>
+            <button
+              onClick={onClose}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Elements stripe={stripePromise}>
       <CheckoutForm 

@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Import database connection
 const connectDB = require('./config/database');
@@ -25,7 +25,14 @@ const PORT = process.env.PORT || 3005;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_live_YOUR_STRIPE_SECRET_KEY_HERE';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+if (!stripeSecretKey) {
+  console.error('❌ STRIPE_SECRET_KEY environment variable is not set!');
+  console.error('Please set your Stripe secret key in environment variables or .env file');
+  process.exit(1);
+}
+
 const stripe = require('stripe')(stripeSecretKey);
 
 // ============================================================================
@@ -228,11 +235,17 @@ async function setupAutoCutSubscription(userData, paymentMethodId, priceId) {
     console.log('✅ Subscription created with auto-renewal');
     console.log('✅ Future payments will be automatic');
     
+    // Check if subscription is actually active
+    const isActive = subscription.status === 'active';
+    const needsPayment = subscription.status === 'incomplete';
+    
     return {
-      success: true,
+      success: isActive,
       customer: customer,
       subscription: subscription,
-      message: 'Auto-cut setup completed successfully'
+      message: isActive ? 'Auto-cut setup completed successfully' : 'Subscription created but payment incomplete - 3D Secure authentication required',
+      needsPayment: needsPayment,
+      subscriptionStatus: subscription.status
     };
     
   } catch (error) {
@@ -4933,10 +4946,21 @@ app.post('/api/create-payment-intent', async (req, res) => {
         customerType: customer ? 'registered' : 'guest',
         integration_check: 'accept_a_payment'
       },
-      // Use payment_method_types instead of automatic_payment_methods for better compatibility
+      // Enhanced payment method types for better Indian card support
       payment_method_types: ['card'],
+      // Enable automatic payment methods for better card support
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'always' // Important for 3D Secure
+      },
       // Don't confirm immediately - let frontend handle confirmation
       confirm: false,
+      // Enable 3D Secure for better security and Indian card support
+      confirmation_method: 'manual',
+      // Add statement descriptor for better recognition
+      statement_descriptor: 'THE BIOPING',
+      // Enable capture method for better control
+      capture_method: 'automatic'
     });
 
     console.log('✅ Payment intent created successfully:', {

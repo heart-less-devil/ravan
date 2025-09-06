@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stripe Test Cards - No 3D Secure</title>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <h1>🧪 Stripe Test Cards (No 3D Secure Required)</h1>
+    
+    <div id="test-cards">
+        <h2>Test Cards that work without 3D Secure:</h2>
+        
+        <div class="card">
+            <h3>✅ Success Card (No 3D Secure)</h3>
+            <p><strong>Number:</strong> 4242424242424242</p>
+            <p><strong>Expiry:</strong> 12/25</p>
+            <p><strong>CVC:</strong> 123</p>
+            <p><strong>Result:</strong> Payment succeeds immediately</p>
+        </div>
+        
+        <div class="card">
+            <h3>✅ Success Card (No 3D Secure)</h3>
+            <p><strong>Number:</strong> 4000000000000002</p>
+            <p><strong>Expiry:</strong> 12/25</p>
+            <p><strong>CVC:</strong> 123</p>
+            <p><strong>Result:</strong> Payment succeeds immediately</p>
+        </div>
+        
+        <div class="card">
+            <h3>⚠️ 3D Secure Required</h3>
+            <p><strong>Number:</strong> 4000000000003220</p>
+            <p><strong>Expiry:</strong> 12/25</p>
+            <p><strong>CVC:</strong> 123</p>
+            <p><strong>Result:</strong> Requires 3D Secure authentication</p>
+        </div>
+        
+        <div class="card">
+            <h3>❌ Declined Card</h3>
+            <p><strong>Number:</strong> 4000000000000002</p>
+            <p><strong>Expiry:</strong> 12/25</p>
+            <p><strong>CVC:</strong> 123</p>
+            <p><strong>Result:</strong> Card declined</p>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        <h2>📋 Instructions:</h2>
+        <ol>
+            <li>Use the <strong>4242424242424242</strong> card for testing</li>
+            <li>This card will work without 3D Secure</li>
+            <li>Payment will succeed immediately</li>
+            <li>No international payment required</li>
+        </ol>
+    </div>
+    
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .card h3 { color: #333; margin-top: 0; }
+        #instructions { background: #f0f8ff; padding: 15px; border-radius: 5px; }
+    </style>
+</body>
+</html>
