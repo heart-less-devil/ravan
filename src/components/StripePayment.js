@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Shield, Lock, CreditCard, CheckCircle, AlertCircle, X, Star, Users, Target, Building2, Zap, Database, Download, MessageSquare, BarChart3, Users2 } from 'lucide-react';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, STRIPE_PUBLISHABLE_KEY } from '../config';
 
 // Load Stripe with correct publishable key
-const stripePublishableKey = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT';
+const stripePublishableKey = STRIPE_PUBLISHABLE_KEY;
 
 console.log('🔧 Stripe Key Debug:');
 console.log('  - Environment variable:', process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);

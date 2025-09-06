@@ -368,16 +368,16 @@ const Dashboard = () => {
     // Check for user suspension immediately and then periodically
     checkUserSuspension();
     
-    // Set up periodic suspension check (every 30 seconds)
-    const suspensionInterval = setInterval(checkUserSuspension, 30000);
+    // Set up periodic suspension check (every 5 minutes - reduced frequency)
+    const suspensionInterval = setInterval(checkUserSuspension, 300000);
     
-    // Set up periodic credit refresh (every 60 seconds) for real-time updates
+    // Set up periodic credit refresh (every 10 minutes - reduced frequency)
     const creditRefreshInterval = setInterval(() => {
       if (userCredits > 0) {
         console.log('🔄 Periodic credit refresh...');
         fetchUserData();
       }
-    }, 60000); // Refresh every 60 seconds
+    }, 600000); // Refresh every 10 minutes
     
     // Also check suspension when user tries to access protected features
     const checkSuspensionOnAction = () => {

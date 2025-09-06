@@ -7,9 +7,9 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 
-const stripePromise = loadStripe('pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT');
+import { API_BASE_URL, STRIPE_PUBLISHABLE_KEY } from '../config';
 
-const API_BASE_URL = 'http://localhost:3005';
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 const PaymentForm = ({ plan, onSuccess, onError, onClose }) => {
   const stripe = useStripe();

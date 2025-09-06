@@ -10,10 +10,7 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const location = useLocation();
   
-  // Invisible Keepalive System
-  const keepaliveRef = useRef(null);
-  const [keepaliveActive, setKeepaliveActive] = useState(false);
-  const [showKeepaliveNotification, setShowKeepaliveNotification] = useState(false);
+  // Keepalive system removed for better performance
 
   // Check if user is logged in
   useEffect(() => {
@@ -38,94 +35,7 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Keepalive system functions
-  const startKeepalive = () => {
-    if (keepaliveActive) return; // Already running
-    
-    setKeepaliveActive(true);
-    setShowKeepaliveNotification(true);
-    console.log('🚀 Invisible Keepalive System Activated!');
-    
-    // Hide notification after 3 seconds
-    setTimeout(() => setShowKeepaliveNotification(false), 3000);
-    
-    // Function to perform keepalive
-    const performKeepalive = async () => {
-      try {
-        // Visit main website
-        await fetch('https://biopingweb.com', { 
-          method: 'GET', 
-          mode: 'no-cors',
-          cache: 'no-store' 
-        });
-        
-        // Test API health
-        await fetch('https://bioping-backend.onrender.com/api/health', { 
-          method: 'GET', 
-          mode: 'no-cors',
-          cache: 'no-store' 
-        });
-        
-        // Visit additional pages
-        const pages = ['/about', '/contact', '/pricing', '/resources'];
-        for (const page of pages) {
-          await fetch(`https://biopingweb.com${page}`, { 
-            method: 'GET', 
-            mode: 'no-cors',
-            cache: 'no-store' 
-          });
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-        console.log('✅ Keepalive cycle completed');
-      } catch (error) {
-        console.log('⚠️ Keepalive cycle completed (some requests may have failed)');
-      }
-    };
-    
-    // First run
-    performKeepalive();
-    
-    // Set up interval for every 4 minutes
-    keepaliveRef.current = setInterval(performKeepalive, 4 * 60 * 1000);
-    
-    // Store in localStorage so it persists across page refreshes
-    localStorage.setItem('keepaliveActive', 'true');
-    localStorage.setItem('keepaliveStarted', Date.now().toString());
-    
-    console.log('🔄 Keepalive system will run every 4 minutes');
-    console.log('🌐 Visiting: https://biopingweb.com');
-    console.log('🏥 Testing: https://bioping-backend.onrender.com/api/health');
-  };
-
-  // Check if keepalive was already started
-  useEffect(() => {
-    const wasActive = localStorage.getItem('keepaliveActive');
-    const startTime = localStorage.getItem('keepaliveStarted');
-    
-    if (wasActive === 'true' && startTime) {
-      const elapsed = Date.now() - parseInt(startTime);
-      const fourMinutes = 4 * 60 * 1000;
-      
-      if (elapsed < fourMinutes) {
-        // Start immediately
-        startKeepalive();
-      } else {
-        // Start after remaining time
-        const remaining = fourMinutes - (elapsed % fourMinutes);
-        setTimeout(startKeepalive, remaining);
-      }
-    }
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (keepaliveRef.current) {
-        clearInterval(keepaliveRef.current);
-      }
-    };
-  }, []);
+  // Keepalive system removed for better performance
 
   const navItems = [
     { name: 'Home', path: '/' },
@@ -150,36 +60,21 @@ const Header = () => {
     >
       <div className="container-custom">
         <div className="flex items-center justify-between h-20">
-          {/* Logo with Invisible Keepalive */}
+          {/* Logo */}
           <div className="flex items-center group">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-3 cursor-pointer"
-              onClick={() => {
-                // Navigate to home
-                window.location.href = '/';
-                // Start keepalive system
-                startKeepalive();
-              }}
-            >
-              <div className="relative">
+            <Link to="/">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center space-x-3 cursor-pointer"
+              >
                 <img 
                   src={require('../img/image.webp')} 
                   alt="BioPing Logo" 
                   className="h-16 w-auto object-contain"
                 />
-                {/* Invisible keepalive indicator (only visible when active) */}
-                {keepaliveActive && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full shadow-lg"
-                    title="Keepalive System Active"
-                  />
-                )}
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -360,22 +255,6 @@ const Header = () => {
         )}
       </AnimatePresence>
 
-      {/* Keepalive Notification */}
-      <AnimatePresence>
-        {showKeepaliveNotification && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg"
-          >
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">Keepalive System Activated!</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.header>
   );
 };

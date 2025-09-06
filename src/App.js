@@ -34,23 +34,25 @@ import ScrollToTop from './components/ScrollToTop';
 import './App.css';
 import KeepAlive from './components/KeepAlive';
 
-// Cache busting component
+// Optimized cache busting component - only for development
 const CacheBuster = ({ children }) => {
   const location = useLocation();
   
   useEffect(() => {
-    // Force refresh on route change
-    const currentTime = Date.now();
-    const version = `v=${currentTime}`;
-    
-    // Add version to URL if not present
-    if (!window.location.search.includes('v=')) {
-      const separator = window.location.search ? '&' : '?';
-      window.history.replaceState(
-        null, 
-        '', 
-        `${window.location.pathname}${window.location.search}${separator}${version}`
-      );
+    // Only add cache busting in development
+    if (process.env.NODE_ENV === 'development') {
+      const currentTime = Date.now();
+      const version = `v=${currentTime}`;
+      
+      // Add version to URL if not present
+      if (!window.location.search.includes('v=')) {
+        const separator = window.location.search ? '&' : '?';
+        window.history.replaceState(
+          null, 
+          '', 
+          `${window.location.pathname}${window.location.search}${separator}${version}`
+        );
+      }
     }
   }, [location]);
 
