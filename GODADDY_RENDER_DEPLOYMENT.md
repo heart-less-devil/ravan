@@ -23,13 +23,13 @@ Go to your Render dashboard and set these environment variables:
 
 **For Backend (Render Server):**
 ```
-STRIPE_SECRET_KEY=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
+STRIPE_SECRET_KEY=sk_live_YOUR_STRIPE_SECRET_KEY_HERE
 ```
 
 **For Frontend (GoDaddy):**
 The build already includes the correct keys, but if you need to set them:
 ```
-REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE
 ```
 
 ## 🔧 What This Fixes

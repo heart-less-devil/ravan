@@ -16,9 +16,9 @@ Your live site is showing `pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE` instead of 
    
    With your actual keys (replace with your real Stripe keys):
    ```bat
-   set STRIPE_SECRET_KEY=sk_live_YOUR_ACTUAL_SECRET_KEY
-   set STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_ACTUAL_PUBLISHABLE_KEY
-   set REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_ACTUAL_PUBLISHABLE_KEY
+   set STRIPE_SECRET_KEY=sk_live_YOUR_STRIPE_SECRET_KEY_HERE
+   set STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE
+   set REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE
    ```
 
 2. **Run the script**: `deploy-template.bat`
@@ -27,15 +27,15 @@ Your live site is showing `pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE` instead of 
 
 Set these environment variables on your hosting platform (GoDaddy/Render):
 
-- `STRIPE_SECRET_KEY=sk_live_YOUR_ACTUAL_SECRET_KEY`
-- `REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_ACTUAL_PUBLISHABLE_KEY`
+- `STRIPE_SECRET_KEY=sk_live_YOUR_STRIPE_SECRET_KEY_HERE`
+- `REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE`
 
 ### Option 3: Manual Build with Keys
 
 ```bash
 # Set environment variables
-export STRIPE_SECRET_KEY="sk_live_YOUR_ACTUAL_SECRET_KEY"
-export REACT_APP_STRIPE_PUBLISHABLE_KEY="pk_live_YOUR_ACTUAL_PUBLISHABLE_KEY"
+export STRIPE_SECRET_KEY="sk_live_YOUR_STRIPE_SECRET_KEY_HERE"
+export REACT_APP_STRIPE_PUBLISHABLE_KEY="pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE"
 
 # Build
 npm run build

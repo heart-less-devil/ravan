@@ -2,9 +2,9 @@
 echo 🚀 URGENT FIX: Deploying BioPing with Real Stripe Keys...
 
 REM Set environment variables for production with REAL KEYS
-set STRIPE_SECRET_KEY=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
-set STRIPE_PUBLISHABLE_KEY=pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
-set REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
+set STRIPE_SECRET_KEY=sk_live_YOUR_STRIPE_SECRET_KEY_HERE
+set STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE
+set REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_STRIPE_PUBLISHABLE_KEY_HERE
 
 echo 🔑 Environment variables set with real Stripe keys
 echo 📦 Building project with correct keys...
