@@ -1,0 +1,5 @@
+[33mc3a8373[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Security fix: Replace exposed Stripe API keys with placeholders
+[33m77cddfd[m Deploy latest changes: Stripe payment fixes, server updates, and new deployment guides
+[33m7e14932[m  Add Secure Stripe Deployment Guide and Templates
+[33m25cde2b[m  Add Stripe Deployment Guide and Templates
+[33m55caaa2[m[33m ([m[1;31morigin/main[m[33m)[m  12-Day Auto-Cut Subscription System Complete
