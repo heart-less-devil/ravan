@@ -64,4 +64,9 @@ jspm_packages/
 .env
 
 # Production config files with secrets
-server/production-config.js 
+server/production-config.js
+
+# Deployment files with API keys (keep local but don't push)
+GODADDY_RENDER_DEPLOYMENT.md
+STRIPE_DEPLOYMENT_GUIDE.md
+deploy-fix.bat 
