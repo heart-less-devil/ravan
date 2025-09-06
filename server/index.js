@@ -1297,14 +1297,23 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('🔍 Auth check:', { 
+    hasAuthHeader: !!authHeader, 
+    hasToken: !!token,
+    tokenLength: token ? token.length : 0
+  });
+
   if (!token) {
+    console.log('❌ No token provided');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
+      console.log('❌ Token verification failed:', err.message);
       return res.status(403).json({ message: 'Invalid token' });
     }
+    console.log('✅ Token verified for user:', user.email);
     req.user = user;
     next();
   });
@@ -2178,18 +2187,254 @@ app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
 // AUTO-CUT SUBSCRIPTION ENDPOINT
 // ============================================================================
 
-// Create subscription with auto-cut functionality
-app.post('/api/create-subscription', async (req, res) => {
+// Simple subscription endpoint - FreeFire style
+app.post('/api/create-simple-subscription', async (req, res) => {
   try {
-    console.log('🚀 Creating subscription with auto-cut...');
+    console.log('🚀 Creating simple subscription...');
+    console.log('📝 Request body:', req.body);
     
-    const { paymentMethodId, customerEmail, planId, customerName } = req.body;
+    const { paymentMethodId, customerEmail, planId, customerName, amount } = req.body;
     
     // Validate required fields
     if (!paymentMethodId || !customerEmail || !planId) {
       return res.status(400).json({
         success: false,
         message: 'Payment method ID, customer email, and plan ID are required'
+      });
+    }
+
+    // Create or get customer
+    let customer;
+    try {
+      const existingCustomers = await stripe.customers.list({
+        email: customerEmail,
+        limit: 1
+      });
+      
+      if (existingCustomers.data.length > 0) {
+        customer = existingCustomers.data[0];
+        console.log('✅ Found existing customer:', customer.id);
+      } else {
+        customer = await stripe.customers.create({
+          email: customerEmail,
+          name: customerName,
+          metadata: { planId }
+        });
+        console.log('✅ Created new customer:', customer.id);
+      }
+    } catch (error) {
+      console.error('❌ Customer creation failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create customer'
+      });
+    }
+
+    // Attach payment method to customer
+    try {
+      // Check if payment method is already attached
+      const existingPaymentMethods = await stripe.paymentMethods.list({
+        customer: customer.id,
+        type: 'card',
+      });
+      
+      const isAlreadyAttached = existingPaymentMethods.data.some(pm => pm.id === paymentMethodId);
+      
+      if (!isAlreadyAttached) {
+        await stripe.paymentMethods.attach(paymentMethodId, {
+          customer: customer.id,
+        });
+        console.log('✅ Payment method attached to customer');
+      } else {
+        console.log('✅ Payment method already attached to customer');
+      }
+      
+      await stripe.customers.update(customer.id, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+      console.log('✅ Default payment method set for customer');
+    } catch (error) {
+      console.error('❌ Payment method attachment failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: `Failed to attach payment method: ${error.message}`
+      });
+    }
+
+    // Create product and price
+    let product, price;
+    try {
+      // Check if product already exists
+      const existingProducts = await stripe.products.list({
+        limit: 100
+      });
+      
+      product = existingProducts.data.find(p => p.name === `${planId} Plan`);
+      
+      if (!product) {
+        product = await stripe.products.create({
+          name: `${planId} Plan`,
+          description: `Daily subscription for ${planId}`,
+        });
+        console.log('✅ Product created:', product.id);
+      } else {
+        console.log('✅ Using existing product:', product.id);
+      }
+
+      // Check if price already exists
+      const existingPrices = await stripe.prices.list({
+        product: product.id,
+        limit: 100
+      });
+      
+      price = existingPrices.data.find(p => p.unit_amount === (amount || 100) && p.recurring?.interval === 'day');
+      
+      if (!price) {
+        price = await stripe.prices.create({
+          unit_amount: amount || 100, // $1.00 in cents
+          currency: 'usd',
+          recurring: { interval: 'day' },
+          product: product.id,
+        });
+        console.log('✅ Price created:', price.id);
+      } else {
+        console.log('✅ Using existing price:', price.id);
+      }
+    } catch (error) {
+      console.error('❌ Product/price creation failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create product/price'
+      });
+    }
+
+    // Create subscription
+    let subscription;
+    try {
+      subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: price.id }],
+        default_payment_method: paymentMethodId,
+        expand: ['latest_invoice.payment_intent'],
+        metadata: {
+          planId: planId,
+          customerEmail: customerEmail
+        }
+      });
+      console.log('✅ Subscription created:', subscription.id);
+    } catch (error) {
+      console.error('❌ Subscription creation failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create subscription'
+      });
+    }
+
+    // Check payment status
+    const latestInvoice = subscription.latest_invoice;
+    if (latestInvoice && latestInvoice.payment_intent) {
+      const paymentIntent = latestInvoice.payment_intent;
+      
+      if (paymentIntent.status === 'requires_action') {
+        console.log('🔐 3D Secure authentication required');
+        return res.json({
+          success: false,
+          requires_action: true,
+          client_secret: paymentIntent.client_secret,
+          subscriptionId: subscription.id,
+          customerId: customer.id,
+          message: '3D Secure authentication required'
+        });
+      }
+      
+      if (paymentIntent.status !== 'succeeded') {
+        console.log('❌ Payment not succeeded:', paymentIntent.status);
+        return res.status(400).json({
+          success: false,
+          message: `Payment failed: ${paymentIntent.status}`
+        });
+      }
+    }
+
+    // Update user in database
+    try {
+      const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
+      if (userIndex !== -1) {
+        mockDB.users[userIndex].currentPlan = planId;
+        mockDB.users[userIndex].paymentCompleted = true;
+        mockDB.users[userIndex].currentCredits = 50;
+        mockDB.users[userIndex].subscriptionId = subscription.id;
+        mockDB.users[userIndex].subscriptionEndAt = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString();
+        
+        // Add invoice
+        const invoice = {
+          id: `INV-${Date.now()}`,
+          date: new Date().toISOString(),
+          amount: (amount || 100) / 100,
+          currency: 'usd',
+          status: 'paid',
+          description: `${planId} Plan - Initial Payment`,
+          subscriptionId: subscription.id
+        };
+        
+        if (!mockDB.users[userIndex].invoices) {
+          mockDB.users[userIndex].invoices = [];
+        }
+        mockDB.users[userIndex].invoices.push(invoice);
+        
+        saveDataToFiles('subscription_created');
+        console.log('✅ User updated in database');
+      }
+    } catch (error) {
+      console.error('❌ Database update failed:', error);
+    }
+
+    // Success response
+    res.json({
+      success: true,
+      subscriptionId: subscription.id,
+      customerId: customer.id,
+      status: subscription.status,
+      message: 'Subscription created successfully!',
+      invoice: {
+        id: `INV-${Date.now()}`,
+        amount: (amount || 100) / 100,
+        status: 'paid'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Simple subscription creation failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Create subscription with auto-cut functionality
+app.post('/api/create-subscription', async (req, res) => {
+  try {
+    console.log('🚀 Creating subscription with auto-cut...');
+    console.log('📝 Request body:', req.body);
+    
+    const { paymentMethodId, customerEmail, planId, customerName } = req.body;
+    
+    console.log('📋 Extracted fields:', { paymentMethodId, customerEmail, planId, customerName });
+    
+    // Validate required fields
+    if (!paymentMethodId || !customerEmail || !planId) {
+      console.log('❌ Missing required fields:', { 
+        paymentMethodId: !!paymentMethodId, 
+        customerEmail: !!customerEmail, 
+        planId: !!planId 
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Payment method ID, customer email, and plan ID are required',
+        received: { paymentMethodId: !!paymentMethodId, customerEmail: !!customerEmail, planId: !!planId }
       });
     }
     
@@ -5014,13 +5259,77 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
     if (result.success) {
       console.log('✅ 12-day subscription with auto-cut created successfully!');
       
+      // Check if 3D Secure authentication is required
+      const latestInvoice = result.subscription.latest_invoice;
+      if (latestInvoice && latestInvoice.payment_intent) {
+        const paymentIntent = latestInvoice.payment_intent;
+        
+        console.log('🔍 Payment Intent Status:', paymentIntent.status);
+        
+        if (paymentIntent.status === 'requires_action') {
+          console.log('🔐 3D Secure authentication required');
+          return res.json({
+            success: false,
+            requires_action: true,
+            client_secret: paymentIntent.client_secret,
+            subscriptionId: result.subscription.id,
+            customerId: result.customer.id,
+            message: 'Subscription created but payment incomplete - 3D Secure authentication required'
+          });
+        }
+        
+        if (paymentIntent.status === 'succeeded') {
+          console.log('✅ Payment succeeded, proceeding with subscription setup');
+        } else {
+          console.log('❌ Payment not succeeded, status:', paymentIntent.status);
+          return res.status(400).json({
+            success: false,
+            message: `Payment failed with status: ${paymentIntent.status}`,
+            paymentStatus: paymentIntent.status
+          });
+        }
+      }
+      
+      // Generate initial invoice for subscription creation
+      const initialInvoice = {
+        id: `INIT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        date: new Date().toISOString(),
+        amount: 1.00, // $1.00 for daily plan
+        currency: 'usd',
+        status: 'paid',
+        description: 'Daily-12 Plan - Initial Subscription',
+        plan: 'Daily-12',
+        subscriptionId: result.subscription.id,
+        customerEmail: customerEmail,
+        type: 'subscription_creation',
+        creditsAdded: 50
+      };
+
+      // Add invoice to user record
+      try {
+        const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
+        if (userIndex !== -1) {
+          if (!mockDB.users[userIndex].invoices) {
+            mockDB.users[userIndex].invoices = [];
+          }
+          mockDB.users[userIndex].invoices.push(initialInvoice);
+          mockDB.users[userIndex].currentCredits = (mockDB.users[userIndex].currentCredits || 0) + 50;
+          mockDB.users[userIndex].currentPlan = 'daily-12';
+          mockDB.users[userIndex].subscriptionEndAt = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString();
+          saveDataToFiles('subscription_created_with_invoice');
+        }
+      } catch (error) {
+        console.error('❌ Error adding initial invoice:', error);
+      }
+
       res.json({
         success: true,
         subscriptionId: result.subscription.id,
         customerId: result.customer.id,
         status: result.subscription.status,
         message: '12-day subscription created with automatic daily billing setup',
-        endAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString()
+        endAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString(),
+        invoice: initialInvoice
       });
     } else {
       console.log('❌ Auto-cut subscription setup failed');

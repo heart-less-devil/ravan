@@ -109,6 +109,53 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
             paymentMethodId: paymentMethod.id
           }),
         });
+
+        const subscriptionData = await response.json();
+        
+        // Handle 3D Secure authentication if required
+        if (subscriptionData.requires_action) {
+          console.log('🔐 3D Secure authentication required');
+          
+          try {
+            const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+              subscriptionData.client_secret
+            );
+            
+            if (confirmError) {
+              console.error('❌ 3D Secure authentication failed:', confirmError);
+              setError(`Payment failed: ${confirmError.message}`);
+              onError && onError(confirmError.message);
+              return;
+            }
+            
+            if (paymentIntent.status === 'succeeded') {
+              console.log('✅ 3D Secure authentication successful');
+              console.log('Payment Intent after 3D Secure:', paymentIntent);
+              
+              // After successful 3D Secure, show success
+              console.log('🎉 Subscription created successfully with 3D Secure!');
+              setLoading(false);
+              onSuccess({
+                subscriptionId: subscriptionData.subscriptionId,
+                customerId: subscriptionData.customerId,
+                status: 'active',
+                paymentIntent: paymentIntent,
+                message: 'Subscription created successfully! Daily billing will start automatically.'
+              });
+              return;
+            } else {
+              console.error('❌ Payment not completed after 3D Secure:', paymentIntent.status);
+              setError('Payment not completed. Please try again.');
+              onError && onError('Payment not completed. Please try again.');
+              return;
+            }
+          } catch (error) {
+            console.error('❌ 3D Secure authentication error:', error);
+            setError(`Payment failed: ${error.message}`);
+            onError && onError(error.message);
+            return;
+          }
+        }
       } else {
         // Default one-time payment intent
         response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
@@ -129,9 +176,17 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       console.log('📡 Payment intent response ok:', response.ok);
 
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('❌ Payment intent error response:', errorData);
-        throw new Error(`Payment intent failed: ${response.status} ${errorData}`);
+        console.error('❌ Payment intent error response status:', response.status);
+        
+        // Try to parse as JSON for better error handling
+        try {
+          const errorData = await response.json();
+          console.error('❌ Payment intent error response:', errorData);
+          throw new Error(errorData.message || `Payment failed: ${response.status}`);
+        } catch (parseError) {
+          console.error('❌ Error parsing response:', parseError);
+          throw new Error(`Payment intent failed: ${response.status}`);
+        }
       }
 
       const responseData = await response.json();
@@ -250,6 +305,11 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
           console.log('🎉 Daily-12 subscription payment completed successfully!');
           // The webhook will handle the subscription activation
           // We just need to show success and close the modal
+          onSuccess && onSuccess({
+            ...paymentIntent,
+            message: '🎉 Subscription created successfully! Daily billing will start automatically. You will be charged $1.00 daily for 12 days.'
+          });
+          return;
         }
         
         onSuccess && onSuccess(paymentIntent);

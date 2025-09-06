@@ -120,6 +120,11 @@ const Dashboard = () => {
         if (errorData.message === 'Account suspended' && errorData.suspended) {
           console.log('🚨 User is suspended! Setting suspension data:', errorData.suspended);
           setSuspensionData(errorData.suspended);
+        } else if (errorData.message === 'Invalid token') {
+          console.log('❌ Invalid token, redirecting to login');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
         }
       } else if (response.ok) {
         console.log('✅ User is not suspended');
@@ -3847,8 +3852,8 @@ const PricingPage = () => {
   const loadStripePayment = async () => {
     if (!StripePaymentComponent) {
       try {
-        const { default: StripePayment } = await import('../components/StripePayment');
-        setStripePaymentComponent(() => StripePayment);
+        const { default: FreeFirePayment } = await import('../components/FreeFirePayment');
+        setStripePaymentComponent(() => FreeFirePayment);
       } catch (error) {
         console.error('Failed to load StripePayment component:', error);
       }
@@ -3974,6 +3979,8 @@ const PricingPage = () => {
   };
 
   const handlePaymentSuccess = async (paymentIntent) => {
+    console.log('🎉 Payment success handler called:', paymentIntent);
+    
     // Update user's current plan after successful payment
     if (selectedPlan && selectedPlan.id !== 'free') {
       setUserCurrentPlan(selectedPlan.id);
@@ -4013,9 +4020,17 @@ const PricingPage = () => {
         console.error('Error syncing payment status:', error);
       }
     }
-    setPaymentStatus('Payment successful! Plan activated.');
+    
+    // Show success message with custom message if available
+    const successMessage = paymentIntent.message || 'Payment successful! Plan activated.';
+    setPaymentStatus(successMessage);
     setShowPayment(false);
     console.log('Payment successful:', paymentIntent);
+    
+    // Refresh user data to get updated credits and plan
+    setTimeout(() => {
+      window.location.reload(); // Simple page reload to get updated data
+    }, 1000);
   };
 
   const handlePaymentError = (error) => {
