@@ -19,6 +19,30 @@ if (!stripePromise) {
   console.error('❌ Failed to load Stripe - check your publishable key');
 }
 
+// Utility function to get user email from localStorage
+const getUserEmail = () => {
+  // Try multiple localStorage keys for email
+  const emailKeys = ['userEmail', 'email', 'user.email'];
+  for (const key of emailKeys) {
+    const email = localStorage.getItem(key);
+    if (email && !email.includes('example.com')) {
+      return email;
+    }
+  }
+  
+  // Try to get from user object
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user && user.email && !user.email.includes('example.com')) {
+      return user.email;
+    }
+  } catch (e) {
+    console.log('Could not parse user object:', e);
+  }
+  
+  return null;
+};
+
 const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -72,12 +96,10 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       // Special daily-12 subscription flow
       let response;
       if (plan.id === 'daily-12') {
-        let customerEmail = localStorage.getItem('userEmail') || null;
+        let customerEmail = getUserEmail();
         if (!customerEmail) {
-          try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
-            if (u && u.email) customerEmail = u.email;
-          } catch (_) {}
+          console.log('⚠️ No valid user email found, using fallback');
+          customerEmail = 'customer@example.com';
         }
         
         // Create payment method first with enhanced billing details

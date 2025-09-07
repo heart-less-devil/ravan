@@ -76,9 +76,9 @@
     "subscriptionId": "sub_1S0zusLf1iznKy11yxNSf5E5",
     "subscriptionEndAt": "2025-09-09T07:06:31.834Z",
     "subscriptionOnHold": false,
-    "lastPaymentError": "2025-09-04T17:30:01.119Z",
-    "paymentErrorCount": 9,
-    "lastPaymentErrorMessage": "Invalid API Key provided: sk_live_**************HERE",
+    "lastPaymentError": "2025-09-07T12:30:01.704Z",
+    "paymentErrorCount": 10,
+    "lastPaymentErrorMessage": "You cannot confirm this PaymentIntent because it's missing a payment method. You can either update the PaymentIntent with a payment method and then confirm it again, or confirm it again directly with a payment method or ConfirmationToken.",
     "paymentUpdatedAt": "2025-09-06T12:20:52.829Z"
   },
   {

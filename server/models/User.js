@@ -54,7 +54,7 @@ const userSchema = new mongoose.Schema({
   },
   currentPlan: {
     type: String,
-    enum: ['free', 'monthly', 'annual', 'test', 'daily-12'],
+    enum: ['free', 'monthly', 'annual', 'test', 'daily-12', 'basic', 'premium', 'simple-1', 'basic-yearly', 'premium-yearly'],
     default: 'free'
   },
   currentCredits: {

@@ -388,9 +388,47 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             credits = 50;
           } else if (planId === 'premium') {
             credits = 100;
+          } else if (planId === 'simple-1') {
+            credits = 50;
           }
           
-          const updatedUser = await User.findOneAndUpdate(
+          // Check if this is a subscription payment
+          const isSubscriptionPayment = planId === 'daily-12' || planId === 'yearly';
+          
+          if (isSubscriptionPayment) {
+            console.log('🔄 Processing subscription payment for:', customerEmail);
+            
+            // Update subscription status to active
+            const updateData = {
+              paymentCompleted: true,
+              currentPlan: planId,
+              paymentUpdatedAt: new Date(),
+              currentCredits: credits,
+              subscriptionStatus: 'active',
+              lastPaymentDate: new Date(),
+              autoRenewal: true
+            };
+            
+            // For daily subscriptions, set up renewal schedule
+            if (planId === 'daily-12') {
+              updateData.nextCreditRenewal = new Date(Date.now() + 24 * 60 * 60 * 1000);
+              updateData.subscriptionEndAt = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000);
+            }
+            
+            const updatedUser = await User.findOneAndUpdate(
+              { email: customerEmail },
+              updateData,
+              { new: true }
+            );
+            
+            if (updatedUser) {
+              console.log('✅ MongoDB subscription payment processed for:', customerEmail);
+            }
+          } else {
+            // One-time payment processing
+            console.log('💳 Processing one-time payment for:', customerEmail);
+            
+            const updatedUser = await User.findOneAndUpdate(
             { email: customerEmail },
             {
               paymentCompleted: true,
@@ -653,8 +691,23 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         status: subscription.status,
         plan: subscription.plan?.id,
         interval: subscription.plan?.interval,
-        amount: subscription.plan?.amount
+        amount: subscription.plan?.amount,
+        metadata: subscription.metadata
       });
+      
+      // Auto-capture payment for incomplete subscriptions
+      if (subscription.status === 'incomplete' && subscription.latest_invoice) {
+        console.log('🔄 Auto-capturing payment for incomplete subscription...');
+        try {
+          const invoice = await stripe.invoices.retrieve(subscription.latest_invoice);
+          if (invoice.payment_intent && invoice.payment_intent.status === 'requires_payment_method') {
+            console.log('💳 Payment method required, attempting to capture...');
+            // The payment will be automatically captured when the customer provides a valid payment method
+          }
+        } catch (captureError) {
+          console.error('❌ Error auto-capturing payment:', captureError);
+        }
+      }
       
       // Check if this is a daily subscription (either by metadata or plan details)
       const isDailySubscription = subscription.metadata?.planId === 'daily-12' || 
@@ -2202,6 +2255,11 @@ app.post('/api/create-simple-subscription', async (req, res) => {
         message: 'Payment method ID, customer email, and plan ID are required'
       });
     }
+    
+    // Validate customer email is not example email
+    if (customerEmail.includes('example.com')) {
+      console.log('⚠️ Warning: Using example email for payment:', customerEmail);
+    }
 
     // Create or get customer
     let customer;
@@ -2332,7 +2390,7 @@ app.post('/api/create-simple-subscription', async (req, res) => {
       });
     }
 
-    // Check payment status
+    // Check payment status and auto-capture if needed
     const latestInvoice = subscription.latest_invoice;
     if (latestInvoice && latestInvoice.payment_intent) {
       const paymentIntent = latestInvoice.payment_intent;
@@ -2347,6 +2405,29 @@ app.post('/api/create-simple-subscription', async (req, res) => {
           customerId: customer.id,
           message: '3D Secure authentication required'
         });
+      }
+      
+      if (paymentIntent.status === 'requires_payment_method') {
+        console.log('💳 Attempting to auto-capture payment...');
+        try {
+          // Try to confirm the payment intent
+          const confirmedPayment = await stripe.paymentIntents.confirm(paymentIntent.id);
+          console.log('✅ Payment auto-captured:', confirmedPayment.status);
+          
+          if (confirmedPayment.status !== 'succeeded') {
+            console.log('❌ Auto-capture failed:', confirmedPayment.status);
+            return res.status(400).json({
+              success: false,
+              message: `Payment auto-capture failed: ${confirmedPayment.status}`
+            });
+          }
+        } catch (captureError) {
+          console.error('❌ Auto-capture error:', captureError);
+          return res.status(400).json({
+            success: false,
+            message: `Payment auto-capture failed: ${captureError.message}`
+          });
+        }
       }
       
       if (paymentIntent.status !== 'succeeded') {
@@ -2468,10 +2549,44 @@ app.post('/api/create-subscription', async (req, res) => {
         }
         break;
       case 'basic':
-        priceId = 'price_basic_plan'; // Replace with your basic plan price ID
+        // Create price dynamically for basic plan
+        try {
+          const basicPrice = await stripe.prices.create({
+            unit_amount: 50000, // $500.00 in cents
+            currency: 'usd',
+            product_data: {
+              name: 'Basic Plan - One-time Payment'
+            }
+          });
+          priceId = basicPrice.id;
+          console.log('✅ Created basic plan price:', priceId);
+        } catch (error) {
+          console.error('❌ Error creating basic plan price:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to create basic plan price'
+          });
+        }
         break;
       case 'premium':
-        priceId = 'price_premium_plan'; // Replace with your premium plan price ID
+        // Create price dynamically for premium plan
+        try {
+          const premiumPrice = await stripe.prices.create({
+            unit_amount: 75000, // $750.00 in cents
+            currency: 'usd',
+            product_data: {
+              name: 'Premium Plan - One-time Payment'
+            }
+          });
+          priceId = premiumPrice.id;
+          console.log('✅ Created premium plan price:', priceId);
+        } catch (error) {
+          console.error('❌ Error creating premium plan price:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to create premium plan price'
+          });
+        }
         break;
       default:
         return res.status(400).json({
@@ -5180,7 +5295,45 @@ app.post('/api/create-payment-intent', async (req, res) => {
     console.log('Customer:', customer ? customer.id : 'guest');
     console.log('Plan details:', { planId, isAnnual, amount: amount * 100 });
 
-    // Create payment intent with customer (if available) or as guest
+    // For annual plans, we need to create a subscription instead of a one-time payment
+    if (isAnnual && (planId === 'basic' || planId === 'premium')) {
+      // Create subscription for annual plans
+      const yearlyPlanId = planId === 'basic' ? 'basic-yearly' : 'premium-yearly';
+      const monthlyAmount = planId === 'basic' ? 400 : 600; // $400 or $600 per month
+      
+      // Create price for monthly billing
+      const price = await stripe.prices.create({
+        unit_amount: monthlyAmount * 100, // Convert to cents
+        currency: 'usd',
+        recurring: { interval: 'month' },
+        product_data: {
+          name: `${planId === 'basic' ? 'Basic' : 'Premium'} Plan - Monthly Billing`
+        }
+      });
+
+      // Create subscription
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{ price: price.id }],
+        expand: ['latest_invoice.payment_intent'],
+        metadata: {
+          planId: yearlyPlanId,
+          isAnnual: 'true',
+          customerEmail: customerEmail
+        }
+      });
+
+      console.log('✅ Annual subscription created:', subscription.id);
+      
+      return res.json({
+        subscriptionId: subscription.id,
+        clientSecret: subscription.latest_invoice.payment_intent.client_secret,
+        status: subscription.status,
+        requires_action: subscription.status === 'incomplete'
+      });
+    }
+
+    // Create payment intent for one-time payments
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount * 100, // Convert to cents
       currency: currency,

@@ -34,7 +34,7 @@ const PaymentForm = ({ plan, onSuccess, onError, onClose }) => {
         card: elements.getElement(CardElement),
         billing_details: {
           name: localStorage.getItem('userName') || 'Customer',
-          email: localStorage.getItem('userEmail') || 'customer@example.com',
+          email: localStorage.getItem('userEmail') || localStorage.getItem('email') || 'customer@example.com',
         }
       });
 
@@ -52,7 +52,7 @@ const PaymentForm = ({ plan, onSuccess, onError, onClose }) => {
         },
         body: JSON.stringify({
           paymentMethodId: paymentMethod.id,
-          customerEmail: localStorage.getItem('userEmail') || 'customer@example.com',
+          customerEmail: localStorage.getItem('userEmail') || localStorage.getItem('email') || 'customer@example.com',
           customerName: localStorage.getItem('userName') || 'Customer',
           planId: plan.id,
           amount: plan.price * 100,
