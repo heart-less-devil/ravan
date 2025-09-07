@@ -324,7 +324,10 @@ app.use((req, res, next) => {
 // Webhook for Stripe events - MUST BE BEFORE express.json() middleware
 app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_ygLySaPSLLs4S4xpWuXWvblGsqA4nhV7';
+  // It's crucial to load the webhook secret from environment variables for security.
+  // Do not hardcode secrets in production. If the environment variable is not set,
+  // the webhook verification will correctly fail, indicating a configuration issue.
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   console.log('🔔 Webhook received - Debug Info:');
   console.log('📧 Signature:', sig ? 'Present' : 'Missing');
@@ -467,6 +470,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             } else {
               console.log('⚠️ User not found in database:', customerEmail);
             }
+          }
           }
         } catch (error) {
           console.error('❌ Error updating user payment status:', error);
