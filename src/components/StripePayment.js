@@ -43,6 +43,52 @@ const getUserEmail = () => {
   return null;
 };
 
+// Enhanced 3D Secure Detection Utility
+const detect3DSecureRequirement = (subscriptionData) => {
+  console.log('🔍 3D Secure Detection Utility Starting...');
+  
+  const detection = {
+    requires3DSecure: false,
+    hasClientSecret: false,
+    hasPaymentIntent: false,
+    status: 'unknown',
+    details: {}
+  };
+  
+  // Check for 3D Secure requirement
+  if (subscriptionData.requires_action && subscriptionData.client_secret) {
+    detection.requires3DSecure = true;
+    detection.hasClientSecret = true;
+    detection.status = 'requires_3d_secure';
+    detection.details = {
+      subscriptionId: subscriptionData.subscriptionId,
+      customerId: subscriptionData.customerId,
+      paymentIntentId: subscriptionData.paymentIntentId,
+      invoiceId: subscriptionData.invoiceId,
+      clientSecret: subscriptionData.client_secret.substring(0, 20) + '...'
+    };
+  } else if (subscriptionData.authentication_required) {
+    detection.requires3DSecure = true;
+    detection.status = 'authentication_required';
+    detection.details = {
+      message: 'Authentication required but client secret missing'
+    };
+  } else if (subscriptionData.status === 'incomplete') {
+    detection.status = 'incomplete';
+    detection.details = {
+      message: 'Subscription incomplete but no 3D Secure requirement detected'
+    };
+  } else if (subscriptionData.status === 'active') {
+    detection.status = 'active';
+    detection.details = {
+      message: 'Subscription is already active'
+    };
+  }
+  
+  console.log('🔍 3D Secure Detection Result:', detection);
+  return detection;
+};
+
 const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -99,11 +145,18 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         let customerEmail = getUserEmail();
         if (!customerEmail) {
           console.log('⚠️ No valid user email found, using fallback');
-          customerEmail = 'customer@example.com';
+          customerEmail = null;
         }
         
         // Create payment method first with enhanced billing details
         const cardElement = elements.getElement(CardElement);
+        
+        if (!cardElement) {
+          console.error('❌ Card element not found');
+          throw new Error('Card element not found. Please refresh the page and try again.');
+        }
+        
+        console.log('🔄 Creating payment method...');
         const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
           type: 'card',
           card: cardElement,
@@ -115,12 +168,97 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
         if (pmError) {
           console.error('❌ Payment method creation failed:', pmError);
-          throw new Error(pmError.message);
+          console.error('❌ Payment method error details:', {
+            type: pmError.type,
+            code: pmError.code,
+            message: pmError.message,
+            decline_code: pmError.decline_code
+          });
+          
+          // Enhanced error handling for payment method creation
+          let errorMessage = pmError.message;
+          
+          if (pmError.type === 'card_error') {
+            switch (pmError.code) {
+              case 'card_declined':
+                if (pmError.decline_code) {
+                  switch (pmError.decline_code) {
+                    case 'insufficient_funds':
+                      errorMessage = '❌ Insufficient funds in your account. Please check your balance or try a different card.';
+                      break;
+                    case 'card_not_supported':
+                      errorMessage = '❌ This card type is not supported. Please try a different card.';
+                      break;
+                    case 'currency_not_supported':
+                      errorMessage = '❌ This card does not support USD transactions. Please try a different card.';
+                      break;
+                    case 'fraudulent':
+                      errorMessage = '❌ This transaction was flagged as potentially fraudulent by your bank. Please contact your bank.';
+                      break;
+                    case 'generic_decline':
+                      errorMessage = '❌ Your bank declined this transaction. Please contact your bank or try a different card.';
+                      break;
+                    default:
+                      errorMessage = `❌ Your bank declined this transaction (${pmError.decline_code}). Please contact your bank or try a different card.`;
+                  }
+                } else {
+                  errorMessage = '❌ Your card was declined by your bank. Please contact your bank or try a different card.';
+                }
+                break;
+              case 'incorrect_number':
+                errorMessage = '❌ Your card number is incorrect. Please check and try again.';
+                break;
+              case 'invalid_expiry_month':
+                errorMessage = '❌ Your card\'s expiry month is invalid. Please check and try again.';
+                break;
+              case 'invalid_expiry_year':
+                errorMessage = '❌ Your card\'s expiry year is invalid. Please check and try again.';
+                break;
+              case 'incorrect_cvc':
+                errorMessage = '❌ Your card\'s security code (CVC) is incorrect. Please check and try again.';
+                break;
+              case 'expired_card':
+                errorMessage = '❌ Your card has expired. Please use a different card.';
+                break;
+              default:
+                errorMessage = `❌ Card error: ${pmError.message}. Please check your card details and try again.`;
+            }
+          } else if (pmError.type === 'validation_error') {
+            errorMessage = '❌ Please check your card details and try again.';
+          }
+          
+          setError(errorMessage);
+          onError && onError(errorMessage);
+          setLoading(false);
+          return;
         }
 
-        console.log('✅ Payment method created:', paymentMethod.id);
+        if (!paymentMethod) {
+          console.error('❌ Payment method not created');
+          throw new Error('Payment method creation failed. Please try again.');
+        }
+
+        console.log('✅ Payment method created successfully:', paymentMethod.id);
+        console.log('📊 Payment method details:', {
+          id: paymentMethod.id,
+          type: paymentMethod.type,
+          card: paymentMethod.card ? {
+            brand: paymentMethod.card.brand,
+            last4: paymentMethod.card.last4,
+            exp_month: paymentMethod.card.exp_month,
+            exp_year: paymentMethod.card.exp_year
+          } : 'No card details'
+        });
         
         // Now create subscription with payment method
+        console.log('🔄 Creating subscription with payment method...');
+        console.log('📊 Subscription request data:', {
+          customerEmail,
+          customerName: localStorage.getItem('userName') || 'Customer',
+          planId: 'daily-12',
+          paymentMethodId: paymentMethod.id
+        });
+        
         response = await fetch(`${API_BASE_URL}/api/create-subscription`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -131,27 +269,125 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
             paymentMethodId: paymentMethod.id
           }),
         });
-
-        const subscriptionData = await response.json();
         
-        // Handle 3D Secure authentication if required
-        if (subscriptionData.requires_action) {
-          console.log('🔐 3D Secure authentication required');
+        console.log('📡 Subscription response received:', {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText
+        });
+
+        console.log('📡 Subscription response status:', response.status);
+        console.log('📡 Subscription response ok:', response.ok);
+
+        // Parse subscription response
+        let subscriptionData;
+        try {
+          subscriptionData = await response.json();
+        } catch (parseError) {
+          console.error('❌ Error parsing subscription response:', parseError);
+          throw new Error(`Failed to parse subscription response: ${response.status}`);
+        }
+
+        if (!response.ok) {
+          console.error('❌ Subscription error response status:', response.status);
+          console.error('❌ Subscription error response:', subscriptionData);
+          
+          // Check if it's a 3D Secure authentication requirement
+          if (subscriptionData.requires_action && subscriptionData.client_secret) {
+            console.log('🔐 3D Secure authentication required - handling...');
+            // Don't throw error, handle 3D Secure below
+          } else if (subscriptionData.message && subscriptionData.message.includes('3D Secure')) {
+            console.log('🔐 3D Secure authentication required from error message');
+            // Don't throw error, handle 3D Secure below
+          } else {
+            throw new Error(subscriptionData.message || `Subscription failed: ${response.status}`);
+          }
+        }
+        
+        // Also check for 3D Secure in successful responses
+        if (response.ok && subscriptionData.requires_action && subscriptionData.client_secret) {
+          console.log('🔐 3D Secure authentication required in successful response');
+        }
+        
+        // Enhanced 3D Secure Detection and Authentication
+        const detection = detect3DSecureRequirement(subscriptionData);
+        
+        // Check for 3D Secure requirement in multiple ways
+        const requires3DSecure = (
+          (subscriptionData.requires_action && subscriptionData.client_secret) ||
+          (subscriptionData.message && subscriptionData.message.includes('3D Secure')) ||
+          (subscriptionData.authentication_required) ||
+          (detection.requires3DSecure && detection.hasClientSecret)
+        );
+        
+        if (requires3DSecure && subscriptionData.client_secret) {
+          console.log('🔐 3D Secure Authentication Required!');
+          console.log('🔍 Detection Details:');
+          console.log('  - Subscription ID:', subscriptionData.subscriptionId);
+          console.log('  - Customer ID:', subscriptionData.customerId);
+          console.log('  - Payment Intent ID:', subscriptionData.paymentIntentId);
+          console.log('  - Invoice ID:', subscriptionData.invoiceId);
+          console.log('  - Client Secret Available:', !!subscriptionData.client_secret);
+          console.log('  - Authentication Required:', subscriptionData.authentication_required);
+          console.log('  - Next Action:', subscriptionData.next_action);
           
           try {
+            console.log('🔄 Starting 3D Secure Authentication Process...');
+            console.log('🔑 Using client secret:', subscriptionData.client_secret.substring(0, 20) + '...');
+            
+            // Show user that 3D Secure is starting
+            setError('🔐 3D Secure authentication required. Please complete the verification process...');
+            
             const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
               subscriptionData.client_secret
             );
             
             if (confirmError) {
               console.error('❌ 3D Secure authentication failed:', confirmError);
-              setError(`Payment failed: ${confirmError.message}`);
-              onError && onError(confirmError.message);
+              
+              // Enhanced 3D Secure error handling
+              let errorMessage = `3D Secure authentication failed: ${confirmError.message}`;
+              
+              if (confirmError.type === 'card_error') {
+                switch (confirmError.code) {
+                  case 'card_declined':
+                    if (confirmError.decline_code) {
+                      switch (confirmError.decline_code) {
+                        case 'insufficient_funds':
+                          errorMessage = '❌ 3D Secure failed: Insufficient funds in your account. Please check your balance.';
+                          break;
+                        case 'fraudulent':
+                          errorMessage = '❌ 3D Secure failed: Transaction flagged as fraudulent by your bank.';
+                          break;
+                        case 'generic_decline':
+                          errorMessage = '❌ 3D Secure failed: Your bank declined the authentication.';
+                          break;
+                        default:
+                          errorMessage = `❌ 3D Secure failed: ${confirmError.decline_code}. Please contact your bank.`;
+                      }
+                    } else {
+                      errorMessage = '❌ 3D Secure authentication was declined by your bank.';
+                    }
+                    break;
+                  case 'authentication_required':
+                    errorMessage = '🔐 3D Secure authentication is required. Please complete the verification process.';
+                    break;
+                  default:
+                    errorMessage = `❌ 3D Secure authentication failed: ${confirmError.message}`;
+                }
+              }
+              
+              setError(errorMessage);
+              onError && onError(errorMessage);
+              setLoading(false);
               return;
             }
             
+            console.log('📊 Payment Intent status after 3D Secure:', paymentIntent.status);
+            console.log('📊 Payment Intent details:', paymentIntent);
+            
             if (paymentIntent.status === 'succeeded') {
-              console.log('✅ 3D Secure authentication successful');
+              console.log('✅ 3D Secure authentication successful!');
               console.log('Payment Intent after 3D Secure:', paymentIntent);
               
               // After successful 3D Secure, show success
@@ -162,21 +398,125 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
                 customerId: subscriptionData.customerId,
                 status: 'active',
                 paymentIntent: paymentIntent,
-                message: 'Subscription created successfully! Daily billing will start automatically.'
+                message: '🎉 Subscription created successfully! Daily billing will start automatically. Your card has been verified with 3D Secure.'
+              });
+              return;
+            } else if (paymentIntent.status === 'processing') {
+              console.log('⏳ Payment is processing after 3D Secure');
+              setLoading(false);
+              onSuccess({
+                subscriptionId: subscriptionData.subscriptionId,
+                customerId: subscriptionData.customerId,
+                status: 'processing',
+                paymentIntent: paymentIntent,
+                message: '🎉 Subscription created successfully! Payment is processing. You will receive confirmation once completed.'
               });
               return;
             } else {
               console.error('❌ Payment not completed after 3D Secure:', paymentIntent.status);
-              setError('Payment not completed. Please try again.');
-              onError && onError('Payment not completed. Please try again.');
+              setError(`Payment not completed. Status: ${paymentIntent.status}`);
+              onError && onError(`Payment not completed. Status: ${paymentIntent.status}`);
+              setLoading(false);
               return;
             }
           } catch (error) {
             console.error('❌ 3D Secure authentication error:', error);
-            setError(`Payment failed: ${error.message}`);
+            setError(`3D Secure authentication failed: ${error.message}`);
             onError && onError(error.message);
+            setLoading(false);
             return;
           }
+        } else if (subscriptionData.authentication_required || (subscriptionData.message && subscriptionData.message.includes('3D Secure'))) {
+          console.log('🔐 Authentication required but no client secret available');
+          console.log('📊 Subscription data for debugging:', subscriptionData);
+          
+          // Try to get client secret from different possible locations
+          const possibleClientSecret = subscriptionData.client_secret || 
+                                     subscriptionData.paymentIntent?.client_secret ||
+                                     subscriptionData.latest_invoice?.payment_intent?.client_secret;
+          
+          if (possibleClientSecret) {
+            console.log('🔑 Found client secret in alternative location, retrying 3D Secure...');
+            subscriptionData.client_secret = possibleClientSecret;
+            subscriptionData.requires_action = true;
+            
+            // Retry 3D Secure authentication
+            try {
+              console.log('🔄 Retrying 3D Secure authentication...');
+              const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(possibleClientSecret);
+              
+              if (confirmError) {
+                console.error('❌ 3D Secure authentication failed on retry:', confirmError);
+                
+                // Enhanced error handling for retry
+                let errorMessage = `3D Secure authentication failed: ${confirmError.message}`;
+                
+                if (confirmError.type === 'card_error') {
+                  switch (confirmError.code) {
+                    case 'card_declined':
+                      if (confirmError.decline_code) {
+                        switch (confirmError.decline_code) {
+                          case 'insufficient_funds':
+                            errorMessage = '❌ Payment failed: Insufficient funds in your account. Please check your balance or try a different card.';
+                            break;
+                          case 'fraudulent':
+                            errorMessage = '❌ Payment failed: Transaction flagged as fraudulent by your bank. Please contact your bank.';
+                            break;
+                          case 'generic_decline':
+                            errorMessage = '❌ Payment failed: Your bank declined this transaction. Please contact your bank or try a different card.';
+                            break;
+                          default:
+                            errorMessage = `❌ Payment failed: ${confirmError.decline_code}. Please contact your bank.`;
+                        }
+                      } else {
+                        errorMessage = '❌ Payment failed: Your bank declined this transaction.';
+                      }
+                      break;
+                    default:
+                      errorMessage = `❌ Payment failed: ${confirmError.message}`;
+                  }
+                }
+                
+                setError(errorMessage);
+                onError && onError(errorMessage);
+                setLoading(false);
+                return;
+              }
+              
+              if (paymentIntent.status === 'succeeded') {
+                console.log('✅ 3D Secure authentication successful on retry!');
+                setLoading(false);
+                onSuccess({
+                  subscriptionId: subscriptionData.subscriptionId,
+                  customerId: subscriptionData.customerId,
+                  status: 'active',
+                  paymentIntent: paymentIntent,
+                  message: '🎉 Subscription created successfully! Daily billing will start automatically. Your card has been verified with 3D Secure.'
+                });
+                return;
+              }
+            } catch (error) {
+              console.error('❌ 3D Secure retry failed:', error);
+            }
+          }
+          
+          setError('🔐 3D Secure authentication required. Your bank needs to verify this payment. Please check for a popup window or complete the verification process.');
+          onError && onError('3D Secure authentication required - please complete bank verification');
+          setLoading(false);
+          return;
+        } else {
+          // Subscription created successfully without 3D Secure
+          console.log('✅ Subscription created successfully without 3D Secure');
+          console.log('📊 Subscription data:', subscriptionData);
+          
+          setLoading(false);
+          onSuccess({
+            subscriptionId: subscriptionData.subscriptionId,
+            customerId: subscriptionData.customerId,
+            status: subscriptionData.status || 'active',
+            message: '🎉 Subscription created successfully! Your card is saved and daily billing will start automatically. You will be charged $1.00 daily for 12 days.'
+          });
+          return;
         }
       } else {
         // Default one-time payment intent
@@ -197,21 +537,20 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       console.log('📡 Payment intent response status:', response.status);
       console.log('📡 Payment intent response ok:', response.ok);
 
-      if (!response.ok) {
-        console.error('❌ Payment intent error response status:', response.status);
-        
-        // Try to parse as JSON for better error handling
-        try {
-          const errorData = await response.json();
-          console.error('❌ Payment intent error response:', errorData);
-          throw new Error(errorData.message || `Payment failed: ${response.status}`);
-        } catch (parseError) {
-          console.error('❌ Error parsing response:', parseError);
-          throw new Error(`Payment intent failed: ${response.status}`);
-        }
+      // Parse response once
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('❌ Error parsing response:', parseError);
+        throw new Error(`Failed to parse server response: ${response.status}`);
       }
 
-      const responseData = await response.json();
+      if (!response.ok) {
+        console.error('❌ Payment intent error response status:', response.status);
+        console.error('❌ Payment intent error response:', responseData);
+        throw new Error(responseData.message || `Payment failed: ${response.status}`);
+      }
       console.log('Payment intent response data:', responseData);
 
       // Handle different response types
@@ -285,27 +624,120 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         let errorMessage = paymentError.message;
         
         if (paymentError.type === 'card_error') {
+          console.log('💳 Card Error Details:', {
+            code: paymentError.code,
+            message: paymentError.message,
+            decline_code: paymentError.decline_code,
+            type: paymentError.type
+          });
+          
           switch (paymentError.code) {
             case 'card_declined':
-              errorMessage = 'Your card was declined. Please try a different card or contact your bank.';
+              // Check for specific decline codes from bank
+              if (paymentError.decline_code) {
+                switch (paymentError.decline_code) {
+                  case 'insufficient_funds':
+                    errorMessage = '❌ Insufficient funds in your account. Please check your balance or try a different card.';
+                    break;
+                  case 'card_not_supported':
+                    errorMessage = '❌ This card type is not supported. Please try a different card.';
+                    break;
+                  case 'currency_not_supported':
+                    errorMessage = '❌ This card does not support USD transactions. Please try a different card.';
+                    break;
+                  case 'duplicate_transaction':
+                    errorMessage = '❌ This transaction was already processed. Please try again in a few minutes.';
+                    break;
+                  case 'fraudulent':
+                    errorMessage = '❌ This transaction was flagged as potentially fraudulent by your bank. Please contact your bank.';
+                    break;
+                  case 'generic_decline':
+                    errorMessage = '❌ Your bank declined this transaction. Please contact your bank or try a different card.';
+                    break;
+                  case 'lost_card':
+                    errorMessage = '❌ This card has been reported as lost. Please contact your bank.';
+                    break;
+                  case 'merchant_blacklist':
+                    errorMessage = '❌ Your bank has blocked this merchant. Please contact your bank.';
+                    break;
+                  case 'new_account_information_available':
+                    errorMessage = '❌ Please update your card information with your bank.';
+                    break;
+                  case 'no_action_taken':
+                    errorMessage = '❌ Your bank did not process this transaction. Please try again.';
+                    break;
+                  case 'not_permitted':
+                    errorMessage = '❌ This transaction is not permitted on your card. Please contact your bank.';
+                    break;
+                  case 'pickup_card':
+                    errorMessage = '❌ Please contact your bank immediately. Your card may have been compromised.';
+                    break;
+                  case 'pin_try_exceeded':
+                    errorMessage = '❌ Too many incorrect PIN attempts. Please contact your bank.';
+                    break;
+                  case 'restricted_card':
+                    errorMessage = '❌ This card has restrictions. Please contact your bank.';
+                    break;
+                  case 'revocation_of_all_authorizations':
+                    errorMessage = '❌ All authorizations for this card have been revoked. Please contact your bank.';
+                    break;
+                  case 'security_violation':
+                    errorMessage = '❌ Security violation detected. Please contact your bank.';
+                    break;
+                  case 'service_not_allowed':
+                    errorMessage = '❌ This service is not allowed on your card. Please contact your bank.';
+                    break;
+                  case 'stolen_card':
+                    errorMessage = '❌ This card has been reported as stolen. Please contact your bank.';
+                    break;
+                  case 'stop_payment_order':
+                    errorMessage = '❌ A stop payment order has been placed on this card. Please contact your bank.';
+                    break;
+                  case 'testmode_decline':
+                    errorMessage = '❌ This is a test card and cannot be used for real transactions.';
+                    break;
+                  case 'transaction_not_allowed':
+                    errorMessage = '❌ This type of transaction is not allowed on your card. Please contact your bank.';
+                    break;
+                  case 'try_again_later':
+                    errorMessage = '❌ Please try again later. Your bank is temporarily unavailable.';
+                    break;
+                  case 'withdrawal_count_limit_exceeded':
+                    errorMessage = '❌ You have exceeded your withdrawal limit. Please contact your bank.';
+                    break;
+                  default:
+                    errorMessage = `❌ Your bank declined this transaction (${paymentError.decline_code}). Please contact your bank or try a different card.`;
+                }
+              } else {
+                errorMessage = '❌ Your card was declined by your bank. Please contact your bank or try a different card.';
+              }
               break;
             case 'insufficient_funds':
-              errorMessage = 'Insufficient funds. Please try a different card.';
+              errorMessage = '❌ Insufficient funds in your account. Please check your balance or try a different card.';
               break;
             case 'expired_card':
-              errorMessage = 'Your card has expired. Please use a different card.';
+              errorMessage = '❌ Your card has expired. Please use a different card.';
               break;
             case 'incorrect_cvc':
-              errorMessage = 'Your card\'s security code is incorrect. Please try again.';
+              errorMessage = '❌ Your card\'s security code (CVC) is incorrect. Please check and try again.';
+              break;
+            case 'incorrect_number':
+              errorMessage = '❌ Your card number is incorrect. Please check and try again.';
+              break;
+            case 'invalid_expiry_month':
+              errorMessage = '❌ Your card\'s expiry month is invalid. Please check and try again.';
+              break;
+            case 'invalid_expiry_year':
+              errorMessage = '❌ Your card\'s expiry year is invalid. Please check and try again.';
               break;
             case 'processing_error':
-              errorMessage = 'An error occurred while processing your card. Please try again.';
+              errorMessage = '❌ An error occurred while processing your card. Please try again or contact your bank.';
               break;
             case 'authentication_required':
-              errorMessage = 'Your card requires additional authentication. Please complete the verification process.';
+              errorMessage = '🔐 Your card requires additional authentication. Please complete the verification process.';
               break;
             default:
-              errorMessage = `Card error: ${paymentError.message}`;
+              errorMessage = `❌ Card error: ${paymentError.message}. Please contact your bank or try a different card.`;
           }
         } else if (paymentError.type === 'validation_error') {
           errorMessage = 'Please check your card details and try again.';
@@ -338,8 +770,24 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       }
     } catch (err) {
       console.error('Payment process error:', err);
-      setError('Payment failed. Please try again.');
-      onError && onError('Payment failed. Please try again.');
+      
+      // Enhanced error handling for different error types
+      let errorMessage = 'Payment failed. Please try again.';
+      
+      if (err.name === 'NetworkError' || err.message.includes('fetch')) {
+        errorMessage = '❌ Network error. Please check your internet connection and try again.';
+      } else if (err.message.includes('Failed to fetch')) {
+        errorMessage = '❌ Server connection failed. Please try again in a few minutes.';
+      } else if (err.message.includes('timeout')) {
+        errorMessage = '❌ Request timeout. Please try again.';
+      } else if (err.message.includes('CORS')) {
+        errorMessage = '❌ Connection error. Please refresh the page and try again.';
+      } else if (err.message) {
+        errorMessage = `❌ ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      onError && onError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -506,6 +954,24 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
               <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5" />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* 3D Secure Status Indicator */}
+            {loading && error && error.includes('3D Secure') && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Shield className="w-5 h-5" />
+                  <span className="font-medium">3D Secure Authentication</span>
+                </div>
+                <div className="text-sm">
+                  <p>Your bank requires additional verification for this payment.</p>
+                  <p className="mt-1">Please complete the authentication process in the popup window.</p>
+                </div>
+                <div className="mt-3 flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm">Waiting for authentication...</span>
+                </div>
               </div>
             )}
 

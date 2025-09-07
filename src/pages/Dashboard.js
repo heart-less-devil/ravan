@@ -3852,8 +3852,8 @@ const PricingPage = () => {
   const loadStripePayment = async () => {
     if (!StripePaymentComponent) {
       try {
-        const { default: FreeFirePayment } = await import('../components/FreeFirePayment');
-        setStripePaymentComponent(() => FreeFirePayment);
+        const { default: StripePayment } = await import('../components/StripePayment');
+        setStripePaymentComponent(() => StripePayment);
       } catch (error) {
         console.error('Failed to load StripePayment component:', error);
       }

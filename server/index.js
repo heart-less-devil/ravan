@@ -492,7 +492,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       
       // Generate invoice for successful payment
       try {
-        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.userEmail;
+        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         if (customerEmail) {
           // Find user in database to add invoice
           const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
@@ -528,7 +528,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       
       // Send payment confirmation email
       try {
-        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email;
+        const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         if (customerEmail) {
           const mailOptions = {
             from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
@@ -2244,260 +2244,6 @@ app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
 // AUTO-CUT SUBSCRIPTION ENDPOINT
 // ============================================================================
 
-// Simple subscription endpoint - FreeFire style
-app.post('/api/create-simple-subscription', async (req, res) => {
-  try {
-    console.log('🚀 Creating simple subscription...');
-    console.log('📝 Request body:', req.body);
-    
-    const { paymentMethodId, customerEmail, planId, customerName, amount } = req.body;
-    
-    // Validate required fields
-    if (!paymentMethodId || !customerEmail || !planId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment method ID, customer email, and plan ID are required'
-      });
-    }
-    
-    // Validate customer email is not example email
-    if (customerEmail.includes('example.com')) {
-      console.log('⚠️ Warning: Using example email for payment:', customerEmail);
-    }
-
-    // Create or get customer
-    let customer;
-    try {
-      const existingCustomers = await stripe.customers.list({
-        email: customerEmail,
-        limit: 1
-      });
-      
-      if (existingCustomers.data.length > 0) {
-        customer = existingCustomers.data[0];
-        console.log('✅ Found existing customer:', customer.id);
-      } else {
-        customer = await stripe.customers.create({
-          email: customerEmail,
-          name: customerName,
-          metadata: { planId }
-        });
-        console.log('✅ Created new customer:', customer.id);
-      }
-    } catch (error) {
-      console.error('❌ Customer creation failed:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create customer'
-      });
-    }
-
-    // Attach payment method to customer
-    try {
-      // Check if payment method is already attached
-      const existingPaymentMethods = await stripe.paymentMethods.list({
-        customer: customer.id,
-        type: 'card',
-      });
-      
-      const isAlreadyAttached = existingPaymentMethods.data.some(pm => pm.id === paymentMethodId);
-      
-      if (!isAlreadyAttached) {
-        await stripe.paymentMethods.attach(paymentMethodId, {
-          customer: customer.id,
-        });
-        console.log('✅ Payment method attached to customer');
-      } else {
-        console.log('✅ Payment method already attached to customer');
-      }
-      
-      await stripe.customers.update(customer.id, {
-        invoice_settings: {
-          default_payment_method: paymentMethodId,
-        },
-      });
-      console.log('✅ Default payment method set for customer');
-    } catch (error) {
-      console.error('❌ Payment method attachment failed:', error);
-      return res.status(500).json({
-        success: false,
-        message: `Failed to attach payment method: ${error.message}`
-      });
-    }
-
-    // Create product and price
-    let product, price;
-    try {
-      // Check if product already exists
-      const existingProducts = await stripe.products.list({
-        limit: 100
-      });
-      
-      product = existingProducts.data.find(p => p.name === `${planId} Plan`);
-      
-      if (!product) {
-        product = await stripe.products.create({
-          name: `${planId} Plan`,
-          description: `Daily subscription for ${planId}`,
-        });
-        console.log('✅ Product created:', product.id);
-      } else {
-        console.log('✅ Using existing product:', product.id);
-      }
-
-      // Check if price already exists
-      const existingPrices = await stripe.prices.list({
-        product: product.id,
-        limit: 100
-      });
-      
-      price = existingPrices.data.find(p => p.unit_amount === (amount || 100) && p.recurring?.interval === 'day');
-      
-      if (!price) {
-        price = await stripe.prices.create({
-          unit_amount: amount || 100, // $1.00 in cents
-          currency: 'usd',
-          recurring: { interval: 'day' },
-          product: product.id,
-        });
-        console.log('✅ Price created:', price.id);
-      } else {
-        console.log('✅ Using existing price:', price.id);
-      }
-    } catch (error) {
-      console.error('❌ Product/price creation failed:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create product/price'
-      });
-    }
-
-    // Create subscription
-    let subscription;
-    try {
-      subscription = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [{ price: price.id }],
-        default_payment_method: paymentMethodId,
-        expand: ['latest_invoice.payment_intent'],
-        metadata: {
-          planId: planId,
-          customerEmail: customerEmail
-        }
-      });
-      console.log('✅ Subscription created:', subscription.id);
-    } catch (error) {
-      console.error('❌ Subscription creation failed:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create subscription'
-      });
-    }
-
-    // Check payment status and auto-capture if needed
-    const latestInvoice = subscription.latest_invoice;
-    if (latestInvoice && latestInvoice.payment_intent) {
-      const paymentIntent = latestInvoice.payment_intent;
-      
-      if (paymentIntent.status === 'requires_action') {
-        console.log('🔐 3D Secure authentication required');
-        return res.json({
-          success: false,
-          requires_action: true,
-          client_secret: paymentIntent.client_secret,
-          subscriptionId: subscription.id,
-          customerId: customer.id,
-          message: '3D Secure authentication required'
-        });
-      }
-      
-      if (paymentIntent.status === 'requires_payment_method') {
-        console.log('💳 Attempting to auto-capture payment...');
-        try {
-          // Try to confirm the payment intent
-          const confirmedPayment = await stripe.paymentIntents.confirm(paymentIntent.id);
-          console.log('✅ Payment auto-captured:', confirmedPayment.status);
-          
-          if (confirmedPayment.status !== 'succeeded') {
-            console.log('❌ Auto-capture failed:', confirmedPayment.status);
-            return res.status(400).json({
-              success: false,
-              message: `Payment auto-capture failed: ${confirmedPayment.status}`
-            });
-          }
-        } catch (captureError) {
-          console.error('❌ Auto-capture error:', captureError);
-          return res.status(400).json({
-            success: false,
-            message: `Payment auto-capture failed: ${captureError.message}`
-          });
-        }
-      }
-      
-      if (paymentIntent.status !== 'succeeded') {
-        console.log('❌ Payment not succeeded:', paymentIntent.status);
-        return res.status(400).json({
-          success: false,
-          message: `Payment failed: ${paymentIntent.status}`
-        });
-      }
-    }
-
-    // Update user in database
-    try {
-      const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
-      if (userIndex !== -1) {
-        mockDB.users[userIndex].currentPlan = planId;
-        mockDB.users[userIndex].paymentCompleted = true;
-        mockDB.users[userIndex].currentCredits = 50;
-        mockDB.users[userIndex].subscriptionId = subscription.id;
-        mockDB.users[userIndex].subscriptionEndAt = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString();
-        
-        // Add invoice
-        const invoice = {
-          id: `INV-${Date.now()}`,
-          date: new Date().toISOString(),
-          amount: (amount || 100) / 100,
-          currency: 'usd',
-          status: 'paid',
-          description: `${planId} Plan - Initial Payment`,
-          subscriptionId: subscription.id
-        };
-        
-        if (!mockDB.users[userIndex].invoices) {
-          mockDB.users[userIndex].invoices = [];
-        }
-        mockDB.users[userIndex].invoices.push(invoice);
-        
-        saveDataToFiles('subscription_created');
-        console.log('✅ User updated in database');
-      }
-    } catch (error) {
-      console.error('❌ Database update failed:', error);
-    }
-
-    // Success response
-    res.json({
-      success: true,
-      subscriptionId: subscription.id,
-      customerId: customer.id,
-      status: subscription.status,
-      message: 'Subscription created successfully!',
-      invoice: {
-        id: `INV-${Date.now()}`,
-        amount: (amount || 100) / 100,
-        status: 'paid'
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Simple subscription creation failed:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
 
 // Create subscription with auto-cut functionality
 app.post('/api/create-subscription', async (req, res) => {
@@ -2509,7 +2255,14 @@ app.post('/api/create-subscription', async (req, res) => {
     
     console.log('📋 Extracted fields:', { paymentMethodId, customerEmail, planId, customerName });
     
-    // Validate required fields
+    // Validate required fields with detailed logging
+    console.log('🔍 Validation check:', {
+      paymentMethodId: paymentMethodId ? `${paymentMethodId.substring(0, 10)}...` : 'MISSING',
+      customerEmail: customerEmail || 'MISSING',
+      planId: planId || 'MISSING',
+      customerName: customerName || 'MISSING'
+    });
+
     if (!paymentMethodId || !customerEmail || !planId) {
       console.log('❌ Missing required fields:', { 
         paymentMethodId: !!paymentMethodId, 
@@ -2519,7 +2272,18 @@ app.post('/api/create-subscription', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Payment method ID, customer email, and plan ID are required',
-        received: { paymentMethodId: !!paymentMethodId, customerEmail: !!customerEmail, planId: !!planId }
+        received: { 
+          paymentMethodId: !!paymentMethodId, 
+          customerEmail: !!customerEmail, 
+          planId: !!planId,
+          customerName: !!customerName
+        },
+        debug: {
+          paymentMethodId: paymentMethodId ? `${paymentMethodId.substring(0, 10)}...` : null,
+          customerEmail: customerEmail,
+          planId: planId,
+          customerName: customerName
+        }
       });
     }
     
@@ -2619,6 +2383,67 @@ app.post('/api/create-subscription', async (req, res) => {
     );
     
     if (result.success) {
+      console.log('✅ Auto-cut subscription setup successful');
+      console.log('📊 Result:', {
+        subscriptionId: result.subscription.id,
+        customerId: result.customer.id,
+        status: result.subscription.status
+      });
+      
+      // Enhanced 3D Secure Detection System
+      console.log('🔍 3D Secure Detection System Starting...');
+      console.log('📊 Subscription Status:', result.subscription.status);
+      console.log('📊 Subscription ID:', result.subscription.id);
+      
+      if (result.subscription.status === 'incomplete' && result.subscription.latest_invoice) {
+        const latestInvoice = result.subscription.latest_invoice;
+        console.log('🔍 Latest invoice status:', latestInvoice.status);
+        console.log('🔍 Latest invoice ID:', latestInvoice.id);
+        console.log('🔍 Payment intent status:', latestInvoice.payment_intent?.status);
+        console.log('🔍 Payment intent ID:', latestInvoice.payment_intent?.id);
+        
+        if (latestInvoice.payment_intent && latestInvoice.payment_intent.status === 'requires_action') {
+          console.log('🔐 3D Secure Authentication Required!');
+          console.log('🔑 Client secret available:', !!latestInvoice.payment_intent.client_secret);
+          console.log('🔑 Client secret preview:', latestInvoice.payment_intent.client_secret ? 
+            latestInvoice.payment_intent.client_secret.substring(0, 20) + '...' : 'Missing');
+          
+          // Enhanced 3D Secure response
+          return res.json({
+            success: true,
+            requires_action: true,
+            client_secret: latestInvoice.payment_intent.client_secret,
+            subscriptionId: result.subscription.id,
+            customerId: result.customer.id,
+            status: result.subscription.status,
+            paymentIntentId: latestInvoice.payment_intent.id,
+            invoiceId: latestInvoice.id,
+            message: 'Subscription created but requires 3D Secure authentication',
+            authentication_required: true,
+            next_action: 'complete_3d_secure_authentication'
+          });
+        } else if (latestInvoice.payment_intent && latestInvoice.payment_intent.status === 'processing') {
+          console.log('⏳ Payment is processing...');
+          return res.json({
+            success: true,
+            requires_action: false,
+            subscriptionId: result.subscription.id,
+            customerId: result.customer.id,
+            status: 'processing',
+            message: 'Subscription created and payment is processing'
+          });
+        } else if (latestInvoice.payment_intent && latestInvoice.payment_intent.status === 'succeeded') {
+          console.log('✅ Payment already succeeded!');
+          // Continue with normal flow
+        } else {
+          console.log('⚠️ Unknown payment intent status:', latestInvoice.payment_intent?.status);
+        }
+      } else if (result.subscription.status === 'active') {
+        console.log('✅ Subscription is already active!');
+      } else {
+        console.log('⚠️ Subscription status not handled:', result.subscription.status);
+      }
+      
       // Update user in database
       try {
         // Try MongoDB first
@@ -5346,6 +5171,7 @@ app.post('/api/create-payment-intent', async (req, res) => {
         planId: planId,
         isAnnual: isAnnual ? 'true' : 'false',
         customerType: customer ? 'registered' : 'guest',
+        customerEmail: customerEmail || (customer ? customer.email : ''),
         integration_check: 'accept_a_payment'
       },
       // Enhanced payment method types for better Indian card support
@@ -5425,13 +5251,21 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
         
         if (paymentIntent.status === 'requires_action') {
           console.log('🔐 3D Secure authentication required');
+          console.log('🔑 Client secret available:', !!paymentIntent.client_secret);
+          console.log('🔑 Client secret preview:', paymentIntent.client_secret ? 
+            paymentIntent.client_secret.substring(0, 20) + '...' : 'Missing');
+          
           return res.json({
-            success: false,
+            success: true,
             requires_action: true,
             client_secret: paymentIntent.client_secret,
             subscriptionId: result.subscription.id,
             customerId: result.customer.id,
-            message: 'Subscription created but payment incomplete - 3D Secure authentication required'
+            status: result.subscription.status,
+            paymentIntentId: paymentIntent.id,
+            message: 'Subscription created but payment incomplete - 3D Secure authentication required',
+            authentication_required: true,
+            next_action: 'complete_3d_secure_authentication'
           });
         }
         
