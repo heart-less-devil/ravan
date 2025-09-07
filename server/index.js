@@ -7915,13 +7915,58 @@ app.delete('/api/admin/pdfs/:id', authenticateToken, async (req, res) => {
 // Add node-cron for daily billing
 const cron = require('node-cron');
 
-// Daily Subscription Processing System
+// Plan Details Function
+function getPlanDetails(planId) {
+  const plans = {
+    'simple-1': { 
+      type: 'simple', 
+      amount: 1, 
+      credits: 50, 
+      description: 'Simple $1 plan - one-time payment' 
+    },
+    'daily-12': { 
+      type: 'daily', 
+      amount: 1, 
+      credits: 50, 
+      description: 'Daily $1 plan - 12 days subscription' 
+    },
+    'basic': { 
+      type: 'simple', 
+      amount: 500, 
+      credits: 50, 
+      description: 'Basic $500 plan - one-time payment' 
+    },
+    'premium': { 
+      type: 'simple', 
+      amount: 750, 
+      credits: 100, 
+      description: 'Premium $750 plan - one-time payment' 
+    },
+    'basic-yearly': { 
+      type: 'yearly', 
+      amount: 400, // $4800/12 = $400 per month
+      credits: 50, 
+      description: 'Basic yearly plan - $400/month for 12 months' 
+    },
+    'premium-yearly': { 
+      type: 'yearly', 
+      amount: 600, // $7200/12 = $600 per month
+      credits: 100, 
+      description: 'Premium yearly plan - $600/month for 12 months' 
+    }
+  };
+  return plans[planId];
+}
+
+// Daily and Yearly Subscription Processing System
 async function processDailySubscriptions() {
-  console.log('🔄 Starting daily subscription processing...');
+  console.log('🔄 Starting subscription processing...');
   
   try {
     // Find all daily-12 subscribers
     let dailySubscribers = [];
+    // Find all yearly subscribers
+    let yearlySubscribers = [];
     
     // Try MongoDB first
     try {
@@ -7935,6 +7980,18 @@ async function processDailySubscriptions() {
         source: 'mongodb'
       }));
       console.log(`✅ Found ${dailySubscribers.length} daily subscribers in MongoDB`);
+      
+      // Find yearly subscribers
+      const yearlyMongoUsers = await User.find({ 
+        currentPlan: { $in: ['basic-yearly', 'premium-yearly'] },
+        subscriptionEndAt: { $gt: new Date() } // Still active
+      }).lean();
+      
+      yearlySubscribers = yearlyMongoUsers.map(user => ({
+        ...user,
+        source: 'mongodb'
+      }));
+      console.log(`✅ Found ${yearlySubscribers.length} yearly subscribers in MongoDB`);
     } catch (dbError) {
       console.log('❌ MongoDB not available, checking file storage...');
     }
@@ -7952,8 +8009,20 @@ async function processDailySubscriptions() {
       console.log(`✅ Found ${dailySubscribers.length} daily subscribers in file storage`);
     }
     
-    if (dailySubscribers.length === 0) {
-      console.log('ℹ️ No active daily subscribers found');
+    if (yearlySubscribers.length === 0) {
+      yearlySubscribers = mockDB.users.filter(user => 
+        (user.currentPlan === 'basic-yearly' || user.currentPlan === 'premium-yearly') && 
+        user.subscriptionEndAt && 
+        new Date(user.subscriptionEndAt) > new Date()
+      ).map(user => ({
+        ...user,
+        source: 'file'
+      }));
+      console.log(`✅ Found ${yearlySubscribers.length} yearly subscribers in file storage`);
+    }
+    
+    if (dailySubscribers.length === 0 && yearlySubscribers.length === 0) {
+      console.log('ℹ️ No active subscribers found');
       return;
     }
     
@@ -7962,14 +8031,195 @@ async function processDailySubscriptions() {
       try {
         await processDailySubscriber(subscriber);
       } catch (error) {
-        console.error(`❌ Error processing subscriber ${subscriber.email}:`, error.message);
+        console.error(`❌ Error processing daily subscriber ${subscriber.email}:`, error.message);
       }
     }
     
-    console.log('✅ Daily subscription processing completed');
+    // Process each yearly subscriber
+    for (const subscriber of yearlySubscribers) {
+      try {
+        await processYearlySubscriber(subscriber);
+      } catch (error) {
+        console.error(`❌ Error processing yearly subscriber ${subscriber.email}:`, error.message);
+      }
+    }
+    
+    console.log('✅ Subscription processing completed');
   } catch (error) {
     console.error('❌ Daily subscription processing failed:', error);
   }
+}
+
+// Process individual yearly subscriber
+async function processYearlySubscriber(subscriber) {
+  console.log(`🔄 Processing yearly subscriber: ${subscriber.email}`);
+  
+  try {
+    // Check if it's time for monthly renewal (yearly plans charge monthly)
+    const lastRenewal = new Date(subscriber.lastCreditRenewal || subscriber.createdAt);
+    const now = new Date();
+    const daysSinceRenewal = (now - lastRenewal) / (1000 * 60 * 60 * 24);
+    
+    if (daysSinceRenewal < 30) {
+      console.log(`⏰ ${subscriber.email} - Not yet time for monthly renewal (${Math.floor(daysSinceRenewal)} days ago)`);
+      return;
+    }
+    
+    // Check if subscription is still active
+    if (subscriber.subscriptionEndAt && new Date(subscriber.subscriptionEndAt) <= now) {
+      console.log(`⏰ ${subscriber.email} - Subscription expired, skipping monthly renewal`);
+      return;
+    }
+    
+    // Process monthly payment and credit renewal
+    await processYearlyPaymentAndCredits(subscriber);
+    
+  } catch (error) {
+    console.error(`❌ Error processing yearly subscriber ${subscriber.email}:`, error);
+  }
+}
+
+// Process yearly payment and credit renewal (monthly billing)
+async function processYearlyPaymentAndCredits(subscriber) {
+  console.log(`💳 Processing monthly payment for yearly plan: ${subscriber.email}`);
+  
+  try {
+    // Get plan details
+    const planDetails = getPlanDetails(subscriber.currentPlan);
+    if (!planDetails) {
+      console.log(`❌ Unknown plan: ${subscriber.currentPlan}`);
+      return;
+    }
+    
+    // Create payment intent for monthly billing
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: planDetails.amount * 100, // Convert to cents
+      currency: 'usd',
+      customer: subscriber.stripeCustomerId,
+      payment_method: subscriber.defaultPaymentMethodId,
+      automatic_payment_methods: { enabled: true },
+      confirm: true, // Auto-confirm for monthly billing
+      off_session: true // Allow charging without user interaction
+    });
+    
+    if (paymentIntent.status === 'succeeded') {
+      console.log(`✅ Monthly payment succeeded for ${subscriber.email}: $${paymentIntent.amount / 100}`);
+      
+      // Renew credits and update user
+      await renewYearlyCredits(subscriber, paymentIntent);
+      
+      // Generate monthly invoice
+      await generateYearlyInvoice(subscriber, paymentIntent);
+      
+    } else {
+      console.log(`❌ Monthly payment failed for ${subscriber.email}: ${paymentIntent.status}`);
+      
+      // Handle failed payment
+      await handleFailedYearlyPayment(subscriber, paymentIntent);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error processing yearly payment for ${subscriber.email}:`, error);
+  }
+}
+
+// Renew yearly credits (monthly)
+async function renewYearlyCredits(subscriber, paymentIntent) {
+  console.log(`🔄 Renewing monthly credits for yearly plan: ${subscriber.email}`);
+  
+  const planDetails = getPlanDetails(subscriber.currentPlan);
+  const newCredits = planDetails.credits;
+  
+  // Update user credits
+  const updateData = {
+    currentCredits: newCredits,
+    lastCreditRenewal: new Date().toISOString(),
+    totalCreditsUsed: subscriber.totalCreditsUsed || 0
+  };
+  
+  // Update in database
+  if (subscriber.source === 'mongodb') {
+    await User.findByIdAndUpdate(subscriber._id, updateData);
+  } else {
+    // Update in file storage
+    const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+    if (userIndex !== -1) {
+      mockDB.users[userIndex] = { ...mockDB.users[userIndex], ...updateData };
+      fs.writeFileSync(path.join(__dirname, 'data', 'users.json'), JSON.stringify(mockDB.users, null, 2));
+    }
+  }
+  
+  console.log(`✅ Monthly credits renewed for yearly plan ${subscriber.email}: ${newCredits} credits`);
+}
+
+// Generate yearly invoice (monthly)
+async function generateYearlyInvoice(subscriber, paymentIntent) {
+  console.log(`📄 Generating monthly invoice for yearly plan: ${subscriber.email}`);
+  
+  const invoice = {
+    id: `inv_${Date.now()}_${subscriber.email}`,
+    amount: paymentIntent.amount / 100,
+    currency: 'usd',
+    status: 'paid',
+    created: new Date().toISOString(),
+    plan: subscriber.currentPlan,
+    type: 'yearly_monthly_renewal',
+    paymentIntentId: paymentIntent.id
+  };
+  
+  // Add invoice to user
+  if (subscriber.source === 'mongodb') {
+    await User.findByIdAndUpdate(subscriber._id, {
+      $push: { invoices: invoice }
+    });
+  } else {
+    const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+    if (userIndex !== -1) {
+      if (!mockDB.users[userIndex].invoices) {
+        mockDB.users[userIndex].invoices = [];
+      }
+      mockDB.users[userIndex].invoices.push(invoice);
+      fs.writeFileSync(path.join(__dirname, 'data', 'users.json'), JSON.stringify(mockDB.users, null, 2));
+    }
+  }
+  
+  console.log(`✅ Monthly invoice generated for yearly plan ${subscriber.email}`);
+}
+
+// Handle failed yearly payment
+async function handleFailedYearlyPayment(subscriber, paymentIntent) {
+  console.log(`❌ Handling failed monthly payment for yearly plan: ${subscriber.email}`);
+  
+  // Log failed payment
+  const failedPayment = {
+    id: `failed_${Date.now()}_${subscriber.email}`,
+    amount: paymentIntent.amount / 100,
+    currency: 'usd',
+    status: 'failed',
+    created: new Date().toISOString(),
+    plan: subscriber.currentPlan,
+    type: 'yearly_monthly_renewal_failed',
+    paymentIntentId: paymentIntent.id,
+    error: paymentIntent.last_payment_error?.message || 'Payment failed'
+  };
+  
+  // Add failed payment to user
+  if (subscriber.source === 'mongodb') {
+    await User.findByIdAndUpdate(subscriber._id, {
+      $push: { failedPayments: failedPayment }
+    });
+  } else {
+    const userIndex = mockDB.users.findIndex(u => u.email === subscriber.email);
+    if (userIndex !== -1) {
+      if (!mockDB.users[userIndex].failedPayments) {
+        mockDB.users[userIndex].failedPayments = [];
+      }
+      mockDB.users[userIndex].failedPayments.push(failedPayment);
+      fs.writeFileSync(path.join(__dirname, 'data', 'users.json'), JSON.stringify(mockDB.users, null, 2));
+    }
+  }
+  
+  console.log(`✅ Failed payment logged for yearly plan ${subscriber.email}`);
 }
 
 // Process individual daily subscriber

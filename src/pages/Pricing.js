@@ -53,14 +53,16 @@ const Pricing = () => {
     {
       id: 'basic',
       name: "Basic Plan",
-      description: "Ideal for growing businesses",
-      credits: "50 credits per month",
+      description: "Ideal for growing businesses - One-time payment",
+      credits: "50 credits (one-time)",
       monthlyPrice: 500,
-      annualPrice: 4800, // Monthly and yearly both available
+      annualPrice: 4800, // Yearly subscription - $400/month
+      planType: 'simple', // Simple payment, no subscription
+      yearlyPlanType: 'yearly', // Yearly subscription
       features: [
         "Everything in Free, plus:",
         "1 Seat included",
-        "Get 50 free contacts / month",
+        "Get 50 credits (one-time)",
         "Pay by credit/debit card",
         "Unlimited Access to Free Resources",
         "1 hr. of BD Consulting with Mr. Vik"
@@ -73,14 +75,16 @@ const Pricing = () => {
     {
       id: 'premium',
       name: "Premium Plan",
-      description: "For advanced users and teams",
-      credits: "100 credits per month",
+      description: "For advanced users and teams - One-time payment",
+      credits: "100 credits (one-time)",
       monthlyPrice: 750,
-      annualPrice: 7200,
+      annualPrice: 7200, // Yearly subscription - $600/month
+      planType: 'simple', // Simple payment, no subscription
+      yearlyPlanType: 'yearly', // Yearly subscription
       features: [
         "Everything in Basic, plus:",
         "1 Seat included",
-        "Get 100 free contacts / month",
+        "Get 100 credits (one-time)",
         "Pay by credit/debit card",
         "Unlimited Access to Free Resources",
         "1 hr. of BD Consulting with Mr. Vik"
@@ -91,12 +95,32 @@ const Pricing = () => {
       buttonStyle: "primary"
     },
     {
+      id: 'simple-1',
+      name: "Simple Plan",
+      description: "$1 one-time payment - No subscription",
+      credits: "50 credits (one-time)",
+      monthlyPrice: 1,
+      annualPrice: 1,
+      planType: 'simple', // Simple payment, no subscription
+      features: [
+        "50 credits included",
+        "One-time payment only",
+        "No automatic billing",
+        "Perfect for testing"
+      ],
+      icon: Zap,
+      popular: false,
+      buttonText: "Buy now",
+      buttonStyle: "outline"
+    },
+    {
       id: 'daily-12',
       name: "Daily Test (12 days)",
       description: "$1 per day for 12 days – daily subscription",
       credits: "50 credits per day",
       monthlyPrice: 1,
       annualPrice: 12,
+      planType: 'daily', // Daily subscription
       features: [
         "50 credits included daily",
         "Daily $1 automatic billing",
