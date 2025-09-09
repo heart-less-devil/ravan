@@ -633,7 +633,7 @@ const Dashboard = () => {
       if (result.success) {
         // Check if no results found
         if (result.data.results.length === 0) {
-          setError(`Not in System…..`);
+          setError(`No results found for "${searchQuery}"`);
           setShowError(true);
           setGlobalSearchResults(null); // Clear any previous results
           // Still redirect to search page to show the error message
@@ -1010,7 +1010,6 @@ const Dashboard = () => {
                   </motion.div>
                   <div className="hidden sm:block">
                     <div className="text-sm font-semibold text-gray-900">{user.name || 'User'}</div>
-                    <div className="text-xs text-gray-500 break-all max-w-30">{user.email}</div>
                 </div>
               </div>
                 <motion.button
@@ -1306,13 +1305,6 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
             <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.firstName || user?.name?.split(' ')[0] || 'User'} 👋</h1>
             <div className="flex items-center space-x-6 mt-4">
               <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
-                <Calendar className="w-5 h-5" />
-                <span className="font-medium">
-                  Current Plan: {userPaymentStatus?.hasPaid ? userPaymentStatus.currentPlan : 'Free Trial'}
-                </span>
-              </div>
-              
-              <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
                 <Gift className="w-5 h-5" />
                 <span className="font-medium">
                   Credits: {userPaymentStatus?.hasPaid ? `${userCredits} premium` : `${userCredits || 5} / ${daysRemaining || 3} days`}
@@ -1346,34 +1338,20 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
                 </Link>
               </motion.div>
             )}
-            
-            {/* Current Plan Banner - Show if user has paid */}
-            {userPaymentStatus && userPaymentStatus.hasPaid && userPaymentStatus.currentPlan !== 'free' && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="mt-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between w-[350px]"
-              >
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-4 h-4 text-white" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-white">Current Plan: {userPaymentStatus.currentPlan}</h3>
-                    <p className="text-xs text-blue-100">You have access to premium features and unlimited searches</p>
-                  </div>
-                </div>
-                <Link to="/dashboard/pricing">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-white text-blue-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-50 transition-all duration-200"
-                  >
-                    Manage Plan
-                  </motion.button>
-                </Link>
-              </motion.div>
-            )}
           </div>
+
+          {/* Manage Plan Button - Top Right Corner */}
+          {userPaymentStatus && userPaymentStatus.hasPaid && userPaymentStatus.currentPlan !== 'free' && (
+            <Link to="/dashboard/pricing">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-all duration-200 shadow-lg"
+              >
+                Manage Plan
+              </motion.button>
+            </Link>
+          )}
 
         </div>
       </motion.div>
@@ -1448,7 +1426,6 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h3>
-                <p className="text-gray-600">{user?.email || 'user@example.com'}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   Member since: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}
                 </p>
@@ -1510,110 +1487,9 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
             </div>
           </div>
           
-          <div className="mt-6 space-y-2">
-            <Link to="/dashboard/customer-profile" className="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-              <User className="w-5 h-5" />
-              <span className="text-sm font-medium">Overview</span>
-            </Link>
-            <Link to="/dashboard/customer-profile" className="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-              <CreditCard className="w-5 h-5" />
-              <span className="text-sm font-medium">Subscription</span>
-            </Link>
-            <Link to="/dashboard/customer-profile" className="flex items-center space-x-3 p-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-              <DollarSign className="w-5 h-5" />
-              <span className="text-sm font-medium">$ Payment History</span>
-            </Link>
-          </div>
         </motion.div>
       </div>
 
-      {/* Invoices Section */}
-      <div className="mt-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Invoices</h3>
-            <div className="text-sm text-gray-500">
-              {user?.invoices?.length || 0} PDFs • 0 System • {user?.invoices?.length || 0} Uploaded
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            {user?.invoices && user.invoices.length > 0 ? (
-              user.invoices.map((invoice) => (
-                <div key={invoice.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">Invoice #{invoice.number || invoice.id}</p>
-                        <p className="text-sm text-gray-600">{new Date(invoice.created).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">
-                          ${invoice.amount} {invoice.currency}
-                        </p>
-                        <p className="text-sm text-gray-600 capitalize">{invoice.status}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (invoice.invoice_pdf) {
-                            window.open(invoice.invoice_pdf, '_blank');
-                          } else {
-                            // Download from our API
-                            const token = localStorage.getItem('token');
-                            fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
-                              headers: { 'Authorization': `Bearer ${token}` }
-                            })
-                            .then(response => {
-                              if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                              }
-                              return response.blob();
-                            })
-                            .then(blob => {
-                              if (blob.size === 0) {
-                                throw new Error('Downloaded file is empty');
-                              }
-                              const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `invoice-${invoice.id}.pdf`;
-                              a.click();
-                              window.URL.revokeObjectURL(url);
-                            })
-                            .catch(error => {
-                              console.error('❌ Error downloading invoice:', error);
-                              alert(`❌ Failed to download invoice: ${error.message}`);
-                            });
-                          }
-                        }}
-                        className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <Download className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Invoices Available</h3>
-                <p className="text-gray-500">Start by uploading your first PDF resource</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
     </div>
   );
 };
@@ -1730,6 +1606,18 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
       }, {});
       console.log('Grouped results:', grouped);
       setGroupedResults(grouped);
+      
+      // Auto-populate Contact Name field with first contact when searching by company
+      if (currentSearchType === 'Company Name' && searchResults.length > 0) {
+        const firstContact = searchResults[0];
+        if (firstContact.contactPerson) {
+          setFormData(prev => ({
+            ...prev,
+            contactPerson: firstContact.contactPerson
+          }));
+          console.log('Auto-populated Contact Name field with:', firstContact.contactPerson);
+        }
+      }
     } else {
       setGroupedResults({});
     }

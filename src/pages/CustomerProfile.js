@@ -319,6 +319,10 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
   const handleDownloadInvoice = async (invoice) => {
     try {
       const token = localStorage.getItem('token');
+      
+      // Add delay to prevent simultaneous downloads
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const response = await fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -327,6 +331,10 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
       if (response.ok) {
         const blob = await response.blob();
+        if (blob.size === 0) {
+          throw new Error('Downloaded file is empty');
+        }
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -336,11 +344,11 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       } else {
-        alert('Failed to download invoice. Please try again.');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Error downloading invoice:', error);
-      alert('Error downloading invoice. Please try again.');
+      alert(`Error downloading invoice: ${error.message}`);
     }
   };
 

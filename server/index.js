@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 3005;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_live_your_stripe_secret_key_here';
 
 if (!stripeSecretKey) {
   console.error('❌ STRIPE_SECRET_KEY environment variable is not set!');
@@ -95,6 +95,7 @@ async function createSubscriptionWithAutoRenewal(customerId, priceId, paymentMet
       customer: customerId,
       items: [{ price: priceId }],
       default_payment_method: paymentMethodId,
+      trial_period_days: 1, // First day free, billing starts from day 2
       expand: ['latest_invoice.payment_intent'],
     });
     
@@ -393,10 +394,14 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             credits = 100;
           } else if (planId === 'simple-1') {
             credits = 50;
+          } else if (planId === 'basic-yearly') {
+            credits = 50;
+          } else if (planId === 'premium-yearly') {
+            credits = 100;
           }
           
           // Check if this is a subscription payment
-          const isSubscriptionPayment = planId === 'daily-12' || planId === 'yearly';
+          const isSubscriptionPayment = planId === 'daily-12' || planId === 'yearly' || planId === 'basic-yearly' || planId === 'premium-yearly';
           
           if (isSubscriptionPayment) {
             console.log('🔄 Processing subscription payment for:', customerEmail);
@@ -430,8 +435,8 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           } else {
             // One-time payment processing
             console.log('💳 Processing one-time payment for:', customerEmail);
-            
-            const updatedUser = await User.findOneAndUpdate(
+          
+          const updatedUser = await User.findOneAndUpdate(
             { email: customerEmail },
             {
               paymentCompleted: true,
@@ -470,7 +475,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             } else {
               console.log('⚠️ User not found in database:', customerEmail);
             }
-          }
+            }
           }
         } catch (error) {
           console.error('❌ Error updating user payment status:', error);
@@ -1990,45 +1995,6 @@ app.post('/api/auth/login', [
   }
 });
 
-// Protected route to get user profile
-app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) => {
-  try {
-    // Find the user in the database
-    const user = mockDB.users.find(u => u.email === req.user.email);
-    
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Return complete user data including invoices and payment history
-    res.json({
-      user: {
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        company: user.company,
-        createdAt: user.createdAt,
-        currentPlan: user.currentPlan || 'free',
-        paymentCompleted: user.paymentCompleted || false,
-        currentCredits: user.currentCredits || 5,
-        invoices: user.invoices || [],
-        paymentHistory: user.paymentHistory || [],
-        lastCreditRenewal: user.lastCreditRenewal,
-        nextCreditRenewal: user.nextCreditRenewal,
-        hasPaymentInfo: true
-      }
-    });
-    
-    // Save profile access data
-    saveDataToFiles('profile_accessed');
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // Dashboard data routes
 app.get('/api/dashboard/stats', authenticateToken, (req, res) => {
   res.json({
@@ -2446,6 +2412,24 @@ app.post('/api/create-subscription', async (req, res) => {
       
       // Update user in database
       try {
+        // Calculate credits based on plan
+        let credits = 5; // default
+        if (planId === 'daily-12') {
+          credits = 50;
+        } else if (planId === 'basic') {
+          credits = 50;
+        } else if (planId === 'premium') {
+          credits = 100;
+        } else if (planId === 'simple-1') {
+          credits = 50;
+        } else if (planId === 'basic-yearly') {
+          credits = 50;
+        } else if (planId === 'premium-yearly') {
+          credits = 100;
+        }
+        
+        console.log(`💰 Assigning ${credits} credits for plan: ${planId}`);
+        
         // Try MongoDB first
         const User = require('./models/User');
         const updatedUser = await User.findOneAndUpdate(
@@ -2457,7 +2441,8 @@ app.post('/api/create-subscription', async (req, res) => {
             subscriptionStatus: 'active',
             paymentCompleted: true,
             subscriptionCreatedAt: new Date(),
-            lastPaymentDate: new Date()
+            lastPaymentDate: new Date(),
+            currentCredits: credits
           },
           { new: true }
         );
@@ -2476,8 +2461,9 @@ app.post('/api/create-subscription', async (req, res) => {
             mockDB.users[userIndex].paymentCompleted = true;
             mockDB.users[userIndex].subscriptionCreatedAt = new Date().toISOString();
             mockDB.users[userIndex].lastPaymentDate = new Date().toISOString();
+            mockDB.users[userIndex].currentCredits = credits;
             saveDataToFiles('subscription_created');
-            console.log('✅ User updated in file storage');
+            console.log(`✅ User updated in file storage with ${credits} credits`);
           }
         }
       } catch (dbError) {
@@ -3794,7 +3780,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
     }
     
     // Show all results without any limits
-    const limitedData = filteredData.map(item => ({
+    let limitedData = filteredData.map(item => ({
       id: item.id,
       companyName: item.companyName,
       contactPerson: item.contactPerson,
@@ -3826,6 +3812,23 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       ta17_urology: item.ta17_urology,
       bdPersonTAFocus: item.bdPersonTAFocus
     }));
+
+    // Deduplicate results for Contact Name searches
+    if (searchType === 'Contact Name') {
+      console.log('Deduplicating contact results...');
+      const seenContacts = new Set();
+      limitedData = limitedData.filter(item => {
+        // Create a unique key based on contact person, company, and email
+        const contactKey = `${item.contactPerson?.toLowerCase() || ''}_${item.companyName?.toLowerCase() || ''}_${item.email?.toLowerCase() || ''}`;
+        if (seenContacts.has(contactKey)) {
+          console.log('Removing duplicate contact:', item.contactPerson, 'at', item.companyName);
+          return false;
+        }
+        seenContacts.add(contactKey);
+        return true;
+      });
+      console.log('After deduplication, contacts found:', limitedData.length);
+    }
 
     res.json({
       success: true,
@@ -5019,20 +5022,70 @@ app.post('/api/auth/reset-password', [
 });
 
 // Protected route to get user profile
-app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) => {
+app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req, res) => {
   try {
-    // Find the user in the database
-    const user = mockDB.users.find(u => u.email === req.user.email);
+    console.log('🔍 Fetching profile for:', req.user.email);
+    
+    let user = null;
+    
+    // Try MongoDB first
+    try {
+      user = await User.findOne({ email: req.user.email });
+      if (user) {
+        console.log('✅ User found in MongoDB');
+        // Convert to plain object for JSON response
+        user = user.toObject();
+      }
+    } catch (dbError) {
+      console.log('⚠️ MongoDB error, falling back to file storage:', dbError.message);
+    }
+    
+    // Fallback to file storage if MongoDB fails
+    if (!user) {
+      user = mockDB.users.find(u => u.email === req.user.email);
+      if (user) {
+        console.log('✅ User found in file storage');
+      }
+    }
     
     if (!user) {
+      console.log('❌ User not found in any database');
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Fetch invoices from Stripe if user has Stripe customer ID
+    let stripeInvoices = [];
+    if (user.stripeCustomerId) {
+      try {
+        console.log('🔍 Fetching Stripe invoices for customer:', user.stripeCustomerId);
+        const invoices = await stripe.invoices.list({
+          customer: user.stripeCustomerId,
+          limit: 10
+        });
+        
+        stripeInvoices = invoices.data.map(invoice => ({
+          id: invoice.id,
+          number: invoice.number || invoice.id,
+          amount: invoice.amount_paid / 100,
+          currency: invoice.currency.toUpperCase(),
+          status: invoice.status,
+          created: new Date(invoice.created * 1000).toISOString(),
+          paid: invoice.paid,
+          hosted_invoice_url: invoice.hosted_invoice_url,
+          description: invoice.description || 'Subscription Payment'
+        }));
+        
+        console.log(`✅ Found ${stripeInvoices.length} Stripe invoices`);
+      } catch (stripeError) {
+        console.log('⚠️ Stripe invoice fetch error:', stripeError.message);
+      }
     }
 
     // Return complete user data including invoices and payment history
     res.json({
       user: {
         email: user.email,
-        name: user.name,
+        name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -5041,11 +5094,13 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, (req, res) 
         currentPlan: user.currentPlan || 'free',
         paymentCompleted: user.paymentCompleted || false,
         currentCredits: user.currentCredits || 5,
-        invoices: user.invoices || [],
+        invoices: [...(user.invoices || []), ...stripeInvoices],
         paymentHistory: user.paymentHistory || [],
         lastCreditRenewal: user.lastCreditRenewal,
         nextCreditRenewal: user.nextCreditRenewal,
-        hasPaymentInfo: true
+        hasPaymentInfo: true,
+        stripeCustomerId: user.stripeCustomerId,
+        subscriptionId: user.subscriptionId
       }
     });
     
@@ -5312,7 +5367,7 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
       } catch (error) {
         console.error('❌ Error adding initial invoice:', error);
       }
-
+      
       res.json({
         success: true,
         subscriptionId: result.subscription.id,
@@ -5977,11 +6032,25 @@ app.get('/api/test-pdf', async (req, res) => {
   }
 });
 
+// Download queue to prevent simultaneous downloads
+const downloadQueue = new Set();
+
 // Download invoice endpoint - Support both Stripe and local invoices
 app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, res) => {
   try {
     const { invoiceId } = req.params;
     
+    // Check if download is already in progress
+    if (downloadQueue.has(invoiceId)) {
+      return res.status(429).json({ 
+        message: 'Download already in progress. Please wait...' 
+      });
+    }
+    
+    // Add to download queue
+    downloadQueue.add(invoiceId);
+    
+    try {
     // Find the user
     const user = mockDB.users.find(u => u.email === req.user.email);
     if (!user) {
@@ -6077,6 +6146,12 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
     res.setHeader('Content-Length', pdfBuffer.length);
     
     res.send(pdfBuffer);
+    
+    } finally {
+      // Remove from download queue
+      downloadQueue.delete(invoiceId);
+    }
+    
   } catch (error) {
     console.error('❌ Error generating invoice:', error);
     res.status(500).json({ 
@@ -6084,6 +6159,9 @@ app.get('/api/auth/download-invoice/:invoiceId', authenticateToken, async (req, 
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  } finally {
+    // Remove from download queue
+    downloadQueue.delete(req.params.invoiceId);
   }
 });
 

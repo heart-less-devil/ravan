@@ -16,24 +16,33 @@ const QuickGuide = () => {
   // Get current domain and set appropriate PDF URL
   useEffect(() => {
     const currentDomain = window.location.hostname;
+    const currentProtocol = window.location.protocol;
     let initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
     
     // Set appropriate URL based on current domain
     if (currentDomain.includes('thebioping.com')) {
       // GoDaddy hosting - PDFs are on Render server
       initialUrl = 'https://bioping-backend.onrender.com/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
-    } else if (currentDomain.includes('localhost')) {
+    } else if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
+      // Local development
+      initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
+    } else if (currentDomain.includes('netlify.app') || currentDomain.includes('vercel.app')) {
+      // Netlify/Vercel hosting
       initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
     }
     
     setPdfUrl(initialUrl);
     setComponentLoaded(true);
-    console.log('Current domain:', currentDomain, 'Setting PDF URL to:', initialUrl);
+    console.log('🔍 PDF URL Configuration:');
+    console.log('  Current domain:', currentDomain);
+    console.log('  Current protocol:', currentProtocol);
+    console.log('  Setting PDF URL to:', initialUrl);
+    console.log('  Full current URL:', window.location.href);
     
     // Test if the route is accessible
-    console.log('QuickGuide component loaded successfully');
-    console.log('Current URL path:', window.location.pathname);
-    console.log('Component state initialized');
+    console.log('✅ QuickGuide component loaded successfully');
+    console.log('📍 Current URL path:', window.location.pathname);
+    console.log('🚀 Component state initialized');
   }, []);
 
   // Try different PDF URLs for different hosting scenarios
@@ -60,16 +69,24 @@ const QuickGuide = () => {
 
   // Handle PDF loading errors
   const handlePdfError = () => {
-    console.log('PDF loading failed, trying alternative URL');
+    console.log('❌ PDF loading failed, trying alternative URL');
+    console.log('🔍 Current attempt:', pdfLoadAttempts + 1, 'of', pdfUrls.length);
+    console.log('📍 Failed URL:', pdfUrl);
     setPdfError(true);
     
     if (pdfLoadAttempts < pdfUrls.length - 1) {
       setPdfLoadAttempts(prev => prev + 1);
-      setPdfUrl(pdfUrls[pdfLoadAttempts + 1]);
-      console.log('Trying URL:', pdfUrls[pdfLoadAttempts + 1]);
+      const nextUrl = pdfUrls[pdfLoadAttempts + 1];
+      setPdfUrl(nextUrl);
+      console.log('🔄 Trying next URL:', nextUrl);
     } else {
-      console.log('All PDF URLs failed. Current domain:', window.location.hostname);
-      console.log('Available URLs tried:', pdfUrls);
+      console.log('💥 All PDF URLs failed!');
+      console.log('🌐 Current domain:', window.location.hostname);
+      console.log('📋 All URLs attempted:', pdfUrls);
+      console.log('🔧 Consider checking:');
+      console.log('   - PDF file exists in public/pdf/');
+      console.log('   - Server configuration for PDF serving');
+      console.log('   - CORS settings for cross-origin requests');
     }
   };
 
@@ -273,10 +290,10 @@ const QuickGuide = () => {
         </div>
       </div>
 
-      {/* Back Button and Training Manual Section - placed side by side */}
+      {/* Back Button - Top Left */}
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          {/* Back Button */}
+        <div className="flex items-start justify-between mb-8">
+          {/* Back Button - Top Left */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -288,20 +305,23 @@ const QuickGuide = () => {
               }
             }}
             aria-label="Go back"
-            className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white shadow-xl hover:shadow-2xl border border-white/10 hover:from-slate-800 hover:via-blue-800 hover:to-slate-800"
+            className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white shadow-xl hover:shadow-2xl border border-white/10 hover:from-slate-800 hover:via-blue-800 hover:to-slate-800 transition-all duration-300"
           >
             <ArrowLeft className="w-5 h-5" />
             <span className="font-semibold">Back</span>
           </motion.button>
 
-          {/* Training Manual Section */}
-          <div className="text-center">
+          {/* Training Manual Section - Centered */}
+          <div className="text-center flex-1">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
               <FileText className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Training Manual</h2>
-            <p className="text-gray-600 text-lg">Access the complete BioPing training documentation</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">BioPing Training Manual</h2>
+            <p className="text-gray-600 text-lg">Complete guide to using the BD Platform</p>
           </div>
+
+          {/* Spacer for balance */}
+          <div className="w-32"></div>
         </div>
       </div>
 

@@ -11,16 +11,9 @@ import {
   Save, 
   X,
   FileSpreadsheet,
-  Calendar,
-  User,
   Building,
-  MessageSquare,
   CheckCircle,
   AlertCircle,
-  Clock,
-  Bell,
-  ArrowRight,
-  FileText,
   ChevronLeft
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -275,16 +268,23 @@ const BDTrackerPage = () => {
     const projectName = prompt('Enter project name for the Excel file:');
     if (!projectName) return;
     
-    // Create CSV content
-    const headers = columns.map(col => col.label).join(',');
-    const rows = filteredEntries.map(entry => 
-      columns.map(col => `"${entry[col.key] || ''}"`).join(',')
-    ).join('\n');
+    // Create CSV content with proper headers
+    const headers = [...columns.map(col => col.label), columnHeadings.actions].join(',');
+    const rows = filteredEntries.map(entry => {
+      const rowData = columns.map(col => {
+        const value = entry[col.key] || '';
+        // Escape quotes and wrap in quotes for CSV
+        return `"${value.toString().replace(/"/g, '""')}"`;
+      });
+      // Add empty actions column
+      rowData.push('""');
+      return rowData.join(',');
+    }).join('\n');
     
     const csvContent = `${headers}\n${rows}`;
     
     // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -320,18 +320,35 @@ const BDTrackerPage = () => {
     return false; // Don't show entries that don't match any filter
   });
 
+  const [columnHeadings, setColumnHeadings] = useState({
+    programPitched: 'Program',
+    company: 'Target Co.',
+    priority: 'Priority',
+    contactPerson: 'Contact Person & Function',
+    cda: 'CDA',
+    outreachDates: 'Outreach Context & Dates',
+    feedback: 'Feedback',
+    actions: 'Actions'
+  });
+
+  const [editingColumn, setEditingColumn] = useState(null);
+
+  const handleColumnHeadingEdit = (columnKey, newLabel) => {
+    setColumnHeadings(prev => ({
+      ...prev,
+      [columnKey]: newLabel
+    }));
+    setEditingColumn(null);
+  };
+
   const columns = [
-    { key: 'projectName', label: 'Project Name', icon: FileSpreadsheet },
-    { key: 'company', label: 'Company', icon: Building },
-    { key: 'programPitched', label: 'Program', icon: FileSpreadsheet },
-    { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },
-    { key: 'contactFunction', label: 'Contact Function', icon: User },
-    { key: 'contactPerson', label: 'Contact Person', icon: User },
-    { key: 'cda', label: 'CDA', icon: CheckCircle },
-    { key: 'feedback', label: 'Feedback', icon: MessageSquare },
-    { key: 'nextSteps', label: 'Next Steps', icon: ArrowRight },
-    { key: 'priority', label: 'Priority', icon: AlertCircle },
-    { key: 'followUp', label: 'Follow Up', icon: Clock }
+    { key: 'programPitched', label: columnHeadings.programPitched, editable: true },
+    { key: 'company', label: columnHeadings.company, editable: true },
+    { key: 'priority', label: columnHeadings.priority, editable: true },
+    { key: 'contactPerson', label: columnHeadings.contactPerson, editable: true },
+    { key: 'cda', label: columnHeadings.cda, editable: true },
+    { key: 'outreachDates', label: columnHeadings.outreachDates, editable: true },
+    { key: 'feedback', label: columnHeadings.feedback, editable: true }
   ];
 
   if (loading) {
@@ -470,7 +487,7 @@ const BDTrackerPage = () => {
             
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {columns.map((column) => (
-                <div key={column.key}>
+                <div key={column.key} className={column.key === 'outreachDates' || column.key === 'feedback' ? 'md:col-span-2 lg:col-span-3' : ''}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {column.label}
                   </label>
@@ -499,6 +516,14 @@ const BDTrackerPage = () => {
                         <option value="Low">Low</option>
                       </select>
                     </div>
+                  ) : column.key === 'outreachDates' || column.key === 'feedback' ? (
+                    <textarea
+                      value={formData[column.key]}
+                      onChange={(e) => handleInputChange(column.key, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[80px] resize-vertical"
+                      placeholder={column.label}
+                      rows={3}
+                    />
                   ) : (
                     <input
                       type="text"
@@ -542,20 +567,68 @@ const BDTrackerPage = () => {
                   <th
                     key={column.key}
                     className={`border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 ${
-                      column.key === 'outreachDates' ? 'w-24' : 
-                      column.key === 'contactFunction' ? 'w-28' : 
-                      column.key === 'cda' ? 'w-32' : 
-                      column.key === 'priority' ? 'w-32' : ''
+                      column.key === 'outreachDates' ? 'min-w-[300px]' : 
+                      column.key === 'feedback' ? 'min-w-[250px]' : 
+                      column.key === 'contactPerson' ? 'min-w-[200px]' :
+                      column.key === 'cda' ? 'w-20' : 
+                      column.key === 'priority' ? 'w-24' : 'min-w-[150px]'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <column.icon className="w-4 h-4 text-gray-600" />
-                      {column.label}
-                    </div>
+                    {editingColumn === column.key ? (
+                      <input
+                        type="text"
+                        value={columnHeadings[column.key]}
+                        onChange={(e) => setColumnHeadings(prev => ({ ...prev, [column.key]: e.target.value }))}
+                        onBlur={() => setEditingColumn(null)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            setEditingColumn(null);
+                          }
+                        }}
+                        className="w-full bg-transparent border-none outline-none text-sm font-semibold text-gray-900"
+                        autoFocus
+                      />
+                    ) : (
+                      <div 
+                        className="cursor-pointer hover:bg-blue-50 hover:border-blue-200 px-2 py-1 rounded border border-transparent transition-all duration-200 group"
+                        onClick={() => setEditingColumn(column.key)}
+                        title="Click to edit column heading"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-900">{column.label}</span>
+                          <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        </div>
+                      </div>
+                    )}
                   </th>
                 ))}
-                <th className="border border-gray-200 px-2 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50">
-                  Actions
+                <th className="border border-gray-200 px-2 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 w-24">
+                  {editingColumn === 'actions' ? (
+                    <input
+                      type="text"
+                      value={columnHeadings.actions}
+                      onChange={(e) => setColumnHeadings(prev => ({ ...prev, actions: e.target.value }))}
+                      onBlur={() => setEditingColumn(null)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          setEditingColumn(null);
+                        }
+                      }}
+                      className="w-full bg-transparent border-none outline-none text-sm font-semibold text-gray-900"
+                      autoFocus
+                    />
+                  ) : (
+                    <div 
+                      className="cursor-pointer hover:bg-blue-50 hover:border-blue-200 px-2 py-1 rounded border border-transparent transition-all duration-200 group"
+                      onClick={() => setEditingColumn('actions')}
+                      title="Click to edit column heading"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-900">{columnHeadings.actions}</span>
+                        <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                      </div>
+                    </div>
+                  )}
                 </th>
               </tr>
             </thead>
@@ -578,10 +651,11 @@ const BDTrackerPage = () => {
                       <td
                         key={column.key}
                         className={`border border-gray-200 px-4 py-3 text-sm text-gray-900 ${
-                          column.key === 'outreachDates' ? 'w-24' : 
-                          column.key === 'contactFunction' ? 'w-28' : 
-                          column.key === 'cda' ? 'w-32' : 
-                          column.key === 'priority' ? 'w-32' : ''
+                          column.key === 'outreachDates' ? 'min-w-[300px]' : 
+                          column.key === 'feedback' ? 'min-w-[250px]' : 
+                          column.key === 'contactPerson' ? 'min-w-[200px]' :
+                          column.key === 'cda' ? 'w-20' : 
+                          column.key === 'priority' ? 'w-24' : 'min-w-[150px]'
                         }`}
                       >
                         {editingId === (entry.id || entry._id) ? (
@@ -613,6 +687,13 @@ const BDTrackerPage = () => {
                                 <option value="Urgent">Urgent</option>
                               </select>
                             </div>
+                          ) : column.key === 'outreachDates' || column.key === 'feedback' ? (
+                            <textarea
+                              value={formData[column.key] || ''}
+                              onChange={(e) => handleInputChange(column.key, e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm min-h-[60px] resize-vertical"
+                              rows={2}
+                            />
                           ) : (
                             <input
                               type="text"

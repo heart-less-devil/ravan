@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Eye, Star, CheckCircle } from 'lucide-react';
+import { Eye, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SecurePDFViewer from '../components/SecurePDFViewer';
 import { API_BASE_URL } from '../config';
@@ -71,8 +71,6 @@ const BDInsights = ({ user, userPaymentStatus }) => {
       description: pdf.description || 'PDF resource from BioPing',
       type: 'PDF',
       size: '2.5 MB', // Default size since we don't store this
-      views: Math.floor(Math.random() * 2000) + 500, // Random views for demo
-      rating: (4.0 + Math.random() * 1.0).toFixed(1), // Random rating between 4.0-5.0
       featured: index === 0, // First PDF is featured
       pdfUrl: pdf.url
     }));
@@ -101,12 +99,6 @@ const BDInsights = ({ user, userPaymentStatus }) => {
     setSelectedPDF(content);
   };
 
-  const formatViews = (views) => {
-    if (views >= 1000) {
-      return `${(views / 1000).toFixed(1)}k`;
-    }
-    return views.toString();
-  };
 
   // Check if user has paid access or is universalx0242@gmail.com
   const hasAccess = userPaymentStatus?.hasPaid || user?.email === 'universalx0242@gmail.com';
@@ -152,76 +144,11 @@ const BDInsights = ({ user, userPaymentStatus }) => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">BD Insights</h2>
-            <p className="text-gray-600">BD Insights from 15+ Years of Experience in Large Pharma to Small Biotechs</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="w-6 h-6 text-purple-600" />
-              <span className="text-sm font-medium text-gray-600">{filteredContent.length} resources</span>
-            </div>
-            <button
-              onClick={fetchPDFs}
-              disabled={loading}
-              className="px-3 py-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50"
-            >
-              {loading ? 'Loading...' : 'Refresh'}
-            </button>
+            <p className="text-gray-600">Strategic guidance drawn from 15+ years in large pharma to biotechs</p>
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-600">Total Resources</p>
-                <p className="text-2xl font-bold text-red-900">{Object.values(bdInsights).flat().length}</p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-red-600" />
-            </div>
-          </div>
-          <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-600">Total Views</p>
-                <p className="text-2xl font-bold text-green-900">
-                  {formatViews(2500)}
-                </p>
-              </div>
-              <Eye className="w-8 h-8 text-green-600" />
-            </div>
-          </div>
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600">Your Views</p>
-                <p className="text-2xl font-bold text-blue-900">{viewedContent.length}</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-blue-600" />
-            </div>
-          </div>
-        </div>
 
-        {/* Category Filter */}
-        <div className="mb-6">
-          <div className="relative inline-block">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2.5 pr-7 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none text-sm"
-            >
-              <option value="all">All Categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-        </div>
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -235,9 +162,8 @@ const BDInsights = ({ user, userPaymentStatus }) => {
               }`}
             >
               {content.featured && (
-                <div className="flex items-center space-x-2 mb-3">
-                  <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                  <span className="text-sm font-medium text-yellow-700">Featured</span>
+                <div className="mb-3">
+                  <span className="text-sm font-medium text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full">Featured</span>
                 </div>
               )}
               
@@ -248,11 +174,6 @@ const BDInsights = ({ user, userPaymentStatus }) => {
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                     <span>{content.type}</span>
                     <span>{content.size}</span>
-                    <span>{formatViews(content.views)} views</span>
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      <span>{content.rating}</span>
-                    </div>
                   </div>
                 </div>
                 <motion.button
