@@ -81,14 +81,14 @@ const ContactUs = () => {
     {
       icon: Mail,
       title: "Email",
-      value: "universalx0242@gmail.com",
+      value: "support@bioping.com",
       description: "Send us an email anytime"
     },
     {
       icon: Phone,
       title: "Phone",
       value: "+1 650 455 5850",
-      description: "Mon-Fri from 8am to 6pm"
+      description: "Call during business hours (8 AM – 5 PM PST)"
     },
     {
       icon: MapPin,
@@ -146,7 +146,7 @@ const ContactUs = () => {
                     Message Sent Successfully!
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    Thank you for reaching out. We'll get back to you within 24 hours.
+                    Thank you for reaching out. We'll get back to you within ~24 hrs.
                   </p>
                   <button
                     onClick={() => setIsSubmitted(false)}
@@ -356,7 +356,7 @@ const ContactUs = () => {
             {[
               {
                 question: "How quickly can you respond to inquiries?",
-                answer: "We typically respond to all inquiries within 24 hours during business days."
+                answer: "We typically respond to all inquiries within ~24 hrs during business days."
               },
               {
                 question: "Do you offer free consultations?",

@@ -24,7 +24,7 @@ The credit system has been completely overhauled to prevent unnecessary refreshe
 
 ### For Free Users (Trial)
 - Start with 5 credits
-- Credits expire after 3 days
+- Credits expire after 5 days
 - No server calls for credit updates
 - Local storage manages credit state
 
@@ -64,7 +64,7 @@ User Searches → Check Credits → Deduct Credit → Update MongoDB → Sync Fr
 
 | Plan | Credits | Renewal |
 |------|---------|---------|
-| Free | 5 (3 days) | No renewal |
+| Free | 5 (5 days) | No renewal |
 | Test | 1 | No renewal |
 | Monthly | 50 | Manual renewal |
 | Annual | 100 | Monthly EMI renewal |

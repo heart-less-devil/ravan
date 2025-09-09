@@ -2,17 +2,17 @@
 
 ## 🚀 **Real Email OTP Configuration**
 
-### **Step 1: Gmail Setup**
+### **Step 1: Bioping Email Setup**
 
-1. **Enable 2-Factor Authentication**:
+1. **Set up support@bioping.com email account**:
+   - Create email account with your hosting provider
+   - Configure SMTP settings for the domain
+   - Enable email forwarding if needed
+
+2. **Alternative: Gmail Setup (if using Gmail for support@bioping.com)**:
    - Go to your Google Account Settings
    - Security → 2-Step Verification → Turn on
-
-2. **Generate App Password**:
-   - Go to Google Account Settings
-   - Security → 2-Step Verification → App passwords
-   - Select "Mail" and generate password
-   - Copy the 16-character password
+   - Generate App Password for Mail
 
 ### **Step 2: Update .env File**
 
@@ -23,9 +23,9 @@ Edit `server/.env` file:
 PORT=3001
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 
-# Email Configuration (Gmail)
-EMAIL_USER=your-actual-email@gmail.com
-EMAIL_PASS=your-16-character-app-password
+# Email Configuration (Bioping Email)
+EMAIL_USER=support@bioping.com
+EMAIL_PASS=your-email-password-or-app-password
 ```
 
 ### **Step 3: Test Email Configuration**
@@ -84,8 +84,8 @@ The system uses beautiful HTML email templates:
 ```env
 PORT=3001
 JWT_SECRET=my-super-secret-jwt-key-2024
-EMAIL_USER=admin@bioping.com
-EMAIL_PASS=abcd efgh ijkl mnop
+EMAIL_USER=support@bioping.com
+EMAIL_PASS=your-bioping-email-password
 ```
 
-**Note**: Replace with your actual Gmail and App Password! 
+**Note**: Replace with your actual Bioping email credentials! 

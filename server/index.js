@@ -536,7 +536,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         if (customerEmail) {
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+            from: process.env.EMAIL_USER || 'support@bioping.com',
             to: customerEmail,
             subject: 'BioPing - Payment Confirmation',
             html: `
@@ -658,7 +658,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           
           // Send notification email
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+            from: process.env.EMAIL_USER || 'support@bioping.com',
             to: email,
             subject: 'Payment Issue - Action Required',
             html: `
@@ -843,7 +843,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             // Send renewal confirmation email
             try {
               const mailOptions = {
-                from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+                from: process.env.EMAIL_USER || 'support@bioping.com',
                 to: customer.email,
                 subject: '🔄 Subscription Renewed - BioPing',
                 html: `
@@ -1676,7 +1676,7 @@ app.post('/api/auth/send-verification', [
       }
 
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        from: process.env.EMAIL_USER || 'support@bioping.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
@@ -2201,7 +2201,7 @@ app.get('/api/dashboard/legal', authenticateToken, (req, res) => {
 
 app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
   res.json({
-    email: "universalx0242@gmail.com",
+    email: "support@bioping.com",
     message: "Please contact us via email if you find any discrepancies."
   });
 });
@@ -4374,12 +4374,12 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
             // Paid users - keep their actual credits (like universalx0242 with 34 credits)
             actualCredits = user.currentCredits || 0;
           } else {
-            // Free users - check if 3-day trial has expired
+            // Free users - check if 5-day trial has expired
             const registrationDate = new Date(user.createdAt);
             const currentDate = new Date();
             const daysSinceRegistration = Math.floor((currentDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
             
-            if (daysSinceRegistration >= 3) {
+            if (daysSinceRegistration >= 5) {
               actualCredits = 0; // Trial expired
             } else {
               actualCredits = 5; // Still in trial period
@@ -4421,12 +4421,12 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
           // Paid users - keep their actual credits (like universalx0242 with 34 credits)
           actualCredits = user.currentCredits || 0;
         } else {
-          // Free users - check if 3-day trial has expired
+          // Free users - check if 5-day trial has expired
           const registrationDate = new Date(user.createdAt);
           const currentDate = new Date();
           const daysSinceRegistration = Math.floor((currentDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
           
-          if (daysSinceRegistration >= 3) {
+          if (daysSinceRegistration >= 5) {
             actualCredits = 0; // Trial expired
           } else {
             actualCredits = 5; // Still in trial period
@@ -4897,7 +4897,7 @@ app.post('/api/auth/forgot-password', [
     // Send email with verification code
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        from: process.env.EMAIL_USER || 'support@bioping.com',
         to: email,
         subject: 'BioPing - Password Reset Code',
         html: `

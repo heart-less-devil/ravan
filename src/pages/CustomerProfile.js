@@ -988,12 +988,57 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                           </div>
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-medium text-gray-900">Payment Reminders</p>
-                              <p className="text-sm text-gray-600">Get notified before billing</p>
+                              <p className="font-medium text-gray-900">Monthly Payment Reminders</p>
+                              <p className="text-sm text-gray-600">Get notified before monthly billing (disabled by default)</p>
                             </div>
-                            <button className="w-12 h-6 bg-primary-600 rounded-full relative">
-                              <div className="w-4 h-4 bg-white rounded-full absolute top-1 right-1"></div>
+                            <button className="w-12 h-6 bg-gray-300 rounded-full relative">
+                              <div className="w-4 h-4 bg-white rounded-full absolute top-1 left-1"></div>
                             </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-4">Plan Testing</h4>
+                        <div className="space-y-3">
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <p className="text-sm text-gray-600 mb-3">Test different pricing plans to see how they would affect your account:</p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <button 
+                                onClick={() => setUser(prev => ({ ...prev, plan: 'Free', credits: 5, subscription: { ...prev.subscription, amount: 0, interval: 'none' } }))}
+                                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                                  user.plan === 'Free' 
+                                    ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                Free Plan<br/>
+                                <span className="text-xs text-gray-500">5 credits, 5 days</span>
+                              </button>
+                              <button 
+                                onClick={() => setUser(prev => ({ ...prev, plan: 'Basic', credits: 50, subscription: { ...prev.subscription, amount: 390, interval: 'month' } }))}
+                                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                                  user.plan === 'Basic' 
+                                    ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                Basic Plan<br/>
+                                <span className="text-xs text-gray-500">$390/month, 50 contacts</span>
+                              </button>
+                              <button 
+                                onClick={() => setUser(prev => ({ ...prev, plan: 'Premium', credits: 100, subscription: { ...prev.subscription, amount: 790, interval: 'month' } }))}
+                                className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                                  user.plan === 'Premium' 
+                                    ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                Premium Plan<br/>
+                                <span className="text-xs text-gray-500">$790/month, 100 contacts</span>
+                              </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">Note: This is for testing purposes only. Changes are not saved.</p>
                           </div>
                         </div>
                       </div>

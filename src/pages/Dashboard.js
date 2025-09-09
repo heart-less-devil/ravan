@@ -221,7 +221,7 @@ const Dashboard = () => {
         if (registrationDate) {
           const regDate = new Date(registrationDate);
           const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
-          const trialExpired = daysSinceRegistration >= 3;
+          const trialExpired = daysSinceRegistration >= 5; // Updated to 5 days
           
           console.log('📅 Trial check:', {
             daysSinceRegistration,
@@ -240,8 +240,8 @@ const Dashboard = () => {
             const credits = profileData.user.currentCredits ?? 5;
             setUserCredits(credits);
             localStorage.setItem('userCredits', credits.toString());
-            setDaysRemaining(3 - daysSinceRegistration);
-            console.log(`💳 Trial credits set: ${credits} (${3 - daysSinceRegistration} days remaining)`);
+            setDaysRemaining(5 - daysSinceRegistration); // Updated to 5 days
+            console.log(`💳 Trial credits set: ${credits} (${5 - daysSinceRegistration} days remaining)`);
           }
         } else {
           // No registration date - use backend credits
@@ -1094,7 +1094,7 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-sm text-gray-600">Expires in:</span>
-                      <span className="text-sm font-medium text-orange-600">{daysRemaining || 3} days</span>
+                      <span className="text-sm font-medium text-orange-600">{daysRemaining || 5} days</span>
                     </div>
                   </div>
                 </div>
@@ -1307,7 +1307,7 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
               <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
                 <Gift className="w-5 h-5" />
                 <span className="font-medium">
-                  Credits: {userPaymentStatus?.hasPaid ? `${userCredits} premium` : `${userCredits || 5} / ${daysRemaining || 3} days`}
+                  Credits: {userPaymentStatus?.hasPaid ? `${userCredits} premium` : `${userCredits || 5} / ${daysRemaining || 5} days`}
                 </span>
               </div>
             </div>
@@ -1780,10 +1780,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
       const regDate = new Date(registrationDate);
       const currentDate = new Date();
       const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
-      const remainingDays = Math.max(0, 3 - daysSinceRegistration);
+      const remainingDays = Math.max(0, 5 - daysSinceRegistration);
       setDaysRemaining(remainingDays);
     } else {
-      setDaysRemaining(3);
+      setDaysRemaining(5);
     }
   }, []);
 
@@ -3571,39 +3571,33 @@ const Contact = () => {
       title: 'Email Support',
       description: 'Get quick responses to your questions',
       contact: 'support@bioping.com',
-      responseTime: 'Within 24 hours'
+      responseTime: 'Within ~24 hrs'
     },
     {
       icon: '📞',
       title: 'Phone Support',
       description: 'Speak directly with our team',
       contact: '+1 650 455 5850',
-      responseTime: 'During business hours'
+      responseTime: 'Call during business hours (8 AM – 5 PM PST)'
     }
   ];
 
   const teamMembers = [
     {
-      name: 'Gaurav',
+      name: 'Vik',
       role: 'Business Development Lead',
-      email: 'gauravvij1980@gmail.com',
+      email: 'support@bioping.com',
       expertise: 'Partnership Strategy, Deal Structuring',
-      avatar: 'G'
+      avatar: 'V'
     }
   ];
 
   return (
       <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Contact Us</h2>
-            <p className="text-gray-600">Get in touch with our support team for assistance</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <User className="w-6 h-6 text-blue-600" />
-            <span className="text-sm font-medium text-gray-600">24/7 Support</span>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Contact Us</h2>
+          <p className="text-gray-600">Get in touch with our support team for assistance</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -3753,15 +3747,15 @@ const PricingPage = () => {
       id: 'free',
       name: "Free",
       description: "Perfect for getting started",
-      credits: "5 credits per month",
+      credits: "5 credits for 5 days only",
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
         "1 Seat included",
         "Get 5 free contacts",
-        "Active for three days",
+        "Credits expire after 5 days (including weekends)",
         "No Credit Card Needed",
-        "No Free Resources Access"
+        "No BD Insights Access"
       ],
       icon: Gift,
       popular: false,
@@ -3771,15 +3765,14 @@ const PricingPage = () => {
       id: 'basic',
       name: "Basic Plan",
       description: "Ideal for growing businesses",
-      credits: "50 credits per month",
-      monthlyPrice: 500,
-      annualPrice: 4800,
+      credits: "50 contacts/month",
+      monthlyPrice: 390,
+      annualPrice: 3750,
       features: [
-        "Everything in Free, plus:",
         "1 Seat included",
-        "Get 50 free contacts / month",
+        "50 contacts per month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources",
+        "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Users,
@@ -3791,41 +3784,20 @@ const PricingPage = () => {
       id: 'premium',
       name: "Premium Plan",
       description: "For advanced users and teams",
-      credits: "100 credits per month",
-      monthlyPrice: 750,
-      annualPrice: 7200,
+      credits: "100 contacts/month",
+      monthlyPrice: 790,
+      annualPrice: 7585,
       features: [
         "Everything in Basic, plus:",
         "1 Seat included",
-        "Get 100 free contacts / month",
+        "100 contacts per month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources",
+        "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
       buttonText: "Choose plan",
-      buttonStyle: "primary"
-    },
-    {
-      id: 'daily-12',
-      name: "Daily Test (12 days)",
-      description: "Perfect for testing our platform",
-      credits: "50 credits per day",
-      monthlyPrice: 1,
-      annualPrice: 12,
-      features: [
-        "1 Seat included",
-        "Get 50 credits daily for 12 days",
-        "$1 USD one time payment",
-        "Total: $12 for 12 days",
-        "Daily automatic billing",
-        "Unlimited Access to Free Resources",
-        "Perfect for trial and testing"
-      ],
-      icon: Zap,
-      popular: false,
-      buttonText: "Start Testing",
       buttonStyle: "primary"
     }
   ];
@@ -4007,20 +3979,14 @@ const PricingPage = () => {
                 <div className="mb-6">
                   <div className="text-sm text-gray-600 mb-1">{plan.credits}</div>
                   <div className="text-3xl font-bold text-gray-900">
-                    ${isAnnual ? (plan.annualPrice || plan.price) : (plan.monthlyPrice || plan.price)} USD
+                    {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
                   </div>
                   <div className="text-sm text-gray-500">
-                    /{isAnnual ? 'yearly' : 'monthly'}
+                    {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
                   </div>
                   {isAnnual && plan.monthlyPrice > 0 && (
                     <div className="text-sm text-green-600 font-medium mt-1">
-                      Save ${((plan.monthlyPrice || plan.price) * 12) - (plan.annualPrice || plan.price)}/year
-                    </div>
-                  )}
-                  {/* Special display for daily-12 plan */}
-                  {plan.id === 'daily-12' && (
-                    <div className="text-sm text-blue-600 font-medium mt-1">
-                      Daily billing for 12 days
+                      Save ${(plan.monthlyPrice * 12) - plan.annualPrice}/year
                     </div>
                   )}
                 </div>
@@ -4030,7 +3996,24 @@ const PricingPage = () => {
                 {plan.features.map((feature, featureIndex) => (
                   <div key={featureIndex} className="flex items-start space-x-3">
                     <Check className="w-5 h-5 text-accent-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700 text-base">{feature}</span>
+                    <span className="text-gray-700 text-base">
+                      {feature.includes('Mr. Vik') ? (
+                        <>
+                          {feature.split('Mr. Vik')[0]}
+                          <a 
+                            href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline font-medium"
+                          >
+                            Mr. Vik
+                          </a>
+                          {feature.split('Mr. Vik')[1]}
+                        </>
+                      ) : (
+                        feature
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -4085,6 +4068,10 @@ const PricingPage = () => {
           <div className="border-b border-gray-200 pb-6">
             <h3 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
             <p className="text-gray-600">We accept all major credit and debit cards and bank payments.</p>
+          </div>
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="font-semibold text-gray-900 mb-2">How do free credits work?</h3>
+            <p className="text-gray-600">Free plan users get 5 credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan.</p>
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">What kind of support do you provide?</h3>

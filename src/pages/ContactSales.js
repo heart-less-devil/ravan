@@ -299,7 +299,7 @@ const ContactSales = () => {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">Email</p>
-                      <p className="text-gray-600">gauravvij1980@gmail.com</p>
+                      <p className="text-gray-600">support@bioping.com</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
@@ -308,7 +308,7 @@ const ContactSales = () => {
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">Response Time</p>
-                      <p className="text-gray-600">Within 24 hours</p>
+                      <p className="text-gray-600">Within ~24 hrs</p>
                     </div>
                   </div>
                 </div>

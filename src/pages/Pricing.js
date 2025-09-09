@@ -35,15 +35,15 @@ const Pricing = () => {
       id: 'free',
       name: "Free",
       description: "Perfect for getting started",
-      credits: "5 credits per month",
+      credits: "5 credits for 5 days only",
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
         "1 Seat included",
         "Get 5 free contacts",
-        "Active for three days",
+        "Credits expire after 5 days (including weekends)",
         "No Credit Card Needed",
-        "No Free Resources Access"
+        "No BD Insights Access"
       ],
       icon: Building2,
       popular: false,
@@ -53,18 +53,17 @@ const Pricing = () => {
     {
       id: 'basic',
       name: "Basic Plan",
-      description: "Ideal for growing businesses - One-time payment",
-      credits: "50 credits (one-time)",
-      monthlyPrice: 500,
-      annualPrice: 4800, // Yearly subscription - $400/month
-      planType: 'simple', // Simple payment, no subscription
-      yearlyPlanType: 'yearly', // Yearly subscription
+      description: "Ideal for growing businesses",
+      credits: "50 contacts/month",
+      monthlyPrice: 390,
+      annualPrice: 3750, // 20% discount
+      planType: 'monthly',
+      yearlyPlanType: 'yearly',
       features: [
-        "Everything in Free, plus:",
         "1 Seat included",
-        "Get 50 credits (one-time)",
+        "50 contacts per month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources",
+        "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Users,
@@ -75,61 +74,23 @@ const Pricing = () => {
     {
       id: 'premium',
       name: "Premium Plan",
-      description: "For advanced users and teams - One-time payment",
-      credits: "100 credits (one-time)",
-      monthlyPrice: 750,
-      annualPrice: 7200, // Yearly subscription - $600/month
-      planType: 'simple', // Simple payment, no subscription
-      yearlyPlanType: 'yearly', // Yearly subscription
+      description: "For advanced users and teams",
+      credits: "100 contacts/month",
+      monthlyPrice: 790,
+      annualPrice: 7585,
+      planType: 'monthly',
+      yearlyPlanType: 'yearly',
       features: [
         "Everything in Basic, plus:",
         "1 Seat included",
-        "Get 100 credits (one-time)",
+        "100 contacts per month",
         "Pay by credit/debit card",
-        "Unlimited Access to Free Resources",
+        "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
       buttonText: "Choose plan",
-      buttonStyle: "primary"
-    },
-    {
-      id: 'simple-1',
-      name: "Simple Plan",
-      description: "$1 one-time payment - No subscription",
-      credits: "50 credits (one-time)",
-      monthlyPrice: 1,
-      annualPrice: 1,
-      planType: 'simple', // Simple payment, no subscription
-      features: [
-        "50 credits included",
-        "One-time payment only",
-        "No automatic billing",
-        "Perfect for testing"
-      ],
-      icon: Zap,
-      popular: false,
-      buttonText: "Buy now",
-      buttonStyle: "outline"
-    },
-    {
-      id: 'daily-12',
-      name: "Daily Test (12 days)",
-      description: "$1 per day for 12 days – daily subscription",
-      credits: "50 credits per day",
-      monthlyPrice: 1,
-      annualPrice: 12,
-      planType: 'daily', // Daily subscription
-      features: [
-        "50 credits included daily",
-        "Daily $1 automatic billing",
-        "12-day subscription cycle",
-        "Total: $12 for 12 days"
-      ],
-      icon: CreditCard,
-      popular: false,
-      buttonText: "Start Daily Plan",
       buttonStyle: "primary"
     }
   ];
@@ -316,16 +277,16 @@ const Pricing = () => {
                          {plan.credits}
                        </div>
                        <div className="text-3xl font-bold text-gray-900">
-                         {plan.id === 'daily-12' ? '$1 USD' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                         {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
                        </div>
                        <div className="text-sm text-gray-500">
-                         {plan.id === 'daily-12' ? 'one time' : (isAnnual ? '/ yearly' : '/ monthly')}
+                         {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
                        </div>
                                                {/* Show yearly savings for Basic and Premium plans */}
                         {isAnnual && (plan.id === 'basic' || plan.id === 'premium') && (
                           <div className="mt-2">
                             <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                              Save ${plan.id === 'basic' ? '1200' : '1800'}/year
+                              Save ${plan.id === 'basic' ? '930' : '1895'}/year
                             </span>
                           </div>
                         )}
@@ -336,7 +297,24 @@ const Pricing = () => {
                     {plan.features.map((feature, featureIndex) => (
                       <div key={featureIndex} className="flex items-start space-x-3">
                         <Check className="w-5 h-5 text-accent-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700 text-base">{feature}</span>
+                        <span className="text-gray-700 text-base">
+                          {feature.includes('Mr. Vik') ? (
+                            <>
+                              {feature.split('Mr. Vik')[0]}
+                              <a 
+                                href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 underline font-medium"
+                              >
+                                Mr. Vik
+                              </a>
+                              {feature.split('Mr. Vik')[1]}
+                            </>
+                          ) : (
+                            feature
+                          )}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -460,10 +438,10 @@ const Pricing = () => {
               className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Is there a free trial available?
+                How do free credits work?
               </h3>
               <p className="text-gray-600">
-                Yes, we offer a free plan with limited features. You can also start with a free trial of our paid plans.
+                Free plan users get 5 credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan.
               </p>
             </motion.div>
           </div>
