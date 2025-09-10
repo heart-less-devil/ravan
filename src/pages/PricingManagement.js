@@ -29,7 +29,7 @@ const PricingManagement = () => {
 
   const fetchPlans = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch('/api/admin/pricing', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -54,7 +54,7 @@ const PricingManagement = () => {
     e.preventDefault();
     
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const url = editingPlan 
         ? `/api/admin/pricing/${editingPlan._id}`
         : '/api/admin/pricing';
@@ -116,7 +116,7 @@ const PricingManagement = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`/api/admin/pricing/${planId}`, {
         method: 'DELETE',
         headers: {

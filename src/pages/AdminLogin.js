@@ -56,9 +56,9 @@ const AdminLogin = () => {
         ];
         
         if (adminEmails.includes(data.user.email)) {
-          // Store token in localStorage
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
+          // Store token in sessionStorage
+          sessionStorage.setItem('token', data.token);
+          sessionStorage.setItem('user', JSON.stringify(data.user));
           
           // Redirect to admin panel (dashboard route)
           navigate('/dashboard/admin-panel');

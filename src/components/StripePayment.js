@@ -19,25 +19,25 @@ if (!stripePromise) {
   console.error('❌ Failed to load Stripe - check your publishable key');
 }
 
-// Utility function to get user email from localStorage
-const getUserEmail = () => {
-  // Try multiple localStorage keys for email
-  const emailKeys = ['userEmail', 'email', 'user.email'];
-  for (const key of emailKeys) {
-    const email = localStorage.getItem(key);
-    if (email && !email.includes('example.com')) {
-      return email;
-    }
-  }
-  
-  // Try to get from user object
+// Utility function to get user email from backend
+const getUserEmail = async () => {
   try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    if (user && user.email && !user.email.includes('example.com')) {
-      return user.email;
+    const token = sessionStorage.getItem('token');
+    if (!token) return null;
+    
+    const response = await fetch('/api/auth/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.user?.email || null;
     }
-  } catch (e) {
-    console.log('Could not parse user object:', e);
+  } catch (error) {
+    console.error('Error fetching user email:', error);
   }
   
   return null;
@@ -161,7 +161,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
           type: 'card',
           card: cardElement,
           billing_details: {
-            name: localStorage.getItem('userName') || 'Customer',
+            name: sessionStorage.getItem('userName') || 'Customer',
             email: customerEmail,
           }
         });
@@ -254,7 +254,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         console.log('🔄 Creating subscription with payment method...');
         console.log('📊 Subscription request data:', {
           customerEmail,
-          customerName: localStorage.getItem('userName') || 'Customer',
+          customerName: sessionStorage.getItem('userName') || 'Customer',
           planId: 'daily-12',
           paymentMethodId: paymentMethod.id
         });
@@ -264,7 +264,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             customerEmail,
-            customerName: localStorage.getItem('userName') || 'Customer',
+            customerName: sessionStorage.getItem('userName') || 'Customer',
             planId: 'daily-12',
             paymentMethodId: paymentMethod.id
           }),
@@ -529,7 +529,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
             amount,
             planId: plan.id,
             isAnnual,
-            customerEmail: localStorage.getItem('userEmail') || null
+            customerEmail: sessionStorage.getItem('userEmail') || null
           }),
         });
       }
@@ -603,8 +603,8 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
         payment_method: {
           card: elements.getElement(CardElement),
           billing_details: {
-            name: localStorage.getItem('userName') || 'Customer',
-            email: localStorage.getItem('userEmail') || null,
+            name: sessionStorage.getItem('userName') || 'Customer',
+            email: sessionStorage.getItem('userEmail') || null,
           }
         },
         // Enable 3D Secure redirects

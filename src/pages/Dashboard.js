@@ -2,6 +2,7 @@ import React, { useState, useEffect, Fragment, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
+import stateManager from '../utils/stateManager';
 import SecurePDFViewer from '../components/SecurePDFViewer';
 import BDTrackerPage from './BDTrackerPage';
 import QuickGuide from './QuickGuide';
@@ -56,7 +57,9 @@ import {
   Gift,
   Lock,
   RefreshCw,
-  CreditCard
+  CreditCard,
+  Tag,
+  Mail
 } from 'lucide-react';
 import { 
   Card, 
@@ -100,7 +103,7 @@ const Dashboard = () => {
   // Check for user suspension
   const checkUserSuspension = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) return;
 
       console.log('🔍 Checking user suspension status...');
@@ -122,8 +125,7 @@ const Dashboard = () => {
           setSuspensionData(errorData.suspended);
         } else if (errorData.message === 'Invalid token') {
           console.log('❌ Invalid token, redirecting to login');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
           window.location.href = '/login';
         }
       } else if (response.ok) {
@@ -142,47 +144,15 @@ const Dashboard = () => {
   // Fetch user data function - accessible throughout the component
   const fetchUserData = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('=== FETCH USER DATA DEBUG ===');
       console.log('Token exists:', !!token);
-      console.log('Token length:', token?.length);
       console.log('API_BASE_URL:', API_BASE_URL);
       
       if (!token) {
         console.log('No token found, redirecting to login');
-        // Preserve trial start when clearing
-        const preservedRegistrationDate = localStorage.getItem('registrationDate');
-        localStorage.clear();
-        if (preservedRegistrationDate) {
-          localStorage.setItem('registrationDate', preservedRegistrationDate);
-        }
-        navigate('/login');
+        window.location.href = '/login';
         return;
-      }
-
-      // Test token validity first
-      try {
-        const testResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (testResponse.status === 401) {
-          console.log('Token expired, redirecting to login');
-          // Preserve trial start when clearing
-          const preservedRegistrationDate = localStorage.getItem('registrationDate');
-          localStorage.clear();
-          if (preservedRegistrationDate) {
-            localStorage.setItem('registrationDate', preservedRegistrationDate);
-          }
-          navigate('/login');
-          return;
-        }
-      } catch (error) {
-        console.log('Server connection failed, using cached data');
-        // Continue with cached data if server is down
       }
 
       // Fetch user profile
@@ -203,20 +173,17 @@ const Dashboard = () => {
         
         // Update user state
         setUser(profileData.user);
-        localStorage.setItem('user', JSON.stringify(profileData.user));
         
         // Update payment status
         if (profileData.user) {
           const hasPaid = profileData.user.paymentCompleted || false;
           const currentPlan = profileData.user.currentPlan || 'free';
           setUserPaymentStatus({ hasPaid, currentPlan });
-          localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
-          localStorage.setItem('userCurrentPlan', currentPlan);
         }
         
         // CRITICAL: Handle trial expiration and credits from backend
-        const registrationDate = localStorage.getItem('registrationDate');
         const currentDate = new Date();
+        const registrationDate = profileData.user.createdAt || profileData.user.registrationDate;
         
         if (registrationDate) {
           const regDate = new Date(registrationDate);
@@ -233,13 +200,11 @@ const Dashboard = () => {
             // Trial expired - force credits to 0 regardless of backend
             console.log('⏰ Trial expired - forcing credits to 0');
             setUserCredits(0);
-            localStorage.setItem('userCredits', '0');
             setDaysRemaining(0);
           } else {
             // Trial active - use backend credits or default to 5
             const credits = profileData.user.currentCredits ?? 5;
             setUserCredits(credits);
-            localStorage.setItem('userCredits', credits.toString());
             setDaysRemaining(5 - daysSinceRegistration); // Updated to 5 days
             console.log(`💳 Trial credits set: ${credits} (${5 - daysSinceRegistration} days remaining)`);
           }
@@ -247,7 +212,6 @@ const Dashboard = () => {
           // No registration date - use backend credits
           if (typeof profileData.user.currentCredits === 'number') {
             setUserCredits(profileData.user.currentCredits);
-            localStorage.setItem('userCredits', profileData.user.currentCredits.toString());
             console.log(`💳 Credits updated from backend: ${profileData.user.currentCredits}`);
           }
         }
@@ -284,14 +248,11 @@ const Dashboard = () => {
           const hasPaid = subscriptionData.paymentCompleted || false;
           const currentPlan = subscriptionData.currentPlan || 'free';
           setUserPaymentStatus({ hasPaid, currentPlan });
-          localStorage.setItem('userPaymentStatus', JSON.stringify({ hasPaid, currentPlan }));
-          localStorage.setItem('userCurrentPlan', subscriptionData.currentPlan);
         }
         // For paid users, update credits from subscription data
         if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
           if (typeof subscriptionData.currentCredits === 'number') {
             setUserCredits(subscriptionData.currentCredits);
-            localStorage.setItem('userCredits', subscriptionData.currentCredits.toString());
             console.log(`💳 Paid user credits updated: ${subscriptionData.currentCredits}`);
           }
         }
@@ -325,116 +286,27 @@ const Dashboard = () => {
       console.error('Error stack:', err.stack);
       // Don't logout, user can still use the app with stored data
     }
-  }, [navigate]);
+  }, []);
 
   // Manual refresh function for the refresh button
   const handleManualRefresh = useCallback(() => {
     console.log('Manual refresh: fetching updated user data');
     // ALWAYS fetch from backend for real-time credit accuracy
     fetchUserData();
-  }, [fetchUserData]);
+  }, []);
 
   useEffect(() => {
     // Check if user is logged in
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
     
     if (!token) {
-      navigate('/login');
+      window.location.href = '/login';
       return;
     }
 
-    // If we have stored user data, set it immediately
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        
-        // Reset payment status for users who haven't actually paid
-        // Only universalx0242 should have payment status
-        if (userData.email !== 'universalx0242@gmail.com') {
-          localStorage.removeItem('paymentCompleted');
-          localStorage.setItem('userCurrentPlan', 'free');
-        }
-      } catch (err) {
-        console.error('Error parsing stored user:', err);
-      }
-    }
-
-    // Check if user has completed payment (optional - for premium features)
-    const paymentCompleted = localStorage.getItem('paymentCompleted');
-    const userCurrentPlan = localStorage.getItem('userCurrentPlan');
-    
-    // Check for user suspension immediately and then periodically
-    checkUserSuspension();
-    
-    // Set up periodic suspension check (every 5 minutes - reduced frequency)
-    const suspensionInterval = setInterval(checkUserSuspension, 300000);
-    
-    // Set up periodic credit refresh (every 10 minutes - reduced frequency)
-    const creditRefreshInterval = setInterval(() => {
-      if (userCredits > 0) {
-        console.log('🔄 Periodic credit refresh...');
-        fetchUserData();
-      }
-    }, 600000); // Refresh every 10 minutes
-    
-    // Also check suspension when user tries to access protected features
-    const checkSuspensionOnAction = () => {
-      checkUserSuspension();
-    };
-    
-    // Add event listeners for user actions
-    document.addEventListener('click', checkSuspensionOnAction);
-    document.addEventListener('keydown', checkSuspensionOnAction);
-    
-    // Debug: Log the payment status
-    console.log('Payment Status Debug:', {
-      paymentCompleted,
-      userCurrentPlan,
-      hasPaid: paymentCompleted === 'true' && userCurrentPlan && userCurrentPlan !== 'free',
-      currentPlan: userCurrentPlan || 'free'
-    });
-    
-    // Cleanup interval and event listeners on component unmount
-    return () => {
-      clearInterval(suspensionInterval);
-      clearInterval(creditRefreshInterval);
-      document.removeEventListener('click', checkSuspensionOnAction);
-      document.removeEventListener('keydown', checkSuspensionOnAction);
-    };
-    
-    // Store payment status for conditional rendering
-    setUserPaymentStatus({
-      hasPaid: paymentCompleted === 'true' && userCurrentPlan && userCurrentPlan !== 'free',
-      currentPlan: userCurrentPlan || 'free'
-    });
-
-    // Set registration date if first time user
-    const registrationDate = localStorage.getItem('registrationDate');
-    const currentDate = new Date();
-    
-    if (!registrationDate) {
-      console.log('🆕 First time user - setting registration date');
-      localStorage.setItem('registrationDate', currentDate.toISOString());
-    }
-    
-    // CRITICAL FIX: Don't set credits from localStorage here
-    // Let fetchUserData() handle ALL credit management from backend
-    console.log('🔍 Credit Loading: Waiting for backend data...');
-    
-    // ALWAYS fetch fresh data from backend for real-time accuracy
+    // Fetch user data once on component mount
     fetchUserData();
-
-    // Check if user is new (first time visiting dashboard)
-    const isNewUser = localStorage.getItem('isNewUser');
-    if (isNewUser === 'true') {
-      setShowWelcomePopup(true);
-      localStorage.removeItem('isNewUser');
-    }
-
-    // Fresh data already fetched above for real-time accuracy
-  }, [navigate]);
+  }, []);
 
   // Clear search query and global search results when navigating to other pages
   // Also refresh user data when navigating to search page to get updated credits
@@ -484,17 +356,16 @@ const Dashboard = () => {
   // }, [location.pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     navigate('/login');
   };
 
   const consumeCredit = async () => {
     console.log('💳 consumeCredit called with current credits:', userCredits);
-    console.log('💳 localStorage userCredits before:', localStorage.getItem('userCredits'));
     
     if (userCredits > 0) {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         
         // Call backend to use credit
         const response = await fetch(`${API_BASE_URL}/api/auth/use-credit`, {
@@ -510,9 +381,8 @@ const Dashboard = () => {
           const newCredits = data.remainingCredits;
           console.log(`✅ Backend credit update: ${userCredits} → ${newCredits}`);
           
-          // Immediately update both state and localStorage
+          // Immediately update state
           setUserCredits(newCredits);
-          localStorage.setItem('userCredits', newCredits.toString());
           
           console.log('💳 Frontend credits updated immediately:', newCredits);
           
@@ -524,7 +394,6 @@ const Dashboard = () => {
           
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
-          console.log('💳 localStorage userCredits after backend update:', localStorage.getItem('userCredits'));
           return true;
         } else {
           console.error('❌ Failed to use credit on backend');
@@ -532,8 +401,6 @@ const Dashboard = () => {
           const newCredits = userCredits - 1;
           console.log(`🔄 Frontend fallback: ${userCredits} → ${newCredits}`);
           setUserCredits(newCredits);
-          localStorage.setItem('userCredits', newCredits.toString());
-          console.log('💳 localStorage userCredits after frontend fallback:', localStorage.getItem('userCredits'));
           return true;
         }
       } catch (error) {
@@ -542,8 +409,6 @@ const Dashboard = () => {
         const newCredits = userCredits - 1;
         console.log(`🔄 Frontend fallback (error): ${userCredits} → ${newCredits}`);
         setUserCredits(newCredits);
-        localStorage.setItem('userCredits', newCredits.toString());
-        console.log('💳 localStorage userCredits after error fallback:', localStorage.getItem('userCredits'));
         return true;
       }
     } else {
@@ -592,7 +457,7 @@ const Dashboard = () => {
     setSearchLoading(true);
     setError(null); // Clear any previous errors
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       if (!token) {
         setError('Please login again to search.');
@@ -1513,6 +1378,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [contactDetails, setContactDetails] = useState([]);
   const [expandedRows, setExpandedRows] = useState(new Set());
   const [revealedEmails, setRevealedEmails] = useState(new Set());
+  const [showAllContacts, setShowAllContacts] = useState(false);
+  const [allContactsData, setAllContactsData] = useState([]);
   const [expandedContactDetails, setExpandedContactDetails] = useState(new Set());
   const [currentSearchType, setCurrentSearchType] = useState(searchType);
   const [currentSearchQuery, setCurrentSearchQuery] = useState('');
@@ -1523,7 +1390,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [daysRemaining, setDaysRemaining] = useState(3);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
 
-  // Load search results from global state, localStorage and location state on component mount
+  // Load search results from global state, sessionStorage and location state on component mount
   useEffect(() => {
     const checkForStoredResults = () => {
       console.log('SearchPage: Checking for stored results:', { globalSearchResults });
@@ -1561,18 +1428,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         setIsGlobalSearch(false);
         return;
       }
-      const storedResults = localStorage.getItem('searchResults');
-      const storedSearchType = localStorage.getItem('searchType');
-      const storedSearchQuery = localStorage.getItem('searchQuery');
-      if (storedResults) {
-        setSearchResults(JSON.parse(storedResults));
-        setCurrentSearchType(storedSearchType || 'Company Name');
-        setCurrentSearchQuery(storedSearchQuery || '');
-        setIsGlobalSearch(false);
-        localStorage.removeItem('searchResults');
-        localStorage.removeItem('searchType');
-        localStorage.removeItem('searchQuery');
-      }
+      // Search results are now loaded from global state only
+      // No more sessionStorage dependency
     };
     checkForStoredResults();
     const timer = setTimeout(checkForStoredResults, 50);
@@ -1640,7 +1497,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     setIsGlobalSearch(false);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
@@ -1773,19 +1630,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     setShowCreditPopup(false);
   };
 
-  // Calculate days remaining based on registration date
-  useEffect(() => {
-    const registrationDate = localStorage.getItem('registrationDate');
-    if (registrationDate) {
-      const regDate = new Date(registrationDate);
-      const currentDate = new Date();
-      const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
-      const remainingDays = Math.max(0, 5 - daysSinceRegistration);
-      setDaysRemaining(remainingDays);
-    } else {
-      setDaysRemaining(5);
-    }
-  }, []);
+  // daysRemaining is passed as a prop from parent component
 
 
 
@@ -2189,7 +2034,22 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 </div>
               </div>
               <div className="bg-white rounded-lg p-4 border border-blue-200">
-                <div className="text-sm font-medium text-gray-600 mb-1">Number of Unique Contacts</div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-sm font-medium text-gray-600">Number of Unique Contacts</div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      if (searchResults.length > 0) {
+                        setAllContactsData(searchResults);
+                        setShowAllContacts(true);
+                      }
+                    }}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Show All Contacts
+                  </motion.button>
+                </div>
                 <div className="text-2xl font-bold text-blue-600">
                   {searchResults.length}
                 </div>
@@ -2443,7 +2303,80 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         </div>
       )}
 
+      {/* All Contacts Section */}
+      {showAllContacts && allContactsData.length > 0 && (
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100 mt-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">All Contacts</h3>
+              <p className="text-gray-600">
+                Showing all {allContactsData.length} contacts from your search
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowAllContacts(false)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-all duration-200"
+            >
+              Hide Contacts
+            </motion.button>
+          </div>
 
+          <div className="space-y-4">
+            {allContactsData.map((contact, index) => (
+              <div key={contact.id || index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                      {contact.contactPerson ? contact.contactPerson.charAt(0).toUpperCase() : 'C'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="text-lg font-semibold text-gray-900">
+                          {contact.contactPerson || 'Contact Person'}
+                        </h4>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          {contact.position || 'Position'}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1">
+                          <Building2 className="w-4 h-4" />
+                          <span>{contact.companyName}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{contact.country || 'Country'}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Tag className="w-4 h-4" />
+                          <span>{contact.tier || 'Tier'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        // Show contact details - email will be revealed after credit consumption
+                        setContactDetails([contact]);
+                        setShowContactModal(true);
+                      }}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Get Contact Info</span>
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Contact Details Modal */}
       {showContactModal && (
@@ -3725,10 +3658,7 @@ const PricingPage = () => {
   const [showPayment, setShowPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [StripePaymentComponent, setStripePaymentComponent] = useState(null);
-  const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
-    // Get user's current plan from localStorage or default to 'free'
-    return localStorage.getItem('userCurrentPlan') || 'free';
-  });
+  const [userCurrentPlan, setUserCurrentPlan] = useState('free');
 
   // Dynamically load StripePayment component when needed
   const loadStripePayment = async () => {
@@ -3844,8 +3774,6 @@ const PricingPage = () => {
     // Update user's current plan after successful payment
     if (selectedPlan && selectedPlan.id !== 'free') {
       setUserCurrentPlan(selectedPlan.id);
-      localStorage.setItem('userCurrentPlan', selectedPlan.id);
-      localStorage.setItem('paymentCompleted', 'true');
       
       // Set credits based on plan
       let credits = 5; // Default
@@ -3856,11 +3784,11 @@ const PricingPage = () => {
       } else if (selectedPlan.id === 'daily-12') {
         credits = 50; // Daily credits
       }
-      localStorage.setItem('userCredits', credits.toString());
+      // Credits will be updated via backend sync
       
       // Sync with backend
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
           method: 'POST',
           headers: {
@@ -3869,7 +3797,8 @@ const PricingPage = () => {
           },
           body: JSON.stringify({
             paymentCompleted: true,
-            currentPlan: selectedPlan.id
+            currentPlan: selectedPlan.id,
+            currentCredits: credits
           })
         });
         
@@ -3887,9 +3816,9 @@ const PricingPage = () => {
     setShowPayment(false);
     console.log('Payment successful:', paymentIntent);
     
-    // Refresh user data to get updated credits and plan
+    // Refresh the page to get updated data
     setTimeout(() => {
-      window.location.reload(); // Simple page reload to get updated data
+      window.location.reload();
     }, 1000);
   };
 
@@ -4394,7 +4323,7 @@ const PricingAnalyticsPage = () => {
   const fetchPricingAnalytics = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/pricing-analytics`, {
         method: 'GET',
@@ -4426,7 +4355,7 @@ const PricingAnalyticsPage = () => {
   // Add new purchase function available for future use
   // const addNewPurchase = async (purchaseData) => {
   //   try {
-  //     const token = localStorage.getItem('token');
+  //     const token = sessionStorage.getItem('token');
   //     
   //     const response = await fetch('http://localhost:5000/api/pricing-analytics/purchases', {
   //       method: 'POST',
@@ -4459,7 +4388,7 @@ const PricingAnalyticsPage = () => {
   // Update plan stats function available for future use
   // const updatePlanStats = async (planId, updates) => {
   //   try {
-  //     const token = localStorage.getItem('token');
+  //     const token = sessionStorage.getItem('token');
   //     
   //     const response = await fetch(`http://localhost:5000/api/pricing-analytics/plans/${planId}`, {
   //       method: 'PUT',
@@ -4491,7 +4420,7 @@ const PricingAnalyticsPage = () => {
 
   const exportAnalyticsData = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/pricing-analytics/export`, {
         method: 'GET',
@@ -4869,7 +4798,7 @@ const PricingManagementPage = () => {
   const fetchPricingPlans = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -4894,7 +4823,7 @@ const PricingManagementPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const url = editingPlan 
         ? `${API_BASE_URL}/api/admin/pricing-plans/${editingPlan._id}`
         : `${API_BASE_URL}/api/admin/pricing-plans`;
@@ -4939,7 +4868,7 @@ const PricingManagementPage = () => {
     if (!window.confirm('Are you sure you want to delete this pricing plan?')) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans/${planId}`, {
         method: 'DELETE',
         headers: {

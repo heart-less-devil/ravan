@@ -87,7 +87,7 @@ const AdminPanel = () => {
   const fetchBiotechData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/biotech-data`, {
         method: 'GET',
@@ -131,7 +131,7 @@ const AdminPanel = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users`, {
         method: 'GET',
@@ -160,7 +160,7 @@ const AdminPanel = () => {
 
   const fetchUserActivity = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/user-activity`, {
         method: 'GET',
@@ -189,7 +189,7 @@ const AdminPanel = () => {
 
   const fetchTrialData = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/trial-data`, {
         method: 'GET',
@@ -218,7 +218,7 @@ const AdminPanel = () => {
 
   const fetchPotentialCustomers = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/potential-customers`, {
         method: 'GET',
@@ -249,7 +249,7 @@ const AdminPanel = () => {
   const fetchComprehensiveData = async () => {
     try {
       setIsRefreshing(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       console.log('🔍 Fetching comprehensive data from MongoDB Atlas...');
       
@@ -310,7 +310,7 @@ const AdminPanel = () => {
 
   const fetchContactSubmissions = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/admin/contact-submissions`, {
         method: 'GET',
@@ -340,7 +340,7 @@ const AdminPanel = () => {
 
   const fetchSubscriptionDetails = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       const response = await fetch(`${API_BASE_URL}/api/admin/subscription-details`, {
         method: 'GET',
@@ -379,7 +379,7 @@ const AdminPanel = () => {
     setUploadProgress(0);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       // Create FormData for file upload
       const formData = new FormData();
@@ -476,7 +476,7 @@ const AdminPanel = () => {
         suspendUntil = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000)).toISOString();
       }
 
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/suspend-user`, {
         method: 'POST',
         headers: {
@@ -512,7 +512,7 @@ const AdminPanel = () => {
         return;
       }
 
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/unsuspend-user`, {
         method: 'POST',
         headers: {
@@ -541,7 +541,7 @@ const AdminPanel = () => {
         return;
       }
 
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
@@ -622,7 +622,7 @@ const AdminPanel = () => {
     if (window.confirm(`Are you sure you want to delete ${selectedItems.length} selected items?`)) {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         
         const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/delete-records`, {
           method: 'DELETE',
@@ -747,7 +747,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
   const handleCancelSubscription = async (subscription) => {
     if (window.confirm(`Are you sure you want to cancel the subscription for ${subscription.email}?`)) {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         
         const response = await fetch(`${API_BASE_URL}/api/admin/cancel-subscription/${subscription.id}`, {
           method: 'PUT',

@@ -4856,6 +4856,108 @@ app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Get custom column headings for BD Tracker
+app.get('/api/bd-tracker/column-headings', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userId = req.user.id;
+    
+    console.log('🔍 GET column-headings - User:', userEmail, 'ID:', userId);
+    
+    // Try MongoDB first
+    try {
+      const user = await User.findById(userId);
+      console.log('📊 User found in MongoDB:', !!user);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      const headings = user.bdTrackerColumnHeadings || {};
+      console.log('📋 Current headings:', headings);
+      
+      res.json({
+        success: true,
+        columnHeadings: headings
+      });
+    } catch (dbError) {
+      console.log('❌ MongoDB error:', dbError.message);
+      console.log('🔄 Using file-based storage...');
+      // Fallback to file-based storage
+      const user = mockDB.users.find(u => u.email === userEmail);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      res.json({
+        success: true,
+        columnHeadings: user.bdTrackerColumnHeadings || {}
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error fetching column headings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch column headings' });
+  }
+});
+
+// Save custom column headings for BD Tracker
+app.post('/api/bd-tracker/column-headings', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userId = req.user.id;
+    const { columnHeadings } = req.body;
+    
+    console.log('💾 POST column-headings - User:', userEmail, 'ID:', userId);
+    console.log('📝 Headings to save:', columnHeadings);
+    
+    // Try MongoDB first
+    try {
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { bdTrackerColumnHeadings: columnHeadings },
+        { new: true }
+      );
+      
+      console.log('✅ User updated in MongoDB:', !!user);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      console.log('📋 Saved headings:', user.bdTrackerColumnHeadings);
+      
+      res.json({
+        success: true,
+        message: 'Column headings saved successfully',
+        columnHeadings: columnHeadings
+      });
+    } catch (dbError) {
+      console.log('❌ MongoDB error:', dbError.message);
+      console.log('🔄 Using file-based storage...');
+      // Fallback to file-based storage
+      const userIndex = mockDB.users.findIndex(u => u.email === userEmail);
+      
+      if (userIndex === -1) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      // Update user's column headings
+      mockDB.users[userIndex].bdTrackerColumnHeadings = columnHeadings;
+      
+      // Save to file
+      saveDataToFiles('bd_tracker_column_headings_updated');
+      
+      res.json({
+        success: true,
+        message: 'Column headings saved successfully',
+        columnHeadings: columnHeadings
+      });
+    }
+  } catch (error) {
+    console.error('Error saving column headings:', error);
+    res.status(500).json({ success: false, message: 'Failed to save column headings' });
+  }
+});
+
 // Server will be started at the end of the file
 
 // Forgot password endpoint

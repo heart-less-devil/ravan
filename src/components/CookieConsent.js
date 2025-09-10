@@ -15,7 +15,7 @@ const CookieConsent = () => {
 
   useEffect(() => {
     // Check if user has already made a choice
-    const cookieChoice = localStorage.getItem('cookieConsent');
+    const cookieChoice = sessionStorage.getItem('cookieConsent');
     if (!cookieChoice) {
       setShowBanner(true);
     }
@@ -29,7 +29,7 @@ const CookieConsent = () => {
       preferences: true
     };
     setCookiePreferences(preferences);
-    localStorage.setItem('cookieConsent', JSON.stringify(preferences));
+    sessionStorage.setItem('cookieConsent', JSON.stringify(preferences));
     setShowBanner(false);
   };
 
@@ -41,12 +41,12 @@ const CookieConsent = () => {
       preferences: false
     };
     setCookiePreferences(preferences);
-    localStorage.setItem('cookieConsent', JSON.stringify(preferences));
+    sessionStorage.setItem('cookieConsent', JSON.stringify(preferences));
     setShowBanner(false);
   };
 
   const handleSavePreferences = () => {
-    localStorage.setItem('cookieConsent', JSON.stringify(cookiePreferences));
+    sessionStorage.setItem('cookieConsent', JSON.stringify(cookiePreferences));
     setShowBanner(false);
   };
 

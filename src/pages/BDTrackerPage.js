@@ -47,7 +47,7 @@ const BDTrackerPage = () => {
   const fetchEntries = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -86,7 +86,7 @@ const BDTrackerPage = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker`, {
         method: 'POST',
         headers: {
@@ -178,7 +178,7 @@ const BDTrackerPage = () => {
     console.log('Form data to update:', formData);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('Token available:', !!token);
       
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${editingId}`, {
@@ -236,7 +236,7 @@ const BDTrackerPage = () => {
     console.log('Entry to delete:', entries.find(entry => (entry.id === id || entry._id === id)));
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('Token available:', !!token);
       
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${id}`, {

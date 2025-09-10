@@ -28,7 +28,7 @@ const PDFManagement = () => {
   const fetchPdfs = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('🔍 API_BASE_URL:', API_BASE_URL);
       console.log('🔍 Full URL:', `${API_BASE_URL}/api/admin/pdfs`);
       
@@ -82,7 +82,7 @@ const PDFManagement = () => {
     });
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('🌐 Making API call to:', `${API_BASE_URL}/api/admin/pdfs/upload`);
       
       const response = await fetch(`${API_BASE_URL}/api/admin/pdfs/upload`, {
@@ -123,7 +123,7 @@ const PDFManagement = () => {
     if (!window.confirm('Are you sure you want to delete this PDF?')) return;
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/admin/pdfs/${pdfId}`, {
         method: 'DELETE',
         headers: {

@@ -11,22 +11,41 @@ const Pricing = () => {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
     // Check if user is logged in first
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       return null; // No current plan if not logged in
     }
-    // Get user's current plan from localStorage or default to 'free'
-    return localStorage.getItem('userCurrentPlan') || 'free';
+    // Default to 'free' plan - will be fetched from backend
+    return 'free';
   });
 
   // Check login status on component mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       setUserCurrentPlan(null);
     } else {
-      const storedPlan = localStorage.getItem('userCurrentPlan') || 'free';
-      setUserCurrentPlan(storedPlan);
+      // Fetch user plan from backend
+      const fetchUserPlan = async () => {
+        try {
+          const response = await fetch('/api/auth/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUserCurrentPlan(data.user?.currentPlan || 'free');
+          }
+        } catch (error) {
+          console.error('Error fetching user plan:', error);
+          setUserCurrentPlan('free');
+        }
+      };
+      
+      fetchUserPlan();
     }
   }, []);
 
@@ -120,7 +139,7 @@ const Pricing = () => {
 
   const handlePlanSelect = (plan) => {
     // Check if user is logged in
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       // Redirect to login if not logged in
       window.location.href = '/login';
@@ -141,8 +160,8 @@ const Pricing = () => {
     // Update user's current plan after successful payment
     if (selectedPlan && selectedPlan.id !== 'free') {
       setUserCurrentPlan(selectedPlan.id);
-      localStorage.setItem('userCurrentPlan', selectedPlan.id);
-      localStorage.setItem('paymentCompleted', 'true');
+      sessionStorage.setItem('userCurrentPlan', selectedPlan.id);
+      sessionStorage.setItem('paymentCompleted', 'true');
       
       // Set initial credits based on plan
       let credits = 5; // Default
@@ -153,11 +172,11 @@ const Pricing = () => {
       } else if (selectedPlan.id === 'test') {
         credits = 1;
       }
-      localStorage.setItem('userCredits', credits.toString());
+      sessionStorage.setItem('userCredits', credits.toString());
       
       // Sync with backend and set up subscription
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
           method: 'POST',
           headers: {

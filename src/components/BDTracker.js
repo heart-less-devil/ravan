@@ -50,7 +50,7 @@ const BDTracker = () => {
 
   const fetchEntries = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -87,7 +87,7 @@ const BDTracker = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker`, {
         method: 'POST',
         headers: {
@@ -151,7 +151,7 @@ const BDTracker = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${editingId}`, {
         method: 'PUT',
         headers: {
@@ -194,7 +194,7 @@ const BDTracker = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this entry?')) {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${id}`, {
           method: 'DELETE',
           headers: {

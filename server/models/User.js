@@ -79,6 +79,12 @@ const userSchema = new mongoose.Schema({
   },
   paymentUpdatedAt: {
     type: Date
+  },
+  // BD Tracker custom column headings
+  bdTrackerColumnHeadings: {
+    type: Map,
+    of: String,
+    default: {}
   }
 }, {
   timestamps: true

@@ -2,7 +2,7 @@
 import { API_BASE_URL } from '../config';
 
 export const checkTokenValidity = async () => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (!token) return false;
   
   try {
@@ -20,11 +20,8 @@ export const checkTokenValidity = async () => {
 };
 
 export const clearAuthData = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  localStorage.removeItem('userCredits');
-  localStorage.removeItem('paymentCompleted');
-  localStorage.removeItem('userCurrentPlan');
+  // Clear only token from sessionStorage for authentication
+  sessionStorage.removeItem('token');
 };
 
 export const isUniversalUser = (email) => {

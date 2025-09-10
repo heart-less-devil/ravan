@@ -16,7 +16,7 @@ const BDInsights = ({ user, userPaymentStatus }) => {
   const fetchPDFs = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/admin/pdfs`, {
         headers: {
           'Authorization': `Bearer ${token}`

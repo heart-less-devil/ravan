@@ -29,21 +29,7 @@ const Login = () => {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
-  // Auto-login for universal users
-  React.useEffect(() => {
-    const universalEmails = [
-      'universalx0242@gmail.com',
-      'admin@bioping.com',
-      'demo@bioping.com',
-      'test@bioping.com'
-    ];
-    
-    const storedEmail = localStorage.getItem('lastEmail');
-    if (storedEmail && universalEmails.includes(storedEmail)) {
-      console.log('Auto-login for universal user:', storedEmail);
-      setFormData(prev => ({ ...prev, email: storedEmail }));
-    }
-  }, []);
+  // No more auto-login from sessionStorage
 
   // Check if admin access is required
   React.useEffect(() => {
@@ -113,14 +99,8 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token in localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Store credits for universal users
-        if (data.credits) {
-          localStorage.setItem('userCredits', data.credits.toString());
-        }
+        // Store only token in sessionStorage for authentication
+        sessionStorage.setItem('token', data.token);
         
         // Redirect to dashboard (payment check is now optional)
         navigate('/dashboard');

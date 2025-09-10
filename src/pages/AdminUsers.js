@@ -14,7 +14,7 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) {
         setError('Authentication required');
         setLoading(false);
@@ -48,7 +48,7 @@ const AdminUsers = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {

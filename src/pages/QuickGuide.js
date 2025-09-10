@@ -270,60 +270,43 @@ const QuickGuide = () => {
       style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none' }}
     >
       {/* Professional Header Section */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-3xl p-10 text-white shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden">
         {/* Animated background elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 animate-pulse"></div>
         <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-bounce"></div>
         <div className="absolute bottom-0 right-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl animate-ping"></div>
         
         <div className="relative z-10">
-          <div className="flex items-center space-x-6 mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
-              <FileText className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">BioPing Training Manual</h1>
-              <p className="text-blue-200 text-lg">Complete guide to mastering business development</p>
-            </div>
-          </div>
-          
-        </div>
-      </div>
-
-      {/* Back Button - Top Left */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-start justify-between mb-8">
           {/* Back Button - Top Left */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate('/dashboard/resources');
-              }
-            }}
-            aria-label="Go back"
-            className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 text-white shadow-xl hover:shadow-2xl border border-white/10 hover:from-slate-800 hover:via-blue-800 hover:to-slate-800 transition-all duration-300"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-semibold">Back</span>
-          </motion.button>
-
-          {/* Training Manual Section - Centered */}
-          <div className="text-center flex-1">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
-              <FileText className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">BioPing Training Manual</h2>
-            <p className="text-gray-600 text-lg">Complete guide to using the BD Platform</p>
+          <div className="flex items-start justify-between mb-6">
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = '/dashboard';
+                }
+              }}
+              className="bg-gradient-to-r from-white/25 to-white/15 hover:from-white/35 hover:to-white/25 backdrop-blur-md text-white px-6 py-3 rounded-2xl font-bold flex items-center space-x-3 transition-all duration-300 border border-white/40 hover:border-white/60 shadow-lg hover:shadow-xl"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-lg">Back</span>
+            </motion.button>
+            <div></div> {/* Spacer for balance */}
           </div>
 
-          {/* Spacer for balance */}
-          <div className="w-32"></div>
+          <div className="text-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-2xl mx-auto mb-1">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-0">BioPing Training Manual</h1>
+            <p className="text-blue-200 text-base">Complete guide to mastering business development</p>
+          </div>
         </div>
       </div>
+
 
       {/* Main Content */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">

@@ -21,15 +21,9 @@ class CreditTracker {
 
   // Use credits and notify listeners
   async useCredits(amount) {
-    const currentCredits = parseInt(localStorage.getItem('userCredits') || '5');
-    const newCredits = Math.max(0, currentCredits - amount);
-    
-    // Update local storage immediately for better UX
-    localStorage.setItem('userCredits', newCredits.toString());
-    
-    // Try to sync with backend
+    // Try to sync with backend first
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (token) {
         const response = await fetch('/api/auth/use-credit', {
           method: 'POST',
@@ -43,7 +37,6 @@ class CreditTracker {
           const data = await response.json();
           // Use backend credits if available
           if (data.remainingCredits !== undefined) {
-            localStorage.setItem('userCredits', data.remainingCredits.toString());
             this.notifyListeners(data.remainingCredits);
             return data.remainingCredits;
           }
@@ -54,21 +47,24 @@ class CreditTracker {
       // Continue with local credits if backend fails
     }
     
+    // Fallback to local calculation
+    const currentCredits = this.getCurrentCredits();
+    const newCredits = Math.max(0, currentCredits - amount);
     console.log(`Credits used: ${amount}, remaining: ${newCredits}`);
     this.notifyListeners(newCredits);
     
     return newCredits;
   }
 
-  // Get current credits
+  // Get current credits (fallback to 5 for new users)
   getCurrentCredits() {
-    return parseInt(localStorage.getItem('userCredits') || '5');
+    return 5; // Default fallback
   }
 
   // Get credits from backend without refreshing UI unnecessarily
   async getCreditsFromBackend() {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) return null;
 
       const response = await fetch('/api/auth/subscription', {
@@ -90,13 +86,12 @@ class CreditTracker {
 
   // Check if credits need refresh (only for paid users)
   shouldRefreshCredits() {
-    const userCurrentPlan = localStorage.getItem('userCurrentPlan');
-    return userCurrentPlan && userCurrentPlan !== 'free';
+    // Always refresh credits from backend for real-time accuracy
+    return true;
   }
 
   // Set credits (for admin or plan changes)
   setCredits(amount) {
-    localStorage.setItem('userCredits', amount.toString());
     this.notifyListeners(amount);
   }
 }

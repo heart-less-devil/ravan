@@ -97,7 +97,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     // Load user data and payment status
   const loadUserData = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       if (!token) return;
 
       // Get user profile
@@ -164,29 +164,13 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                   paymentData.currentPlan === 'monthly' ? 500 : 
                   paymentData.currentPlan === 'annual' ? 4800 : 0;
           
-          // Get used credits from localStorage or calculate from usage
-          const existingCredits = localStorage.getItem('userCredits');
-          if (existingCredits) {
-            usedCredits = totalCredits - parseInt(existingCredits);
-          }
-          
-          // Update localStorage with new credits
-          localStorage.setItem('userCredits', credits.toString());
-        } else {
-          // Free users - get existing credits from localStorage
-          const existingCredits = localStorage.getItem('userCredits');
-          credits = existingCredits ? parseInt(existingCredits) : 5;
-          totalCredits = 5;
-          
-          // Calculate used credits
+          // Calculate used credits based on total and remaining
           usedCredits = totalCredits - credits;
-          
-          // Only set to 5 if no existing credits (new user)
-          if (!existingCredits) {
-            localStorage.setItem('userCredits', '5');
-            credits = 5;
-            usedCredits = 0;
-          }
+        } else {
+          // Free users - default to 5 credits
+          credits = 5;
+          totalCredits = 5;
+          usedCredits = 0;
         }
 
         // Get invoices data
@@ -318,7 +302,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   const handleDownloadInvoice = async (invoice) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       // Add delay to prevent simultaneous downloads
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -354,7 +338,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   const handleDownloadAllInvoices = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/auth/download-all-invoices`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -395,7 +379,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   const handleSaveProfile = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       console.log('Updating profile with:', editForm);
       console.log('Token:', token);
       
@@ -447,32 +431,45 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   // Function to update credits when they are used
   const updateCredits = (creditsUsed) => {
-    const currentCredits = parseInt(localStorage.getItem('userCredits') || '5');
-    const newCredits = Math.max(0, currentCredits - creditsUsed);
-    localStorage.setItem('userCredits', newCredits.toString());
-    
     setUser(prev => ({
       ...prev,
-      credits: newCredits,
-      usedCredits: prev.totalCredits - newCredits
+      credits: Math.max(0, (prev.credits || 5) - creditsUsed),
+      usedCredits: prev.totalCredits - Math.max(0, (prev.credits || 5) - creditsUsed)
     }));
     
-    console.log(`Credits updated: ${creditsUsed} used, ${newCredits} remaining`);
+    console.log(`Credits updated: ${creditsUsed} used, ${Math.max(0, (user.credits || 5) - creditsUsed)} remaining`);
   };
 
-  // Function to get current credits from localStorage
+  // Function to get current credits from user state
   const getCurrentCredits = () => {
-    return parseInt(localStorage.getItem('userCredits') || '5');
+    return user.credits || 5;
   };
 
-  // Function to sync credits with localStorage
-  const syncCredits = () => {
-    const currentCredits = getCurrentCredits();
-    setUser(prev => ({
-      ...prev,
-      credits: currentCredits,
-      usedCredits: prev.totalCredits - currentCredits
-    }));
+  // Function to sync credits with backend
+  const syncCredits = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          setUser(prev => ({
+            ...prev,
+            credits: data.user.currentCredits || 5,
+            usedCredits: prev.totalCredits - (data.user.currentCredits || 5)
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing credits:', error);
+    }
   };
 
   // Function to refresh user data

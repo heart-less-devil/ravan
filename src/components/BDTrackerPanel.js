@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
+import stateManager from '../utils/stateManager';
 import {
   Plus,
   Download,
@@ -42,6 +43,8 @@ const BDTrackerPanel = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editingColumn, setEditingColumn] = useState(null);
+  const [customColumnLabels, setCustomColumnLabels] = useState({});
   const [formData, setFormData] = useState({
     projectName: '',
     company: '',
@@ -56,15 +59,64 @@ const BDTrackerPanel = () => {
     reminders: ''
   });
 
+  // Load custom column labels from MongoDB using state manager
+  const loadCustomColumnLabels = async () => {
+    try {
+      console.log('Loading custom column labels...');
+      const headings = await stateManager.getBDTrackerColumnHeadings();
+      console.log('Loaded headings:', headings);
+      setCustomColumnLabels(headings);
+    } catch (error) {
+      console.error('Error loading custom column labels:', error);
+    }
+  };
+
   // Load data from backend on component mount
   useEffect(() => {
     fetchEntries();
+    loadCustomColumnLabels();
   }, []);
+
+  // Save custom column labels to MongoDB using state manager
+  const saveCustomColumnLabels = async (labels) => {
+    try {
+      console.log('Saving custom column labels:', labels);
+      const success = await stateManager.saveBDTrackerColumnHeadings(labels);
+      if (success) {
+        setCustomColumnLabels(labels);
+        console.log('Column headings saved successfully');
+      } else {
+        console.error('Failed to save column headings');
+      }
+    } catch (error) {
+      console.error('Error saving custom column labels:', error);
+    }
+  };
+
+  // Handle column label edit
+  const handleColumnLabelEdit = async (columnKey, newLabel) => {
+    const updatedLabels = {
+      ...customColumnLabels,
+      [columnKey]: newLabel
+    };
+    await saveCustomColumnLabels(updatedLabels);
+    setEditingColumn(null);
+  };
+
+  // Reset all column labels to default
+  const resetColumnLabels = async () => {
+    try {
+      await saveCustomColumnLabels({});
+      setEditingColumn(null);
+    } catch (error) {
+      console.error('Error resetting column labels:', error);
+    }
+  };
 
   const fetchEntries = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       if (!token) {
         console.error('No authentication token found');
@@ -116,7 +168,7 @@ const BDTrackerPanel = () => {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       
       if (!token) {
         alert('Please log in to add entries');
@@ -181,7 +233,7 @@ const BDTrackerPanel = () => {
 
     try {
       setIsEditing(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${editingId}`, {
         method: 'PUT',
         headers: {
@@ -226,7 +278,7 @@ const BDTrackerPanel = () => {
     if (window.confirm('Are you sure you want to delete this entry?')) {
       try {
         setIsDeleting(id);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/api/bd-tracker/${id}`, {
           method: 'DELETE',
           headers: {
@@ -308,7 +360,7 @@ const BDTrackerPanel = () => {
     return matchesSearch;
   });
 
-  const columns = [
+  const defaultColumns = [
     { key: 'projectName', label: 'Project Name', icon: FileSpreadsheet },
     { key: 'company', label: 'Company', icon: Building },
     { key: 'programPitched', label: 'Program Pitched', icon: FileSpreadsheet },
@@ -321,6 +373,12 @@ const BDTrackerPanel = () => {
     { key: 'timelines', label: 'Timelines to Remember', icon: Clock },
     { key: 'reminders', label: 'Reminders', icon: Bell }
   ];
+
+  // Use custom labels if available, otherwise use default
+  const columns = defaultColumns.map(column => ({
+    ...column,
+    label: customColumnLabels[column.key] || column.label
+  }));
 
 
 
@@ -529,6 +587,17 @@ const BDTrackerPanel = () => {
                   <Download className="w-5 h-5" />
                 </motion.div>
                 Export
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={resetColumnLabels}
+                className="flex items-center gap-2 px-4 py-3 bg-gray-500/20 backdrop-blur-sm border border-gray-400/30 rounded-xl hover:bg-gray-500/30 transition-all duration-300 font-semibold"
+                title="Reset column headings to default"
+              >
+                <X className="w-4 h-4" />
+                Reset Headings
               </motion.button>
             </div>
           </motion.div>
@@ -815,11 +884,44 @@ const BDTrackerPanel = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 1.2 + index * 0.1 }}
-                        className="px-6 py-4 text-left font-semibold text-sm"
+                        className="px-6 py-4 text-left font-semibold text-sm group relative"
                       >
                         <div className="flex items-center gap-2">
                           <column.icon className="w-4 h-4" />
-                          {column.label}
+                          {editingColumn === column.key ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                defaultValue={column.label}
+                                className="bg-white/20 text-white placeholder-white/70 px-2 py-1 rounded text-sm border border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                placeholder="Enter column name"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleColumnLabelEdit(column.key, e.target.value);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingColumn(null);
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  if (e.target.value.trim()) {
+                                    handleColumnLabelEdit(column.key, e.target.value.trim());
+                                  } else {
+                                    setEditingColumn(null);
+                                  }
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                          ) : (
+                            <div 
+                              className="flex items-center gap-2 cursor-pointer hover:bg-white/10 px-2 py-1 rounded transition-colors"
+                              onClick={() => setEditingColumn(column.key)}
+                              title="Click to edit column heading"
+                            >
+                              {column.label}
+                              <Edit3 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
                         </div>
                       </motion.th>
                     ))}

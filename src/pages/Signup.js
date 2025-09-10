@@ -273,10 +273,7 @@ const Signup = () => {
 
         if (accountData.success) {
           // Auto login after successful account creation
-          localStorage.setItem('token', accountData.token);
-          localStorage.setItem('user', JSON.stringify(accountData.user));
-          localStorage.setItem('isNewUser', 'true');
-          localStorage.setItem('userCredits', '5');
+          sessionStorage.setItem('token', accountData.token);
           
           // Redirect to dashboard (payment check is now optional)
           alert('Account created successfully! Redirecting to dashboard...');

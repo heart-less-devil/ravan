@@ -14,15 +14,29 @@ const Header = () => {
 
   // Check if user is logged in
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
     
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error('Error parsing stored user:', err);
-      }
+    if (token) {
+      // Fetch user data from backend instead of sessionStorage
+      const fetchUserData = async () => {
+        try {
+          const response = await fetch('/api/auth/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      };
+      
+      fetchUserData();
     }
   }, []);
 
