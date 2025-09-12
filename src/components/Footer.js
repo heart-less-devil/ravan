@@ -45,7 +45,7 @@ const Footer = () => {
   ];
 
   const contactInfo = [
-    { icon: Mail, text: 'support@bioping.com', href: 'mailto:support@bioping.com' },
+    { icon: Mail, text: 'support@thebioping.com', href: 'mailto:support@thebioping.com' },
     { icon: Phone, text: '+1 650 455 5850', href: 'tel:+16504555850' },
     { icon: MapPin, text: 'San Francisco, CA', href: '#' },
   ];

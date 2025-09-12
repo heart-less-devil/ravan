@@ -81,7 +81,7 @@ const ContactUs = () => {
     {
       icon: Mail,
       title: "Email",
-      value: "support@bioping.com",
+      value: "support@thebioping.com",
       description: "Send us an email anytime"
     },
     {

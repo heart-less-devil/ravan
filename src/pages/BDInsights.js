@@ -171,10 +171,6 @@ const BDInsights = ({ user, userPaymentStatus }) => {
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg mb-2">{content.title}</h3>
                   <p className="text-gray-600 mb-3">{content.description}</p>
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>{content.type}</span>
-                    <span>{content.size}</span>
-                  </div>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}

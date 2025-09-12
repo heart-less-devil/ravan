@@ -42,7 +42,55 @@ const BDTrackerPage = () => {
   // Load data from backend on component mount
   useEffect(() => {
     fetchEntries();
+    fetchColumnHeadings();
   }, []);
+
+  // Fetch column headings from backend
+  const fetchColumnHeadings = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/bd-tracker/column-headings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.columnHeadings) {
+          setColumnHeadings(prev => ({ ...prev, ...data.columnHeadings }));
+          console.log('✅ Column headings loaded:', data.columnHeadings);
+        }
+      } else {
+        console.log('Using default column headings');
+      }
+    } catch (error) {
+      console.log('Using default column headings:', error);
+    }
+  };
+
+  // Save column headings to backend
+  const saveColumnHeadings = async (newHeadings) => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/api/bd-tracker/column-headings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ columnHeadings: newHeadings })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Column headings saved successfully');
+      } else {
+        console.error('Failed to save column headings');
+      }
+    } catch (error) {
+      console.error('Error saving column headings:', error);
+    }
+  };
 
   const fetchEntries = async () => {
     try {
@@ -98,7 +146,17 @@ const BDTrackerPage = () => {
 
       if (response.ok) {
         const result = await response.json();
-        setEntries(prev => [...prev, result.data]);
+        console.log('✅ Entry added successfully:', result);
+        
+        // Update local state immediately with the new entry
+        if (result.data) {
+          setEntries(prev => {
+            const updated = [result.data, ...prev];
+            console.log('🔄 Added new entry to local state:', updated.length, 'entries');
+            return updated;
+          });
+        }
+        
         setFormData({
           company: '',
           programPitched: '',
@@ -112,6 +170,9 @@ const BDTrackerPage = () => {
           reminders: ''
         });
         setShowForm(false);
+        
+        // Show success message
+        alert('Entry added successfully!');
       } else {
         alert('Failed to add entry');
       }
@@ -195,11 +256,22 @@ const BDTrackerPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Update successful:', data);
+        console.log('✅ Update successful:', data);
         
-        setEntries(prev => prev.map(entry => 
-          (entry.id === editingId || entry._id === editingId) ? { ...entry, ...formData } : entry
-        ));
+        // Update local state immediately
+        setEntries(prev => {
+          const updated = prev.map(entry => {
+            if (entry.id === editingId || entry._id === editingId) {
+              const updatedEntry = { ...entry, ...formData, updatedAt: new Date().toISOString() };
+              console.log('🔄 Updated entry in local state:', updatedEntry);
+              return updatedEntry;
+            }
+            return entry;
+          });
+          console.log('🔄 Local state updated after edit:', updated.length, 'entries');
+          return updated;
+        });
+        
         setEditingId(null);
         setFormData({
           projectName: '',
@@ -216,6 +288,9 @@ const BDTrackerPage = () => {
           timelines: '',
           reminders: ''
         });
+        
+        // Show success message
+        alert('Entry updated successfully!');
       } else {
         const errorData = await response.json();
         console.error('Update failed:', errorData);
@@ -250,8 +325,17 @@ const BDTrackerPage = () => {
       console.log('Delete response ok:', response.ok);
 
       if (response.ok) {
-        setEntries(prev => prev.filter(entry => (entry.id !== id && entry._id !== id)));
-        console.log('Entry deleted successfully');
+        // Update local state immediately by removing the deleted entry
+        setEntries(prev => {
+          const updated = prev.filter(entry => (entry.id !== id && entry._id !== id));
+          console.log('🔄 Removed entry from local state:', updated.length, 'entries remaining');
+          return updated;
+        });
+        
+        console.log('✅ Entry deleted successfully');
+        
+        // Show success message
+        alert('Entry deleted successfully!');
       } else {
         const errorData = await response.json();
         console.error('Delete failed:', errorData);
@@ -334,11 +418,16 @@ const BDTrackerPage = () => {
   const [editingColumn, setEditingColumn] = useState(null);
 
   const handleColumnHeadingEdit = (columnKey, newLabel) => {
-    setColumnHeadings(prev => ({
-      ...prev,
+    const newHeadings = {
+      ...columnHeadings,
       [columnKey]: newLabel
-    }));
+    };
+    
+    setColumnHeadings(newHeadings);
     setEditingColumn(null);
+    
+    // Save to backend
+    saveColumnHeadings(newHeadings);
   };
 
   const columns = [
@@ -468,22 +557,6 @@ const BDTrackerPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Project Name:</strong> {formData.projectName || 'Not set'}
-                <button 
-                  onClick={() => {
-                    const projectName = prompt('Enter project name:');
-                    if (projectName) {
-                      setFormData(prev => ({ ...prev, projectName }));
-                    }
-                  }}
-                  className="ml-2 text-blue-600 underline hover:text-blue-800"
-                >
-                  {formData.projectName ? 'Change' : 'Set Project Name'}
-                </button>
-              </p>
-            </div>
             
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {columns.map((column) => (
@@ -579,10 +652,14 @@ const BDTrackerPage = () => {
                         type="text"
                         value={columnHeadings[column.key]}
                         onChange={(e) => setColumnHeadings(prev => ({ ...prev, [column.key]: e.target.value }))}
-                        onBlur={() => setEditingColumn(null)}
+                        onBlur={() => {
+                          setEditingColumn(null);
+                          saveColumnHeadings({ ...columnHeadings, [column.key]: columnHeadings[column.key] });
+                        }}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
                             setEditingColumn(null);
+                            saveColumnHeadings({ ...columnHeadings, [column.key]: columnHeadings[column.key] });
                           }
                         }}
                         className="w-full bg-transparent border-none outline-none text-sm font-semibold text-gray-900"
@@ -608,10 +685,14 @@ const BDTrackerPage = () => {
                       type="text"
                       value={columnHeadings.actions}
                       onChange={(e) => setColumnHeadings(prev => ({ ...prev, actions: e.target.value }))}
-                      onBlur={() => setEditingColumn(null)}
+                      onBlur={() => {
+                        setEditingColumn(null);
+                        saveColumnHeadings({ ...columnHeadings, actions: columnHeadings.actions });
+                      }}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           setEditingColumn(null);
+                          saveColumnHeadings({ ...columnHeadings, actions: columnHeadings.actions });
                         }
                       }}
                       className="w-full bg-transparent border-none outline-none text-sm font-semibold text-gray-900"

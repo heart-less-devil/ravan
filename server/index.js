@@ -1264,19 +1264,41 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Email configuration with better Gmail setup
+// Email configuration with custom SMTP setup
 let transporter = null;
 
 // Only initialize email if credentials are provided
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
   try {
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
+    // Check if using custom domain email or Gmail
+    const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
+    
+    if (isCustomDomain) {
+      // Custom domain email configuration
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'y3o.c8f.mytemp.website',
+        port: process.env.SMTP_PORT || 465,
+        secure: process.env.SMTP_SECURE === 'true' || true,
+        auth: {
+          user: process.env.EMAIL_USER || 'info@thebioping.com',
+          pass: process.env.EMAIL_PASS
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+      console.log('📧 Using custom domain email configuration');
+    } else {
+      // Gmail configuration
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
+      console.log('📧 Using Gmail email configuration');
+    }
 
     // Verify transporter configuration
     transporter.verify(function(error, success) {
@@ -2592,13 +2614,29 @@ Timestamp: ${new Date().toLocaleString()}
       try {
         console.log('📧 Attempting to send email...');
         
-        const transporter = nodemailer.createTransporter({
-          service: 'gmail',
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          }
-        });
+        // Use the same transporter configuration as the main email setup
+        const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
+        
+        const transporter = isCustomDomain ? 
+          nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'y3o.c8f.mytemp.website',
+            port: process.env.SMTP_PORT || 465,
+            secure: process.env.SMTP_SECURE === 'true' || true,
+            auth: {
+              user: process.env.EMAIL_USER || 'info@thebioping.com',
+              pass: process.env.EMAIL_PASS
+            },
+            tls: {
+              rejectUnauthorized: false
+            }
+          }) :
+          nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS
+            }
+          });
 
         const mailOptions = {
           from: process.env.EMAIL_USER,

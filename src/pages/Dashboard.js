@@ -77,6 +77,7 @@ import { useForm } from '@mantine/form';
 import { IconInfoCircle } from '@tabler/icons-react';
 import CustomerProfile from './CustomerProfile';
 import SuspensionNotice from '../components/SuspensionNotice';
+import SubscriptionManager from '../components/SubscriptionManager';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -92,6 +93,8 @@ const Dashboard = () => {
   const [userCredits, setUserCredits] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [showCustomerProfile, setShowCustomerProfile] = useState(false);
+  const [showSubscriptionManager, setShowSubscriptionManager] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [userPaymentStatus, setUserPaymentStatus] = useState({ hasPaid: false, currentPlan: 'free' });
   const [error, setError] = useState(null);
   const [daysRemaining, setDaysRemaining] = useState(3);
@@ -144,10 +147,9 @@ const Dashboard = () => {
   // Fetch user data function - accessible throughout the component
   const fetchUserData = useCallback(async () => {
     try {
+      setIsInitialLoading(true);
       const token = sessionStorage.getItem('token');
-      console.log('=== FETCH USER DATA DEBUG ===');
-      console.log('Token exists:', !!token);
-      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('=== OPTIMIZED FETCH USER DATA ===');
       
       if (!token) {
         console.log('No token found, redirecting to login');
@@ -155,23 +157,34 @@ const Dashboard = () => {
         return;
       }
 
-      // Fetch user profile
-      console.log('Fetching user profile...');
-      const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('Profile response status:', profileResponse.status);
-      console.log('Profile response ok:', profileResponse.ok);
-      
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json();
-        console.log('Profile data received:', profileData);
+      // Make all API calls in parallel for faster loading
+      console.log('Making parallel API calls...');
+      const [profileResponse, subscriptionResponse, invoicesResponse] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`${API_BASE_URL}/api/auth/subscription`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`${API_BASE_URL}/api/auth/invoices`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ]);
+
+      // Process profile data (most important)
+      if (profileResponse.status === 'fulfilled' && profileResponse.value.ok) {
+        const profileData = await profileResponse.value.json();
+        console.log('✅ Profile data loaded');
         
-        // Update user state
         setUser(profileData.user);
         
         // Update payment status
@@ -181,110 +194,75 @@ const Dashboard = () => {
           setUserPaymentStatus({ hasPaid, currentPlan });
         }
         
-        // CRITICAL: Handle trial expiration and credits from backend
+        // Handle credits
         const currentDate = new Date();
         const registrationDate = profileData.user.createdAt || profileData.user.registrationDate;
         
         if (registrationDate) {
           const regDate = new Date(registrationDate);
           const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
-          const trialExpired = daysSinceRegistration >= 5; // Updated to 5 days
-          
-          console.log('📅 Trial check:', {
-            daysSinceRegistration,
-            trialExpired,
-            backendCredits: profileData.user.currentCredits
-          });
+          const trialExpired = daysSinceRegistration >= 5;
           
           if (trialExpired) {
-            // Trial expired - force credits to 0 regardless of backend
-            console.log('⏰ Trial expired - forcing credits to 0');
             setUserCredits(0);
             setDaysRemaining(0);
           } else {
-            // Trial active - use backend credits or default to 5
             const credits = profileData.user.currentCredits ?? 5;
             setUserCredits(credits);
-            setDaysRemaining(5 - daysSinceRegistration); // Updated to 5 days
-            console.log(`💳 Trial credits set: ${credits} (${5 - daysSinceRegistration} days remaining)`);
+            setDaysRemaining(5 - daysSinceRegistration);
           }
         } else {
-          // No registration date - use backend credits
           if (typeof profileData.user.currentCredits === 'number') {
             setUserCredits(profileData.user.currentCredits);
-            console.log(`💳 Credits updated from backend: ${profileData.user.currentCredits}`);
           }
         }
-        
-        console.log('✅ User data updated from backend');
       } else {
-        console.log('Profile fetch failed, using cached data');
+        console.log('❌ Profile fetch failed');
       }
       
-      // Fetch subscription data
-      console.log('Fetching subscription data...');
-      const subscriptionResponse = await fetch(`${API_BASE_URL}/api/auth/subscription`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      // Fetch invoices data
-      console.log('Fetching invoices data...');
-      const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (subscriptionResponse.ok) {
-        const subscriptionData = await subscriptionResponse.json();
-        console.log('Subscription data received:', subscriptionData);
+      // Process subscription data (optional)
+      if (subscriptionResponse.status === 'fulfilled' && subscriptionResponse.value.ok) {
+        const subscriptionData = await subscriptionResponse.value.json();
+        console.log('✅ Subscription data loaded');
         
-        // Update payment status from subscription data
         if (subscriptionData) {
           const hasPaid = subscriptionData.paymentCompleted || false;
           const currentPlan = subscriptionData.currentPlan || 'free';
           setUserPaymentStatus({ hasPaid, currentPlan });
-        }
-        // For paid users, update credits from subscription data
-        if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
-          if (typeof subscriptionData.currentCredits === 'number') {
-            setUserCredits(subscriptionData.currentCredits);
-            console.log(`💳 Paid user credits updated: ${subscriptionData.currentCredits}`);
+          
+          // For paid users, update credits from subscription data
+          if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
+            if (typeof subscriptionData.currentCredits === 'number') {
+              setUserCredits(subscriptionData.currentCredits);
+            }
           }
         }
-        // Trial users are handled in profile data section above
-        
-        console.log('✅ Subscription data updated from backend');
       } else {
-        console.log('Subscription fetch failed, using cached data');
+        console.log('❌ Subscription fetch failed');
       }
 
-      // Process invoices data
-      if (invoicesResponse.ok) {
-        const invoicesData = await invoicesResponse.json();
-        console.log('Invoices data received:', invoicesData);
+      // Process invoices data (optional)
+      if (invoicesResponse.status === 'fulfilled' && invoicesResponse.value.ok) {
+        const invoicesData = await invoicesResponse.value.json();
+        console.log('✅ Invoices data loaded');
         
         if (invoicesData.success && invoicesData.data) {
           setUser(prev => ({
             ...prev,
             invoices: invoicesData.data
           }));
-          console.log('✅ Invoices data updated from backend');
         }
       } else {
-        console.log('Invoices fetch failed, using cached data');
+        console.log('❌ Invoices fetch failed');
       }
       
+      console.log('🎉 All data loaded successfully');
+      
     } catch (err) {
-      console.error('Error fetching user data:', err);
-      console.error('Error type:', err.constructor.name);
-      console.error('Error message:', err.message);
-      console.error('Error stack:', err.stack);
+      console.error('❌ Error fetching user data:', err);
       // Don't logout, user can still use the app with stored data
+    } finally {
+      setIsInitialLoading(false);
     }
   }, []);
 
@@ -502,7 +480,7 @@ const Dashboard = () => {
           setShowError(true);
           setGlobalSearchResults(null); // Clear any previous results
           // Still redirect to search page to show the error message
-          navigate('/dashboard/search');
+          navigate(`/dashboard/search?q=${encodeURIComponent(searchQuery)}&type=${encodeURIComponent(searchType)}`);
           
           // Auto hide after 4 seconds
           setTimeout(() => {
@@ -528,9 +506,9 @@ const Dashboard = () => {
         // Clear any existing error
         setError(null);
         
-        // Navigate to search page (global search results will be handled by globalSearchResults prop)
+        // Navigate to search page with search query as URL parameter
         console.log('Navigating to search page...');
-        navigate('/dashboard/search');
+        navigate(`/dashboard/search?q=${encodeURIComponent(searchQuery)}&type=${encodeURIComponent(searchType)}`);
       } else {
         throw new Error(result.message || 'Search failed');
       }
@@ -570,7 +548,7 @@ const Dashboard = () => {
     
     switch(path) {
       case '/dashboard':
-        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} />;
+        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} onManageSubscription={() => setShowSubscriptionManager(true)} />;
       case '/dashboard/search':
         // Check for suspension before allowing access to Search
         if (suspensionData) {
@@ -650,16 +628,22 @@ const Dashboard = () => {
         return <PricingManagementPage />;
           
       default:
-        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} />;
+        return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} onManageSubscription={() => setShowSubscriptionManager(true)} />;
     }
   };
 
-  if (!user) {
+  if (!user || isInitialLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
-          <div className="spinner-lg mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <p className="text-gray-600 text-lg font-medium">Loading your dashboard...</p>
+          <p className="text-gray-500 text-sm mt-2">Optimizing your experience</p>
         </div>
       </div>
     );
@@ -1041,12 +1025,24 @@ const Dashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Subscription Manager Modal */}
+      {showSubscriptionManager && (
+        <SubscriptionManager
+          user={user}
+          onClose={() => setShowSubscriptionManager(false)}
+          onPlanUpdate={() => {
+            // Refresh user data when plan is updated
+            fetchUserData();
+          }}
+        />
+      )}
               </div>
   );
 };
 
 // Enhanced Dashboard Home Component
-const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) => {
+const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, onManageSubscription }) => {
   const stats = [
     { 
       label: 'Total Searches', 
@@ -1207,15 +1203,14 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining }) 
 
           {/* Manage Plan Button - Top Right Corner */}
           {userPaymentStatus && userPaymentStatus.hasPaid && userPaymentStatus.currentPlan !== 'free' && (
-            <Link to="/dashboard/pricing">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-all duration-200 shadow-lg"
-              >
-                Manage Plan
-              </motion.button>
-            </Link>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onManageSubscription}
+              className="bg-white text-blue-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-50 transition-all duration-200 shadow-lg"
+            >
+              Manage Plan
+            </motion.button>
           )}
 
         </div>
@@ -1390,6 +1385,66 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [daysRemaining, setDaysRemaining] = useState(3);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
 
+  // Function to perform search from URL parameters
+  const performSearchFromURL = async (searchQuery, searchType) => {
+    setLoading(true);
+    setError(null);
+    setIsGlobalSearch(true);
+    
+    try {
+      const token = sessionStorage.getItem('token');
+      
+      const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          searchType: searchType,
+          searchQuery: searchQuery.trim()
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setSearchResults(result.data?.results || []);
+          setCurrentSearchType(searchType);
+          setCurrentSearchQuery(searchQuery);
+          setError(null);
+        } else {
+          setError(result.message || 'Search failed');
+        }
+      } else {
+        setError('Search failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setError('Search failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle URL parameters for auto-filling form and showing results
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q');
+    const searchType = urlParams.get('type') || 'Company Name';
+    
+    if (searchQuery) {
+      console.log('URL parameters found:', { searchQuery, searchType });
+      // Auto-fill the form with the search query
+      setFormData(prev => ({
+        ...prev,
+        drugName: searchQuery
+      }));
+      setCurrentSearchType(searchType);
+      setCurrentSearchQuery(searchQuery);
+    }
+  }, []); // Run only once on component mount
+
   // Load search results from global state, sessionStorage and location state on component mount
   useEffect(() => {
     const checkForStoredResults = () => {
@@ -1410,6 +1465,18 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         setCurrentPage(1); // Reset to first page
         setError(null); // Clear any existing error
         console.log('SearchPage: Results set successfully');
+        return;
+      }
+      
+      // If no global results but we have URL parameters, try to perform search
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('q');
+      const searchType = urlParams.get('type') || 'Company Name';
+      
+      if (searchQuery && !globalSearchResults) {
+        console.log('No global results but URL parameters found, performing search:', { searchQuery, searchType });
+        // Perform search with URL parameters
+        performSearchFromURL(searchQuery, searchType);
         return;
       }
       
@@ -3485,10 +3552,40 @@ const Contact = () => {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Contact form submitted:', contactForm);
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: contactForm.name,
+          email: contactForm.email,
+          company: '', // Dashboard form doesn't have company field
+          message: `Subject: ${contactForm.subject}\n\nMessage: ${contactForm.message}`
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Message sent successfully! We\'ll get back to you soon.');
+        setContactForm({ name: '', email: '', subject: '', message: '' });
+      } else {
+        alert(result.message || 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      alert('Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -3503,7 +3600,7 @@ const Contact = () => {
       icon: '📧',
       title: 'Email Support',
       description: 'Get quick responses to your questions',
-      contact: 'support@bioping.com',
+      contact: 'support@thebioping.com',
       responseTime: 'Within ~24 hrs'
     },
     {
@@ -3519,7 +3616,7 @@ const Contact = () => {
     {
       name: 'Vik',
       role: 'Business Development Lead',
-      email: 'support@bioping.com',
+      email: 'support@thebioping.com',
       expertise: 'Partnership Strategy, Deal Structuring',
       avatar: 'V'
     }
@@ -3586,11 +3683,16 @@ const Contact = () => {
               </div>
               <motion.button
                 type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200"
+                disabled={isSubmitting}
+                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
+                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+                className={`font-semibold py-3 px-6 rounded-lg transition-all duration-200 ${
+                  isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed text-white' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
               >
-                Send Message
+                {isSubmitting ? 'Sending...' : 'Send Message'}
               </motion.button>
             </form>
           </div>
@@ -5141,6 +5243,7 @@ const PricingManagementPage = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };

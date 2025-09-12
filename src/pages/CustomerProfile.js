@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
+import SubscriptionManager from '../components/SubscriptionManager';
 import creditTracker from '../utils/creditTracker';
 
 const CustomerProfile = ({ user: propUser, onBack }) => {
@@ -87,6 +88,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showSubscriptionManager, setShowSubscriptionManager] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -425,8 +427,12 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
   };
 
   const handleManageSubscription = () => {
-    // Navigate to pricing page or open subscription modal
-    window.location.href = '/dashboard/pricing';
+    setShowSubscriptionManager(true);
+  };
+
+  const handlePlanUpdate = () => {
+    // Reload user data when plan is updated
+    loadUserData();
   };
 
   // Function to update credits when they are used
@@ -1073,6 +1079,15 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
           </div>
         </div>
       </div>
+
+      {/* Subscription Manager Modal */}
+      {showSubscriptionManager && (
+        <SubscriptionManager
+          user={user}
+          onClose={() => setShowSubscriptionManager(false)}
+          onPlanUpdate={handlePlanUpdate}
+        />
+      )}
     </div>
   );
 };

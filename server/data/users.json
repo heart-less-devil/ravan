@@ -106,7 +106,17 @@
         "remainingCredits": 1
       }
     ],
-    "lastCreditUsage": "2025-09-09T19:13:40.785Z"
+    "lastCreditUsage": "2025-09-09T19:13:40.785Z",
+    "bdTrackerColumnHeadings": {
+      "programPitched": "Program",
+      "company": "Target Co.",
+      "priority": "Priority",
+      "contactPerson": "aman is bacha",
+      "cda": "CDA",
+      "outreachDates": "Outreach Context & Dates",
+      "feedback": "Feedback",
+      "actions": "Actions"
+    }
   },
   {
     "id": 5,

@@ -29,5 +29,12 @@
     "createdAt": "2025-09-04T16:54:02.099Z",
     "expiresAt": "2025-09-04T17:04:02.099Z",
     "type": "password-reset"
+  },
+  {
+    "email": "universalx0242@gmail.com",
+    "code": "918162",
+    "createdAt": "2025-09-10T14:31:59.003Z",
+    "expiresAt": "2025-09-10T14:41:59.003Z",
+    "type": "password-reset"
   }
 ]

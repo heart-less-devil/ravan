@@ -13,13 +13,37 @@ app.use(cors());
 app.use(express.json());
 
 // Email configuration
-const transporter = nodemailer.createTransporter({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-    pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'
-  }
-});
+let transporter;
+
+// Check if using custom domain email or Gmail
+const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
+
+if (isCustomDomain) {
+  // Custom domain email configuration
+  transporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'mail.bioping.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: process.env.SMTP_SECURE === 'true' || false,
+    auth: {
+      user: process.env.EMAIL_USER || 'info@bioping.com',
+      pass: process.env.EMAIL_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+  console.log('📧 API using custom domain email:', process.env.EMAIL_USER);
+} else {
+  // Gmail configuration
+  transporter = nodemailer.createTransporter({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+      pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'
+    }
+  });
+  console.log('📧 API using Gmail email:', process.env.EMAIL_USER);
+}
 
 // Verify transporter configuration
 transporter.verify(function(error, success) {
