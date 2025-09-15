@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const PDFDocument = require('pdfkit');
+const mongoose = require('mongoose');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Import database connection
@@ -426,7 +427,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             const updatedUser = await User.findOneAndUpdate(
               { email: customerEmail },
               updateData,
-              { new: true }
+              { new: true, maxTimeMS: 10000 }
             );
             
             if (updatedUser) {
@@ -1802,7 +1803,7 @@ app.post('/api/auth/create-account', [
     let existingUser = null;
     try {
       console.log('🔍 Checking MongoDB for existing user...');
-      existingUser = await User.findOne({ email });
+      existingUser = await User.findOne({ email }).maxTimeMS(10000);
       console.log('✅ MongoDB query completed');
     } catch (dbError) {
       console.log('❌ MongoDB not available, checking file-based storage...');
@@ -1915,7 +1916,7 @@ app.post('/api/auth/login', [
       // Check if it's a registered user (try MongoDB first, then file-based)
       let registeredUser = null;
       try {
-        registeredUser = await User.findOne({ email });
+        registeredUser = await User.findOne({ email }).maxTimeMS(10000);
         console.log('✅ MongoDB query completed');
         if (registeredUser) {
           console.log(`✅ Found user in MongoDB: ${email}`);
@@ -5170,7 +5171,7 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
     
     // Try MongoDB first
     try {
-      user = await User.findOne({ email: req.user.email });
+      user = await User.findOne({ email: req.user.email }).maxTimeMS(10000);
       if (user) {
         console.log('✅ User found in MongoDB');
         // Convert to plain object for JSON response
@@ -5544,11 +5545,23 @@ app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
   try {
     console.log('🔍 Fetching real user activity from MongoDB...');
     
-    // Get real user activity data from MongoDB
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('❌ MongoDB not connected, using file-based data...');
+      return res.json({
+        success: true,
+        data: [],
+        totalUsers: 0,
+        recentActivity: 0,
+        message: 'Using file-based storage - MongoDB not available'
+      });
+    }
+    
+    // Get real user activity data from MongoDB with timeout
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    const users = await User.find({}).lean().sort({ createdAt: -1 }).maxTimeMS(15000);
     
     const userActivity = users.map(user => {
       const activities = [];
@@ -5595,8 +5608,21 @@ app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
   try {
     console.log('🔍 Fetching real trial data from MongoDB...');
     
-    // Get real trial data from MongoDB
-    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('❌ MongoDB not connected, using file-based data...');
+      return res.json({
+        success: true,
+        data: [],
+        totalUsers: 0,
+        trialUsers: 0,
+        paidUsers: 0,
+        message: 'Using file-based storage - MongoDB not available'
+      });
+    }
+    
+    // Get real trial data from MongoDB with timeout
+    const users = await User.find({}).lean().sort({ createdAt: -1 }).maxTimeMS(15000);
     
     const trialData = users.map(user => {
       let trialInfo;
@@ -5667,8 +5693,20 @@ app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) =>
   try {
     console.log('🔍 Fetching real potential customers from MongoDB...');
     
-    // Get real potential customer data from MongoDB
-    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('❌ MongoDB not connected, using file-based data...');
+      return res.json({
+        success: true,
+        data: [],
+        totalUsers: 0,
+        potentialCustomers: 0,
+        message: 'Using file-based storage - MongoDB not available'
+      });
+    }
+    
+    // Get real potential customer data from MongoDB with timeout
+    const users = await User.find({}).lean().sort({ createdAt: -1 }).maxTimeMS(15000);
     
     const potentialCustomers = users
       .filter(user => !user.paymentCompleted && user.currentPlan !== 'test')
@@ -5762,9 +5800,26 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
   try {
     console.log('🔍 Fetching comprehensive admin data from MongoDB Atlas...');
     
-    // Fetch all data from MongoDB
-    const users = await User.find({}).lean().sort({ createdAt: -1 });
-    const bdTrackers = await BDTracker.find({}).lean();
+    // Check if MongoDB is connected
+    if (mongoose.connection.readyState !== 1) {
+      console.log('❌ MongoDB not connected, using file-based data...');
+      return res.json({
+        success: true,
+        message: 'Using file-based storage - MongoDB not available',
+        data: {
+          users: [],
+          trialData: [],
+          potentialCustomers: [],
+          userActivity: [],
+          subscriptionDetails: [],
+          contactSubmissions: []
+        }
+      });
+    }
+    
+    // Fetch all data from MongoDB with timeout
+    const users = await User.find({}).lean().sort({ createdAt: -1 }).maxTimeMS(15000);
+    const bdTrackers = await BDTracker.find({}).lean().maxTimeMS(15000);
     
     // Calculate trial data
     const trialUsers = users.filter(user => 
@@ -5963,40 +6018,45 @@ const generatePDFInvoice = (invoice, user) => {
 
       // Add company logo
       try {
-        const logoPath = path.join(__dirname, '..', 'public', 'image.png');
-        console.log('🔍 Looking for logo at:', logoPath);
-        console.log('🔍 Current directory:', __dirname);
+        // Try multiple logo files in order of preference
+        const logoPaths = [
+          path.join(__dirname, '..', 'public', 'logo192.png'),
+          path.join(__dirname, '..', 'public', 'Gaurav.png'),
+          path.join(__dirname, '..', 'public', 'our-approach.png'),
+          path.join(__dirname, '..', 'public', 'who-we-serve.png'),
+          path.join(__dirname, '..', 'public', 'image.png')
+        ];
         
-        if (fs.existsSync(logoPath)) {
-          console.log('✅ Logo found! Adding to PDF...');
-          // Add logo at the top right
-          doc.image(logoPath, {
-            fit: [120, 60],
-            align: 'right'
-          });
-          doc.moveDown(1);
-        } else {
-          console.log('❌ Logo not found at:', logoPath);
-          // Try alternative path
-          const altLogoPath = path.join(__dirname, '..', '..', 'public', 'image.png');
-          console.log('🔍 Trying alternative path:', altLogoPath);
-          if (fs.existsSync(altLogoPath)) {
-            console.log('✅ Logo found at alternative path!');
-            doc.image(altLogoPath, {
-              fit: [120, 60],
-              align: 'right'
-            });
-            doc.moveDown(1);
-          } else {
-            console.log('❌ Logo not found at alternative path either');
+        let logoAdded = false;
+        for (const logoPath of logoPaths) {
+          if (fs.existsSync(logoPath)) {
+            console.log('🔍 Trying logo at:', logoPath);
+            try {
+              // Add logo at the top right
+              doc.image(logoPath, {
+                fit: [120, 60],
+                align: 'right'
+              });
+              console.log('✅ Logo added successfully from:', logoPath);
+              logoAdded = true;
+              doc.moveDown(1);
+              break;
+            } catch (imageError) {
+              console.log('❌ Failed to load logo from:', logoPath, '- Error:', imageError.message);
+              continue;
+            }
           }
+        }
+        
+        if (!logoAdded) {
+          console.log('❌ No suitable logo found, using text fallback');
         }
       } catch (logoError) {
         console.log('❌ Error loading logo:', logoError.message);
       }
 
-      // Only add company name if logo fails
-      if (!fs.existsSync(path.join(__dirname, '..', 'public', 'image.png'))) {
+      // Only add company name if no logo was added
+      if (!logoAdded) {
         doc.fontSize(24)
            .font('Helvetica-Bold')
            .fillColor('#2563eb')
@@ -6535,40 +6595,45 @@ app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) =
 
     // Add company logo
     try {
-      const logoPath = path.join(__dirname, '..', 'public', 'image.png');
-      console.log('🔍 Looking for logo at:', logoPath);
-      console.log('🔍 Current directory:', __dirname);
+      // Try multiple logo files in order of preference
+      const logoPaths = [
+        path.join(__dirname, '..', 'public', 'logo192.png'),
+        path.join(__dirname, '..', 'public', 'Gaurav.png'),
+        path.join(__dirname, '..', 'public', 'our-approach.png'),
+        path.join(__dirname, '..', 'public', 'who-we-serve.png'),
+        path.join(__dirname, '..', 'public', 'image.png')
+      ];
       
-              if (fs.existsSync(logoPath)) {
-          console.log('✅ Logo found! Adding to PDF...');
-          // Add logo at the top right
-          doc.image(logoPath, {
-            fit: [120, 60],
-            align: 'right'
-          });
-          doc.moveDown(1);
-        } else {
-        console.log('❌ Logo not found at:', logoPath);
-        // Try alternative path
-        const altLogoPath = path.join(__dirname, '..', '..', 'public', 'image.png');
-        console.log('🔍 Trying alternative path:', altLogoPath);
-                  if (fs.existsSync(altLogoPath)) {
-            console.log('✅ Logo found at alternative path!');
-            doc.image(altLogoPath, {
+      let logoAdded = false;
+      for (const logoPath of logoPaths) {
+        if (fs.existsSync(logoPath)) {
+          console.log('🔍 Trying logo at:', logoPath);
+          try {
+            // Add logo at the top right
+            doc.image(logoPath, {
               fit: [120, 60],
               align: 'right'
             });
+            console.log('✅ Logo added successfully from:', logoPath);
+            logoAdded = true;
             doc.moveDown(1);
-          } else {
-          console.log('❌ Logo not found at alternative path either');
+            break;
+          } catch (imageError) {
+            console.log('❌ Failed to load logo from:', logoPath, '- Error:', imageError.message);
+            continue;
+          }
         }
+      }
+      
+      if (!logoAdded) {
+        console.log('❌ No suitable logo found, using text fallback');
       }
     } catch (logoError) {
       console.log('❌ Error loading logo:', logoError.message);
     }
 
-    // Only add company name if logo fails
-    if (!fs.existsSync(path.join(__dirname, '..', 'public', 'image.png'))) {
+    // Only add company name if no logo was added
+    if (!logoAdded) {
       doc.fontSize(24)
          .font('Helvetica-Bold')
          .fillColor('#2563eb')
@@ -7501,7 +7566,7 @@ app.post('/api/auth/signup', async (req, res) => {
     let existingUser = null;
     try {
       console.log('🔍 Checking MongoDB for existing user...');
-      existingUser = await User.findOne({ email });
+      existingUser = await User.findOne({ email }).maxTimeMS(10000);
       console.log('✅ MongoDB query completed');
     } catch (dbError) {
       console.log('❌ MongoDB not available, checking file-based storage...');

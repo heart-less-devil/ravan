@@ -32,6 +32,7 @@ import {
   Rocket,
   Crown
 } from 'lucide-react';
+import LoadingSpinner, { CompactSpinner } from './LoadingSpinner';
 
 const BDTrackerPanel = () => {
   const [entries, setEntries] = useState([]);
@@ -384,50 +385,13 @@ const BDTrackerPanel = () => {
 
   if (loading) {
     return (
-      <div className="h-full bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <div className="relative">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto"
-            />
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <FileSpreadsheet className="w-8 h-8 text-blue-600" />
-            </motion.div>
-          </div>
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-6 text-lg font-semibold text-gray-700"
-          >
-            Loading BD Tracker...
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="mt-4 flex justify-center space-x-1"
-          >
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
-                className="w-2 h-2 bg-blue-600 rounded-full"
-              />
-            ))}
-          </motion.div>
-        </motion.div>
+      <div className="h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+        <LoadingSpinner
+          size="large"
+          message="SYNCHRONIZING BD MATRIX..."
+          subMessage="Connecting to business development neural networks"
+          color="cyber"
+        />
       </div>
     );
   }
@@ -790,12 +754,7 @@ const BDTrackerPanel = () => {
               >
                 {isSubmitting ? (
                   <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                    </motion.div>
+                    <CompactSpinner size="small" color="cyber" />
                     <span>Saving...</span>
                   </>
                 ) : (
@@ -996,12 +955,7 @@ const BDTrackerPanel = () => {
                               className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
                             >
                               {isDeleting === entry.id ? (
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                >
-                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full" />
-                                </motion.div>
+                                <CompactSpinner size="small" color="cyber" />
                               ) : (
                                 <Trash2 className="w-4 h-4" />
                               )}

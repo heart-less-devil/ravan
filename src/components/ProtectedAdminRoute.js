@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import LoadingSpinner from './LoadingSpinner';
 
 const ProtectedAdminRoute = ({ children }) => {
   const token = sessionStorage.getItem('token');
@@ -50,7 +51,15 @@ const ProtectedAdminRoute = ({ children }) => {
   console.log('ProtectedAdminRoute - User email:', user?.email);
   
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <LoadingSpinner
+        size="large"
+        message="VERIFYING ADMIN ACCESS..."
+        subMessage="Scanning biometric signatures and security clearance"
+        fullScreen={true}
+        color="cyber"
+      />
+    );
   }
   
   // Check if user is logged in

@@ -17,6 +17,11 @@ const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : 
 // Validate Stripe is loaded
 if (!stripePromise) {
   console.error('❌ Failed to load Stripe - check your publishable key');
+  console.error('🔧 To fix this issue:');
+  console.error('  1. Create a .env file in your project root');
+  console.error('  2. Add: REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key_here');
+  console.error('  3. Replace with your actual Stripe test/live key');
+  console.error('  4. Restart your development server');
 }
 
 // Utility function to get user email from backend
@@ -1023,10 +1028,19 @@ const StripePayment = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertCircle className="w-8 h-8 text-red-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment System Error</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment System Configuration Error</h2>
             <p className="text-gray-600 mb-4">
-              Stripe payment system is not properly configured. Please check your environment variables.
+              Stripe payment system is not properly configured. The Stripe publishable key is missing or invalid.
             </p>
+            <div className="bg-gray-50 p-4 rounded-lg mb-4 text-left">
+              <h3 className="font-semibold text-gray-800 mb-2">To fix this issue:</h3>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                <li>Create a <code className="bg-gray-200 px-1 rounded">.env</code> file in your project root</li>
+                <li>Add: <code className="bg-gray-200 px-1 rounded">REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here</code></li>
+                <li>Replace with your actual Stripe test/live key</li>
+                <li>Restart your development server</li>
+              </ol>
+            </div>
             <button
               onClick={onClose}
               className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg"

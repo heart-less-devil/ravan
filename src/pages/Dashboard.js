@@ -78,6 +78,7 @@ import { IconInfoCircle } from '@tabler/icons-react';
 import CustomerProfile from './CustomerProfile';
 import SuspensionNotice from '../components/SuspensionNotice';
 import SubscriptionManager from '../components/SubscriptionManager';
+import LoadingSpinner, { CompactSpinner } from '../components/LoadingSpinner';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -634,18 +635,14 @@ const Dashboard = () => {
 
   if (!user || isInitialLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-blue-600 rounded-full animate-pulse"></div>
-            </div>
-          </div>
-          <p className="text-gray-600 text-lg font-medium">Loading your dashboard...</p>
-          <p className="text-gray-500 text-sm mt-2">Optimizing your experience</p>
-        </div>
-      </div>
+      <LoadingSpinner
+        size="xl"
+        message="Loading Dashboard..."
+        subMessage="Please wait while we load your data"
+        fullScreen={true}
+        color="cyber"
+        showProgress={false}
+      />
     );
   }
 
@@ -807,7 +804,7 @@ const Dashboard = () => {
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-blue-600 transition-colors duration-200"
                 >
                   {searchLoading ? (
-                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <CompactSpinner size="small" color="cyber" />
                   ) : (
                     <Search className="w-5 h-5" />
                   )}
@@ -1243,30 +1240,30 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
         ))}
           </div> */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-7xl mx-auto">
         {/* Enhanced Quick Actions */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+          className="bg-white rounded-xl p-4 shadow-lg border border-gray-100"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-900">Quick Actions</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
         </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {quickActions.map((action, index) => (
               <Link key={index} to={action.path}>
                 <motion.div 
-                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 text-center hover:shadow-lg transition-all duration-300 border border-gray-200"
+                  className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 text-center hover:shadow-lg transition-all duration-300 border border-gray-200"
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <div className={`w-12 h-12 bg-gradient-to-br ${action.gradient} rounded-2xl flex items-center justify-center mx-auto mb-3`}>
-                    <action.icon className="w-6 h-6 text-white" />
+                  <div className={`w-10 h-10 bg-gradient-to-br ${action.gradient} rounded-xl flex items-center justify-center mx-auto mb-2`}>
+                    <action.icon className="w-5 h-5 text-white" />
                   </div>
-                  <p className="font-semibold text-gray-900 mb-1">{action.name}</p>
-                  <p className="text-xs text-gray-600">{action.description}</p>
+                  <p className="font-semibold text-gray-900 mb-1 text-sm">{action.name}</p>
+                  <p className="text-xs text-gray-600 leading-tight">{action.description}</p>
                 </motion.div>
               </Link>
             ))}
@@ -1278,44 +1275,44 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100"
+          className="bg-white rounded-xl p-4 shadow-lg border border-gray-100"
         >
-                      <div className="flex items-center space-x-4 mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
+                      <div className="flex items-center space-x-3 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-lg">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">{user?.name || 'User'}</h3>
+                <h3 className="text-lg font-bold text-gray-900">{user?.name || 'User'}</h3>
                 <p className="text-xs text-gray-500 mt-1">
                   Member since: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}
                 </p>
               </div>
             </div>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
-              <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${userPaymentStatus?.hasPaid ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-                <span className="text-sm font-medium text-gray-700">Current Plan</span>
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
               <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${userPaymentStatus?.hasPaid ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+                <span className="text-xs font-medium text-gray-700">Current Plan</span>
+              </div>
+              <div className="flex items-center space-x-1">
                 {userPaymentStatus?.hasPaid ? (
                   <>
-                    <CreditCard className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-semibold text-green-700">{userPaymentStatus.currentPlan || 'Premium'}</span>
+                    <CreditCard className="w-3 h-3 text-green-600" />
+                    <span className="text-xs font-semibold text-green-700">{userPaymentStatus.currentPlan || 'Premium'}</span>
                   </>
                 ) : (
                   <>
-                    <Gift className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-orange-700">Free Trial</span>
+                    <Gift className="w-3 h-3 text-orange-600" />
+                    <span className="text-xs font-semibold text-orange-700">Free Trial</span>
                   </>
                 )}
               </div>
             </div>
             
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
-              <span className="text-sm font-medium text-gray-700">Credits Status</span>
-              <span className="text-lg font-bold text-blue-600">
+            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <span className="text-xs font-medium text-gray-700">Credits Status</span>
+              <span className="text-sm font-bold text-blue-600">
                 {userPaymentStatus?.hasPaid ? (
                   `${userCredits} credits`
                 ) : (
@@ -1324,9 +1321,9 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
               </span>
             </div>
             
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-xl">
-              <span className="text-sm font-medium text-gray-700">Trial Status</span>
-              <span className="text-sm font-semibold text-orange-600">
+            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+              <span className="text-xs font-medium text-gray-700">Trial Status</span>
+              <span className="text-xs font-semibold text-orange-600">
                 {userPaymentStatus?.hasPaid ? (
                   'Paid Plan'
                 ) : (
@@ -1335,9 +1332,9 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
               </span>
             </div>
             
-            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl">
-              <span className="text-sm font-medium text-gray-700">Credits Used</span>
-              <span className="text-sm font-semibold text-purple-600">
+            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+              <span className="text-xs font-medium text-gray-700">Credits Used</span>
+              <span className="text-xs font-semibold text-purple-600">
                 {userPaymentStatus?.hasPaid ? (
                   `${Math.max(0, (userPaymentStatus.currentPlan === 'monthly' ? 50 : 100) - userCredits)} / ${userPaymentStatus.currentPlan === 'monthly' ? 50 : 100}`
                 ) : (
@@ -2044,7 +2041,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-all duration-200 flex items-center space-x-2 disabled:opacity-50"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <CompactSpinner size="small" color="cyber" />
               ) : (
                 <Search className="w-5 h-5" />
               )}
@@ -4589,12 +4586,13 @@ const PricingAnalyticsPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading Pricing Analytics...</p>
-        </div>
-      </div>
+      <LoadingSpinner
+        size="xl"
+        message="Loading Market Data..."
+        subMessage="Please wait while we analyze the data"
+        fullScreen={true}
+        color="cyber"
+      />
     );
   }
 

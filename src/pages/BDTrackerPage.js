@@ -17,6 +17,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const BDTrackerPage = () => {
   const [entries, setEntries] = useState([]);
@@ -442,12 +443,13 @@ const BDTrackerPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading BD Tracker...</p>
-        </div>
-      </div>
+      <LoadingSpinner
+        size="xl"
+        message="INITIALIZING BD TRACKER..."
+        subMessage="Accessing business development neural networks"
+        fullScreen={true}
+        color="cyber"
+      />
     );
   }
 

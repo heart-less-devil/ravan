@@ -5,6 +5,7 @@ import {
   Search as SearchIcon, 
   Info
 } from 'lucide-react';
+import LoadingSpinner, { CompactSpinner } from '../components/LoadingSpinner';
 
 const Search = () => {
   const location = useLocation();
@@ -360,7 +361,7 @@ const Search = () => {
                 <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
                 {searchLoading && (
                   <div className="flex items-center space-x-2 text-blue-600">
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <CompactSpinner size="small" color="cyber" />
                     <span className="text-sm">Searching...</span>
                   </div>
                 )}
@@ -369,6 +370,17 @@ const Search = () => {
               {searchError && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                   <p className="text-red-800">{searchError}</p>
+                </div>
+              )}
+
+              {searchLoading && (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner
+                    size="large"
+                    message="SCANNING NEURAL DATABASE..."
+                    subMessage="Executing advanced search algorithms across quantum indexes"
+                    color="cyber"
+                  />
                 </div>
               )}
 

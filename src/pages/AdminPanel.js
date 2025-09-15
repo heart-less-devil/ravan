@@ -800,7 +800,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
             </div>
             <div className="flex items-center space-x-4">
               {/* MongoDB Atlas Data Status */}
-              <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20">
+              <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20" style={{ display: 'none' }}>
                 <div className={`w-3 h-3 rounded-full ${comprehensiveData ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></div>
                 <span className="text-white text-sm font-medium">
                   {comprehensiveData ? 'MongoDB Atlas' : 'Loading...'}
@@ -1004,6 +1004,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8"
+            style={{ display: 'none' }}
           >
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -1049,7 +1050,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
         )}
 
         {/* MongoDB Atlas Connection Status */}
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-6 p-6">
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-6 p-6" style={{ display: 'none' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
@@ -1256,7 +1257,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                 </div>
 
                 {uploadedData.length === 0 ? (
-                  <div className="text-center py-12">
+                  <div className="text-center py-12" style={{ display: 'none' }}>
                     <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Data Available</h3>
                     <p className="text-gray-600 mb-4">Upload your first Excel file to see data here</p>
@@ -1483,7 +1484,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                     <p className="text-gray-600">Fetching latest data from MongoDB Atlas...</p>
                   </div>
                 ) : !comprehensiveData ? (
-                  <div className="bg-white rounded-lg shadow p-8 text-center">
+                  <div className="bg-white rounded-lg shadow p-8 text-center" style={{ display: 'none' }}>
                     <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <AlertTriangle className="w-8 h-8 text-yellow-600" />
                     </div>

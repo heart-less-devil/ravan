@@ -61,8 +61,33 @@ const getBackendURL = () => {
   return possibleURLs[0]; // Use your correct backend as default
 };
 
-// Stripe Configuration
-export const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_your_stripe_publishable_key_here';
+// Stripe Configuration with better error handling
+const getStripeKey = () => {
+  const key = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+  
+  if (!key) {
+    console.error('❌ REACT_APP_STRIPE_PUBLISHABLE_KEY is not set in environment variables');
+    console.error('🔧 Please create a .env file with: REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here');
+    return null;
+  }
+  
+  if (key.includes('your_stripe_publishable_key_here') || key.includes('your_key_here')) {
+    console.error('❌ Stripe key is still using placeholder value');
+    console.error('🔧 Please replace with your actual Stripe publishable key');
+    return null;
+  }
+  
+  if (!key.startsWith('pk_test_') && !key.startsWith('pk_live_')) {
+    console.error('❌ Invalid Stripe publishable key format');
+    console.error('🔧 Stripe keys should start with pk_test_ or pk_live_');
+    return null;
+  }
+  
+  console.log('✅ Valid Stripe publishable key found');
+  return key;
+};
+
+export const STRIPE_PUBLISHABLE_KEY = getStripeKey();
 
 // Environment check
 export const isDevelopment = process.env.NODE_ENV === 'development';

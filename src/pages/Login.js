@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { CompactSpinner } from '../components/LoadingSpinner';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -468,7 +469,7 @@ const Login = () => {
                       className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-xl flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {loading ? (
-                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <CompactSpinner size="medium" color="cyber" />
                       ) : (
                         <>
                           <span className="text-lg">Sign In</span>
@@ -657,7 +658,7 @@ const Login = () => {
                   className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-4 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200"
                 >
                   {isForgotLoading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <CompactSpinner size="small" color="cyber" />
                   ) : (
                     <>
                       <span>Send Verification Code</span>
@@ -768,7 +769,7 @@ const Login = () => {
                   className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-medium py-3 px-4 rounded-lg hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transition-all duration-200"
                 >
                   {isVerifying ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <CompactSpinner size="small" color="cyber" />
                   ) : (
                     <>
                       <span>Reset Password</span>

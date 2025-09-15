@@ -17,6 +17,7 @@ import {
   User
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import LoadingSpinner, { CompactSpinner } from './LoadingSpinner';
 
 const SubscriptionManager = ({ user, onClose, onPlanUpdate }) => {
   const [loading, setLoading] = useState(false);
@@ -178,10 +179,12 @@ const SubscriptionManager = ({ user, onClose, onPlanUpdate }) => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-8">
-          <div className="flex items-center space-x-3">
-            <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
-            <span>Loading subscription data...</span>
-          </div>
+          <LoadingSpinner
+            size="medium"
+            message="ACCESSING SUBSCRIPTION MATRIX..."
+            subMessage="Decrypting payment protocols and billing history"
+            color="cyber"
+          />
         </div>
       </div>
     );
