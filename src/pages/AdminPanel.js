@@ -1086,32 +1086,32 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
         </div>
 
         {/* MongoDB Atlas Data Summary */}
-        {comprehensiveData && (
+        {comprehensiveData && comprehensiveData.summary && (
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-6 p-6">
             <h3 className="text-lg font-semibold text-white mb-4">📊 MongoDB Atlas Data Summary</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               <div className="bg-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-white">{comprehensiveData.summary.totalUsers}</div>
+                <div className="text-2xl font-bold text-white">{comprehensiveData?.summary?.totalUsers || 0}</div>
                 <div className="text-gray-300 text-sm">Total Users</div>
               </div>
               <div className="bg-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-green-400">{comprehensiveData.summary.activeUsers}</div>
+                <div className="text-2xl font-bold text-green-400">{comprehensiveData?.summary?.activeUsers || 0}</div>
                 <div className="text-gray-300 text-sm">Active Users</div>
               </div>
               <div className="bg-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-blue-400">{comprehensiveData.summary.verifiedUsers}</div>
+                <div className="text-2xl font-bold text-blue-400">{comprehensiveData?.summary?.verifiedUsers || 0}</div>
                 <div className="text-gray-300 text-sm">Verified Users</div>
               </div>
               <div className="bg-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-purple-400">{comprehensiveData.summary.paidUsers}</div>
+                <div className="text-2xl font-bold text-purple-400">{comprehensiveData?.summary?.paidUsers || 0}</div>
                 <div className="text-gray-300 text-sm">Paid Users</div>
               </div>
               <div className="bg-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-orange-400">{comprehensiveData.summary.trialUsers}</div>
+                <div className="text-2xl font-bold text-orange-400">{comprehensiveData?.summary?.trialUsers || 0}</div>
                 <div className="text-gray-300 text-sm">Trial Users</div>
               </div>
               <div className="bg-white/10 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-red-400">{comprehensiveData.summary.potentialCustomers}</div>
+                <div className="text-2xl font-bold text-red-400">{comprehensiveData?.summary?.potentialCustomers || 0}</div>
                 <div className="text-gray-300 text-sm">Potential Customers</div>
               </div>
             </div>
