@@ -3871,8 +3871,18 @@ const PricingPage = () => {
   // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
   const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => ({
     ...plan,
-    features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : []),
-    icon: plan.icon || iconMap[plan.id] || iconMap[plan.name?.toLowerCase()] || Building2
+    // Map yearlyPrice to annualPrice for consistency
+    annualPrice: plan.annualPrice || plan.yearlyPrice || 0,
+    // Ensure features are arrays
+    features: Array.isArray(plan.features) ? plan.features : (plan.features ? plan.features.split('\n').filter(f => f.trim()) : []),
+    // Map icon properly
+    icon: plan.icon || iconMap[plan.id] || iconMap[plan.name?.toLowerCase()] || Building2,
+    // Ensure popular flag is boolean
+    popular: Boolean(plan.popular || plan.isPopular),
+    // Ensure button text exists
+    buttonText: plan.buttonText || (plan.monthlyPrice === 0 ? 'Get Started' : 'Choose Plan'),
+    // Ensure button style exists
+    buttonStyle: plan.buttonStyle || (plan.monthlyPrice === 0 ? 'outline' : 'primary')
   }));
 
   const features = [
@@ -4030,10 +4040,10 @@ const PricingPage = () => {
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {plans.map((plan, index) => (
           <motion.div
-            key={plan.id}
+            key={plan.id || plan._id || index}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -4048,15 +4058,15 @@ const PricingPage = () => {
               </div>
             )}
             
-            <div className={`card p-8 h-full bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 shadow-large flex flex-col`}>
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <plan.icon className="w-8 h-8 text-primary-600" />
+            <div className={`card p-6 h-full bg-white border-2 ${plan.popular ? 'border-purple-300 shadow-xl' : 'border-gray-200 shadow-lg'} rounded-2xl flex flex-col hover:shadow-xl transition-all duration-300`}>
+              <div className="text-center mb-6">
+                <div className={`w-16 h-16 ${plan.popular ? 'bg-gradient-to-br from-purple-100 to-pink-100' : 'bg-gradient-to-br from-blue-100 to-indigo-100'} rounded-full mx-auto mb-4 flex items-center justify-center`}>
+                  <plan.icon className={`w-8 h-8 ${plan.popular ? 'text-purple-600' : 'text-blue-600'}`} />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   {plan.name}
                 </h3>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 mb-4 text-sm">
                   {plan.description}
                 </p>
                 <div className="mb-6">
@@ -4075,11 +4085,11 @@ const PricingPage = () => {
                 </div>
               </div>
 
-              <div className="space-y-4 mb-8">
+              <div className="space-y-3 mb-6 flex-grow">
                 {plan.features.map((feature, featureIndex) => (
                   <div key={featureIndex} className="flex items-start space-x-3">
-                    <Check className="w-5 h-5 text-accent-500 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-700 text-base">
+                    <Check className={`w-4 h-4 ${plan.popular ? 'text-purple-500' : 'text-green-500'} mt-1 flex-shrink-0`} />
+                    <span className="text-gray-700 text-sm leading-relaxed">
                       {feature.includes('Mr. Vik') ? (
                         <>
                           {feature.split('Mr. Vik')[0]}
@@ -4107,9 +4117,11 @@ const PricingPage = () => {
                 className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-300 mt-auto ${
                   (plan.id === 'free' && userCurrentPlan === 'free') || userCurrentPlan === plan.id
                     ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
-                    : plan.buttonStyle === 'primary' 
-                      ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-soft hover:shadow-medium' 
-                      : 'border-2 border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300'
+                    : plan.popular
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg'
+                      : plan.buttonStyle === 'primary' 
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg' 
+                        : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
                 }`}
                 onClick={() => handleSelectPlan(plan)}
               >

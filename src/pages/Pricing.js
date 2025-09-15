@@ -150,8 +150,18 @@ const Pricing = () => {
   // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
   const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => ({
     ...plan,
-    features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : []),
-    icon: plan.icon || iconMap[plan.id] || iconMap[plan.name?.toLowerCase()] || Building2
+    // Map yearlyPrice to annualPrice for consistency
+    annualPrice: plan.annualPrice || plan.yearlyPrice || 0,
+    // Ensure features are arrays
+    features: Array.isArray(plan.features) ? plan.features : (plan.features ? plan.features.split('\n').filter(f => f.trim()) : []),
+    // Map icon properly
+    icon: plan.icon || iconMap[plan.id] || iconMap[plan.name?.toLowerCase()] || Building2,
+    // Ensure popular flag is boolean
+    popular: Boolean(plan.popular || plan.isPopular),
+    // Ensure button text exists
+    buttonText: plan.buttonText || (plan.monthlyPrice === 0 ? 'Get Started' : 'Choose Plan'),
+    // Ensure button style exists
+    buttonStyle: plan.buttonStyle || (plan.monthlyPrice === 0 ? 'outline' : 'primary')
   }));
 
   const features = [
