@@ -138,10 +138,20 @@ const Pricing = () => {
     }
   }, []);
 
-  // Use dynamic pricing plans from API and ensure features are arrays
+  // Icon mapping for plans
+  const iconMap = {
+    'free': Building2,
+    'basic': Users,
+    'premium': Target,
+    'pro': Target,
+    'enterprise': Building2
+  };
+
+  // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
   const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => ({
     ...plan,
-    features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+    features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : []),
+    icon: plan.icon || iconMap[plan.id] || iconMap[plan.name?.toLowerCase()] || Building2
   }));
 
   const features = [
