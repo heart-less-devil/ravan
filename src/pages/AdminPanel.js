@@ -434,7 +434,7 @@ const AdminPanel = () => {
   };
 
   const handleDeleteRecord = (id) => {
-    const updatedData = uploadedData.filter(item => item.id !== id);
+    const updatedData = uploadedData.filter(item => (item.id || '') !== id);
     setUploadedData(updatedData);
     calculateStats(updatedData);
   };
@@ -604,7 +604,7 @@ const AdminPanel = () => {
     if (selectedItems.length === uploadedData.length) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(uploadedData.map(item => item.id));
+      setSelectedItems(uploadedData.map(item => item.id || '').filter(id => id !== ''));
     }
   };
 
@@ -635,9 +635,9 @@ const AdminPanel = () => {
 
         if (response.ok) {
           // Remove deleted items from state
-          setUploadedData(prev => prev.filter(item => !selectedItems.includes(item.id)));
+          setUploadedData(prev => prev.filter(item => !selectedItems.includes(item.id || '')));
           setSelectedItems([]);
-          calculateStats(uploadedData.filter(item => !selectedItems.includes(item.id)));
+          calculateStats(uploadedData.filter(item => !selectedItems.includes(item.id || '')));
         } else {
           throw new Error('Failed to delete records');
         }
@@ -1085,8 +1085,8 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
           </div>
         </div>
 
-        {/* MongoDB Atlas Data Summary */}
-        {comprehensiveData && comprehensiveData.summary && (
+        {/* MongoDB Atlas Data Summary - HIDDEN */}
+        {false && comprehensiveData && comprehensiveData.summary && (
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 mb-6 p-6">
             <h3 className="text-lg font-semibold text-white mb-4">📊 MongoDB Atlas Data Summary</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -1295,8 +1295,8 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
                                 type="checkbox"
-                                checked={selectedItems.includes(item.id)}
-                                onChange={() => handleSelectItem(item.id)}
+                                checked={selectedItems.includes(item.id || '')}
+                                onChange={() => handleSelectItem(item.id || '')}
                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                               />
                             </td>
@@ -1330,7 +1330,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                   <Edit className="w-4 h-4" />
                                 </button>
                                 <button 
-                                  onClick={() => handleDeleteRecord(item.id)}
+                                  onClick={() => handleDeleteRecord(item.id || '')}
                                   className="text-red-600 hover:text-red-900 transition-colors duration-200 cursor-pointer"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1521,11 +1521,11 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{activity.email}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    activity.action.includes('Login') ? 'bg-green-100 text-green-800' : 
-                                    activity.action.includes('Registration') ? 'bg-blue-100 text-blue-800' :
+                                    activity.action && activity.action.includes('Login') ? 'bg-green-100 text-green-800' : 
+                                    activity.action && activity.action.includes('Registration') ? 'bg-blue-100 text-blue-800' :
                                     'bg-yellow-100 text-yellow-800'
                                   }`}>
-                                    {activity.action}
+                                    {activity.action || 'N/A'}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

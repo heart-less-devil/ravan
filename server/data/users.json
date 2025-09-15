@@ -46,8 +46,8 @@
     "role": "user",
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
-    "currentPlan": "daily-12",
-    "currentCredits": 1,
+    "currentPlan": "free",
+    "currentCredits": 0,
     "lastCreditRenewal": "2025-09-05T19:12:55.232Z",
     "nextCreditRenewal": "2025-10-05T19:12:55.232Z",
     "company": "Company",
@@ -75,7 +75,7 @@
     ],
     "subscriptionId": "sub_1S0zusLf1iznKy11yxNSf5E5",
     "subscriptionEndAt": "2025-09-09T07:06:31.834Z",
-    "subscriptionOnHold": false,
+    "subscriptionOnHold": true,
     "lastPaymentError": "2025-09-08T09:30:10.387Z",
     "paymentErrorCount": 13,
     "lastPaymentErrorMessage": "Invalid API Key provided: sk_live_********************3JJE",
@@ -116,7 +116,9 @@
       "outreachDates": "Outreach Context & Dates",
       "feedback": "Feedback",
       "actions": "Actions"
-    }
+    },
+    "subscriptionStatus": "cancelled",
+    "cancelledAt": "2025-09-15T10:06:29.119Z"
   },
   {
     "id": 5,

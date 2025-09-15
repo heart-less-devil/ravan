@@ -133,7 +133,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 
     // Validate amount
     if (!amount || amount <= 0) {
-      const errorMsg = 'Invalid payment amount. Please try again.';
+      const errorMsg = 'Invalid payment amount. Free plans should not require payment processing.';
       console.error('❌ Invalid amount:', amount);
       setError(errorMsg);
       onError && onError(errorMsg);
@@ -1019,6 +1019,14 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
 };
 
 const StripePayment = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
+  // Check if this is a free plan - should not render payment modal
+  if (plan && plan.id === 'free') {
+    console.log('❌ StripePayment component should not be used for free plans');
+    onError && onError('Free plans should not require payment processing');
+    onClose && onClose();
+    return null;
+  }
+
   // Check if Stripe is properly loaded
   if (!stripePromise) {
     return (

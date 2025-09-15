@@ -70,13 +70,19 @@ const PricingManagement = () => {
       
       const method = editingPlan ? 'PUT' : 'POST';
       
+      // Process features to ensure they're in the correct format
+      const processedData = {
+        ...formData,
+        features: formData.features ? formData.features.split('\n').filter(f => f.trim()) : []
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(processedData)
       });
 
       if (!response.ok) {
@@ -111,7 +117,7 @@ const PricingManagement = () => {
       monthlyPrice: plan.monthlyPrice?.toString() || '',
       yearlyPrice: plan.yearlyPrice?.toString() || '',
       credits: plan.credits?.toString() || '',
-      features: plan.features || '',
+      features: Array.isArray(plan.features) ? plan.features.join('\n') : (plan.features || ''),
       description: plan.description || '',
       isPopular: plan.isPopular || false,
       isActive: plan.isActive !== false
@@ -426,7 +432,7 @@ const PricingManagement = () => {
                       <div className="mb-4">
                         <h4 className="text-sm font-medium text-gray-700 mb-2">Features:</h4>
                         <ul className="space-y-1">
-                          {plan.features.split('\n').filter(f => f.trim()).map((feature, idx) => (
+                          {(Array.isArray(plan.features) ? plan.features : plan.features.split('\n')).filter(f => f.trim()).map((feature, idx) => (
                             <li key={idx} className="flex items-center text-sm text-gray-600">
                               <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />

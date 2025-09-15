@@ -423,6 +423,7 @@ const Dashboard = () => {
     }
   }, [location.pathname, showCustomerProfile]);
 
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     
@@ -3868,17 +3869,17 @@ const PricingPage = () => {
     'enterprise': Building2
   };
 
+  // Get the correct icon component
+  const getIcon = (plan) => {
+    if (plan.icon && typeof plan.icon === 'function') {
+      return plan.icon;
+    }
+    const iconKey = plan.id || plan.name?.toLowerCase();
+    return iconMap[iconKey] || Building2;
+  };
+
   // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
   const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => {
-    // Get the correct icon component
-    const getIcon = () => {
-      if (plan.icon && typeof plan.icon === 'function') {
-        return plan.icon;
-      }
-      const iconKey = plan.id || plan.name?.toLowerCase();
-      return iconMap[iconKey] || Building2;
-    };
-
     return {
       ...plan,
       // Map yearlyPrice to annualPrice for consistency
@@ -3886,7 +3887,7 @@ const PricingPage = () => {
       // Ensure features are arrays
       features: Array.isArray(plan.features) ? plan.features : (plan.features ? plan.features.split('\n').filter(f => f.trim()) : []),
       // Map icon properly
-      icon: getIcon(),
+      icon: getIcon(plan),
       // Ensure popular flag is boolean
       popular: Boolean(plan.popular || plan.isPopular),
       // Ensure button text exists
@@ -3895,6 +3896,15 @@ const PricingPage = () => {
       buttonStyle: plan.buttonStyle || (plan.monthlyPrice === 0 ? 'outline' : 'primary')
     };
   });
+
+  // Safety check: prevent payment modal for free plans
+  useEffect(() => {
+    if (selectedPlan && selectedPlan.id === 'free' && showPayment) {
+      console.log('🚨 Safety check: Free plan detected with showPayment=true, resetting...');
+      setShowPayment(false);
+      setSelectedPlan(null);
+    }
+  }, [selectedPlan, showPayment]);
 
   const features = [
     {
@@ -3920,9 +3930,54 @@ const PricingPage = () => {
   ];
 
   const handleSelectPlan = async (plan) => {
+    console.log('🎯 handleSelectPlan called with plan:', plan);
+    
     if (plan.id === 'free') {
-      // Handle free plan
-      setPaymentStatus('Free plan activated!');
+      console.log('🆓 Free plan selected - activating without payment');
+      
+      // Reset payment modal state
+      setSelectedPlan(null);
+      setShowPayment(false);
+      
+      // Handle free plan - activate without payment
+      try {
+        setPaymentStatus('Activating free plan...');
+        
+        const token = sessionStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/api/auth/activate-free-plan`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUserCurrentPlan('free');
+          sessionStorage.setItem('userCurrentPlan', 'free');
+          setPaymentStatus('Free plan activated successfully!');
+          
+          // Refresh user data
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          const errorData = await response.json();
+          setPaymentStatus(`Error: ${errorData.message || 'Failed to activate free plan'}`);
+        }
+      } catch (error) {
+        console.error('Error activating free plan:', error);
+        setPaymentStatus('Error: Failed to activate free plan. Please try again.');
+      }
+      return;
+    }
+    
+    console.log('💳 Paid plan selected - loading payment modal');
+    
+    // Double check - don't show payment modal for free plans
+    if (plan.id === 'free') {
+      console.log('❌ Free plan detected in paid plan section - this should not happen');
       return;
     }
     
@@ -4051,7 +4106,7 @@ const PricingPage = () => {
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {plans.map((plan, index) => (
           <motion.div
             key={plan.id || plan._id || index}
@@ -4069,63 +4124,63 @@ const PricingPage = () => {
               </div>
             )}
             
-            <div className={`card p-6 h-full bg-white border-2 ${plan.popular ? 'border-purple-300 shadow-xl' : 'border-gray-200 shadow-lg'} rounded-2xl flex flex-col hover:shadow-xl transition-all duration-300`}>
-              <div className="text-center mb-6">
-                <div className={`w-16 h-16 ${plan.popular ? 'bg-gradient-to-br from-purple-100 to-pink-100' : 'bg-gradient-to-br from-blue-100 to-indigo-100'} rounded-full mx-auto mb-4 flex items-center justify-center`}>
-                  <plan.icon className={`w-8 h-8 ${plan.popular ? 'text-purple-600' : 'text-blue-600'}`} />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  {plan.name}
-                </h3>
-                <p className="text-gray-600 mb-4 text-sm">
-                  {plan.description}
-                </p>
-                <div className="mb-6">
-                  <div className="text-sm text-gray-600 mb-1">{plan.credits}</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
-                  </div>
-                  {isAnnual && plan.monthlyPrice > 0 && (
-                    <div className="text-sm text-green-600 font-medium mt-1">
-                      Save ${(plan.monthlyPrice * 12) - plan.annualPrice}/year
-                    </div>
-                  )}
-                </div>
-              </div>
+                 <div className={`card p-4 h-full bg-white border-2 ${plan.popular ? 'border-purple-300 shadow-xl' : 'border-gray-200 shadow-lg'} rounded-xl flex flex-col hover:shadow-xl transition-all duration-300`}>
+                   <div className="text-center mb-4">
+                     <div className={`w-12 h-12 ${plan.popular ? 'bg-gradient-to-br from-purple-100 to-pink-100' : 'bg-gradient-to-br from-blue-100 to-indigo-100'} rounded-full mx-auto mb-3 flex items-center justify-center`}>
+                       <plan.icon className={`w-6 h-6 ${plan.popular ? 'text-purple-600' : 'text-blue-600'}`} />
+                     </div>
+                     <h3 className="text-lg font-bold text-gray-900 mb-1">
+                       {plan.name}
+                     </h3>
+                     <p className="text-gray-600 mb-3 text-xs">
+                       {plan.description}
+                     </p>
+                     <div className="mb-4">
+                       <div className="text-xs text-gray-600 mb-1">{plan.credits}</div>
+                       <div className="text-xl font-bold text-gray-900">
+                         {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                       </div>
+                       <div className="text-xs text-gray-500">
+                         {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
+                       </div>
+                       {isAnnual && plan.monthlyPrice > 0 && (
+                         <div className="text-xs text-green-600 font-medium mt-1">
+                           Save ${(plan.monthlyPrice * 12) - plan.annualPrice}/year
+                         </div>
+                       )}
+                     </div>
+                   </div>
 
-              <div className="space-y-3 mb-6 flex-grow">
-                {plan.features.map((feature, featureIndex) => (
-                  <div key={featureIndex} className="flex items-start space-x-3">
-                    <Check className={`w-4 h-4 ${plan.popular ? 'text-purple-500' : 'text-green-500'} mt-1 flex-shrink-0`} />
-                    <span className="text-gray-700 text-sm leading-relaxed">
-                      {feature.includes('Mr. Vik') ? (
-                        <>
-                          {feature.split('Mr. Vik')[0]}
-                          <a 
-                            href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 underline font-medium"
-                          >
-                            Mr. Vik
-                          </a>
-                          {feature.split('Mr. Vik')[1]}
-                        </>
-                      ) : (
-                        feature
-                      )}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                   <div className="space-y-2 mb-4 flex-grow">
+                     {plan.features.map((feature, featureIndex) => (
+                       <div key={featureIndex} className="flex items-start space-x-2">
+                         <Check className={`w-3 h-3 ${plan.popular ? 'text-purple-500' : 'text-green-500'} mt-1 flex-shrink-0`} />
+                         <span className="text-gray-700 text-xs leading-tight">
+                           {feature.includes('Mr. Vik') ? (
+                             <>
+                               {feature.split('Mr. Vik')[0]}
+                               <a 
+                                 href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                                 className="text-blue-600 hover:text-blue-800 underline font-medium"
+                               >
+                                 Mr. Vik
+                               </a>
+                               {feature.split('Mr. Vik')[1]}
+                             </>
+                           ) : (
+                             feature
+                           )}
+                         </span>
+                       </div>
+                     ))}
+                   </div>
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-300 mt-auto ${
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto ${
                   (plan.id === 'free' && userCurrentPlan === 'free') || userCurrentPlan === plan.id
                     ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
                     : plan.popular
@@ -4134,12 +4189,18 @@ const PricingPage = () => {
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg' 
                         : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
                 }`}
-                onClick={() => handleSelectPlan(plan)}
+                onClick={() => {
+                  // Don't allow clicking on current plan
+                  if (plan.id === 'free' && userCurrentPlan === 'free') {
+                    return;
+                  }
+                  handleSelectPlan(plan);
+                }}
               >
                 {(() => {
                   // Free plan logic
                   if (plan.id === 'free') {
-                    return userCurrentPlan === 'free' ? 'Current Plan' : 'Current Plan';
+                    return userCurrentPlan === 'free' ? 'Current Plan' : 'Get Started';
                   }
                   
                   // Daily Test plan logic
@@ -4202,7 +4263,7 @@ const PricingPage = () => {
       </div>
 
       {/* Payment Modal */}
-      {showPayment && selectedPlan && StripePaymentComponent && (
+      {showPayment && selectedPlan && selectedPlan.id !== 'free' && StripePaymentComponent && (
         <StripePaymentComponent
           plan={selectedPlan}
           isAnnual={isAnnual}
@@ -4210,6 +4271,13 @@ const PricingPage = () => {
           onError={handlePaymentError}
           onClose={() => setShowPayment(false)}
         />
+      )}
+      
+      {/* Debug info for free plan */}
+      {selectedPlan && selectedPlan.id === 'free' && (
+        <div className="fixed top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded-lg shadow-lg z-50">
+          Debug: Free plan selected - should not show payment modal
+        </div>
       )}
       
       {/* Payment Status */}

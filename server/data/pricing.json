@@ -1,1 +1,45 @@
-[]
+[
+  {
+    "_id": "plan_1757916034022_1",
+    "name": "Free",
+    "monthlyPrice": 0,
+    "yearlyPrice": 0,
+    "credits": 5,
+    "features": [
+      "Basic access",
+      "5 credits per month",
+      "Limited features"
+    ],
+    "description": "Perfect for getting started",
+    "isPopular": false,
+    "isActive": true,
+    "createdAt": "2025-09-15T06:00:34.022Z",
+    "updatedAt": "2025-09-15T10:32:38.589Z"
+  },
+  {
+    "_id": "plan_1757916034022_2",
+    "name": "Basic",
+    "monthlyPrice": 99,
+    "yearlyPrice": 990,
+    "credits": 100,
+    "features": "100 credits per month\nAdvanced search\nPriority support",
+    "description": "Great for small teams",
+    "isPopular": false,
+    "isActive": true,
+    "createdAt": "2025-09-15T06:00:34.022Z",
+    "updatedAt": "2025-09-15T06:00:34.022Z"
+  },
+  {
+    "_id": "plan_1757916034022_3",
+    "name": "Premium",
+    "monthlyPrice": 750,
+    "yearlyPrice": 7500,
+    "credits": 500,
+    "features": "500 credits per month\nPremium features\nDedicated support\nCustom integrations",
+    "description": "Enterprise-grade solution",
+    "isPopular": true,
+    "isActive": true,
+    "createdAt": "2025-09-15T06:00:34.022Z",
+    "updatedAt": "2025-09-15T06:00:34.022Z"
+  }
+]

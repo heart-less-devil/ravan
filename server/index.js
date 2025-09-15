@@ -5258,6 +5258,89 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
   }
 });
 
+// Free Plan Activation Route
+app.post('/api/auth/activate-free-plan', authenticateToken, async (req, res) => {
+  try {
+    console.log('🎉 Free plan activation request received for user:', req.user.email);
+    
+    const userEmail = req.user.email;
+    const userId = req.user.id;
+    
+    // Try MongoDB first
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      // Update user to free plan
+      user.currentPlan = 'free';
+      user.paymentCompleted = true; // Mark as completed for free plan
+      user.currentCredits = 5; // Give 5 credits for free plan
+      user.subscriptionStatus = 'active';
+      user.planActivatedAt = new Date();
+      
+      await user.save();
+      console.log('✅ Free plan activated in MongoDB for user:', userEmail);
+      
+      res.json({
+        success: true,
+        message: 'Free plan activated successfully!',
+        user: {
+          id: user._id,
+          email: user.email,
+          currentPlan: user.currentPlan,
+          currentCredits: user.currentCredits,
+          paymentCompleted: user.paymentCompleted
+        }
+      });
+    } catch (dbError) {
+      console.log('MongoDB error, using file-based storage...');
+      
+      // Fallback to file-based storage
+      const userIndex = mockDB.users.findIndex(u => u.email === userEmail);
+      if (userIndex === -1) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      // Update user to free plan
+      mockDB.users[userIndex].currentPlan = 'free';
+      mockDB.users[userIndex].paymentCompleted = true;
+      mockDB.users[userIndex].currentCredits = 5;
+      mockDB.users[userIndex].subscriptionStatus = 'active';
+      mockDB.users[userIndex].planActivatedAt = new Date().toISOString();
+      
+      // Save to file
+      saveDataToFiles('free_plan_activated');
+      console.log('✅ Free plan activated in file storage for user:', userEmail);
+      
+      res.json({
+        success: true,
+        message: 'Free plan activated successfully!',
+        user: {
+          id: mockDB.users[userIndex].id,
+          email: mockDB.users[userIndex].email,
+          currentPlan: mockDB.users[userIndex].currentPlan,
+          currentCredits: mockDB.users[userIndex].currentCredits,
+          paymentCompleted: mockDB.users[userIndex].paymentCompleted
+        }
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error activating free plan:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to activate free plan' 
+    });
+  }
+});
+
 // Stripe Payment Routes
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
@@ -5266,6 +5349,15 @@ app.post('/api/create-payment-intent', async (req, res) => {
 
     console.log('Stripe secret key available:', !!stripeSecretKey);
     console.log('Processing payment for:', { amount, planId, isAnnual });
+    
+    // Check if this is a free plan (amount is 0 or planId is 'free')
+    if (amount === 0 || planId === 'free') {
+      console.log('❌ Free plan detected - should not create payment intent');
+      return res.status(400).json({ 
+        error: 'Invalid payment amount', 
+        message: 'Free plans should not require payment processing. Use the free plan activation endpoint instead.' 
+      });
+    }
     
     // Validate Stripe is properly configured
     if (!stripe || !stripeSecretKey) {
@@ -7385,6 +7477,101 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
   } catch (error) {
     console.error('Error fetching subscription status:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Cancel subscription endpoint
+app.post('/api/auth/cancel-subscription', authenticateToken, async (req, res) => {
+  try {
+    console.log('🚫 User requesting subscription cancellation...');
+    
+    const user = mockDB.users.find(u => u.email === req.user.email);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has an active subscription
+    if (!user.paymentCompleted || user.currentPlan === 'free') {
+      return res.status(400).json({ 
+        message: 'No active subscription to cancel',
+        hasActiveSubscription: false 
+      });
+    }
+
+    console.log(`📧 Cancelling subscription for: ${user.email}`);
+    console.log(`📋 Current plan: ${user.currentPlan}`);
+
+    // Update user subscription status
+    const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+    if (userIndex !== -1) {
+      mockDB.users[userIndex].subscriptionStatus = 'cancelled';
+      mockDB.users[userIndex].subscriptionOnHold = true;
+      mockDB.users[userIndex].currentPlan = 'free';
+      mockDB.users[userIndex].cancelledAt = new Date().toISOString();
+      
+      // Save to file
+      saveDataToFiles('subscription_cancelled');
+      console.log('✅ Subscription cancelled in file storage');
+    }
+
+    // If user has Stripe subscription, cancel it
+    if (user.stripeCustomerId) {
+      try {
+        console.log(`🔍 Looking for Stripe subscriptions for customer: ${user.stripeCustomerId}`);
+        
+        // Get all subscriptions for this customer
+        const subscriptions = await stripe.subscriptions.list({
+          customer: user.stripeCustomerId,
+          status: 'active'
+        });
+
+        console.log(`📊 Found ${subscriptions.data.length} active subscriptions`);
+
+        // Cancel all active subscriptions
+        for (const subscription of subscriptions.data) {
+          console.log(`🚫 Cancelling Stripe subscription: ${subscription.id}`);
+          await stripe.subscriptions.cancel(subscription.id);
+          console.log(`✅ Stripe subscription ${subscription.id} cancelled`);
+        }
+
+        // Update MongoDB if connected
+        if (isMongoConnected()) {
+          try {
+            await User.findOneAndUpdate(
+              { email: user.email },
+              {
+                subscriptionStatus: 'cancelled',
+                subscriptionOnHold: true,
+                currentPlan: 'free',
+                cancelledAt: new Date()
+              }
+            );
+            console.log('✅ MongoDB subscription cancelled');
+          } catch (dbError) {
+            console.log('❌ MongoDB update failed, file storage used');
+          }
+        }
+
+      } catch (stripeError) {
+        console.error('❌ Error cancelling Stripe subscription:', stripeError);
+        // Continue with local cancellation even if Stripe fails
+      }
+    }
+
+    res.json({
+      message: 'Subscription cancelled successfully',
+      hasActiveSubscription: false,
+      currentPlan: 'free',
+      subscriptionStatus: 'cancelled',
+      cancelledAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error cancelling subscription:', error);
+    res.status(500).json({ 
+      message: 'Failed to cancel subscription',
+      error: error.message 
+    });
   }
 });
 

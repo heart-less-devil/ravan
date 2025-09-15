@@ -25,6 +25,7 @@ const Pricing = () => {
   const fetchPricingPlans = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/pricing-plans`);
+      
       if (response.ok) {
         const data = await response.json();
         setPricingPlans(data.plans || []);
@@ -93,11 +94,12 @@ const Pricing = () => {
       planType: 'monthly',
       yearlyPlanType: 'yearly',
       features: [
+        "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
         "Pay by credit/debit card",
         "Access to BD Tracker",
-        "2 hrs. of BD Consulting with Mr. Vik"
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
@@ -138,6 +140,15 @@ const Pricing = () => {
     }
   }, []);
 
+  // Safety check: prevent payment modal for free plans
+  useEffect(() => {
+    if (selectedPlan && selectedPlan.id === 'free' && showPayment) {
+      console.log('🚨 Safety check: Free plan detected with showPayment=true, resetting...');
+      setShowPayment(false);
+      setSelectedPlan(null);
+    }
+  }, [selectedPlan, showPayment]);
+
   // Icon mapping for plans
   const iconMap = {
     'free': Building2,
@@ -147,17 +158,20 @@ const Pricing = () => {
     'enterprise': Building2
   };
 
-  // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
-  const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => {
-    // Get the correct icon component
-    const getIcon = () => {
-      if (plan.icon && typeof plan.icon === 'function') {
-        return plan.icon;
-      }
-      const iconKey = plan.id || plan.name?.toLowerCase();
-      return iconMap[iconKey] || Building2;
-    };
+  // Get the correct icon component
+  const getIcon = (plan) => {
+    if (plan.icon && typeof plan.icon === 'function') {
+      return plan.icon;
+    }
+    const iconKey = plan.id || plan.name?.toLowerCase();
+    return iconMap[iconKey] || Building2;
+  };
 
+  // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
+  const defaultPlans = getDefaultPlans();
+  const plansToUse = pricingPlans.length > 0 ? pricingPlans : defaultPlans;
+  
+  const plans = plansToUse.map(plan => {
     return {
       ...plan,
       // Map yearlyPrice to annualPrice for consistency
@@ -165,7 +179,7 @@ const Pricing = () => {
       // Ensure features are arrays
       features: Array.isArray(plan.features) ? plan.features : (plan.features ? plan.features.split('\n').filter(f => f.trim()) : []),
       // Map icon properly
-      icon: getIcon(),
+      icon: getIcon(plan),
       // Ensure popular flag is boolean
       popular: Boolean(plan.popular || plan.isPopular),
       // Ensure button text exists
@@ -198,7 +212,9 @@ const Pricing = () => {
     }
   ];
 
-  const handlePlanSelect = (plan) => {
+  const handlePlanSelect = async (plan) => {
+    console.log('🎯 Pricing handlePlanSelect called with plan:', plan);
+    
     // Check if user is logged in
     const token = sessionStorage.getItem('token');
     if (!token) {
@@ -208,13 +224,46 @@ const Pricing = () => {
     }
     
     if (plan.id === 'free') {
-      // Handle free plan
-      setPaymentStatus('Free plan activated!');
+      console.log('🆓 Free plan selected in Pricing - activating without payment');
+      // Handle free plan - activate without payment
+      try {
+        setPaymentStatus('Activating free plan...');
+        
+        const response = await fetch(`${API_BASE_URL}/api/auth/activate-free-plan`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUserCurrentPlan('free');
+          sessionStorage.setItem('userCurrentPlan', 'free');
+          setPaymentStatus('Free plan activated successfully!');
+          
+          // Show success message and redirect to dashboard after a delay
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2000);
+        } else {
+          const errorData = await response.json();
+          setPaymentStatus(`Error: ${errorData.message || 'Failed to activate free plan'}`);
+        }
+      } catch (error) {
+        console.error('Error activating free plan:', error);
+        setPaymentStatus('Error: Failed to activate free plan. Please try again.');
+      }
       return;
     }
     
-    setSelectedPlan(plan);
-    setShowPayment(true);
+    console.log('💳 Paid plan selected in Pricing - showing payment modal');
+    // Only show payment modal for paid plans
+    if (plan.id !== 'free') {
+      setSelectedPlan(plan);
+      setShowPayment(true);
+    }
   };
 
   const handlePaymentSuccess = async (paymentIntent) => {
@@ -334,8 +383,22 @@ const Pricing = () => {
       {/* Pricing Cards */}
       <section className="section bg-white -mt-36">
         <div className="container-custom">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {plans.map((plan, index) => (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="text-center">
+                <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading pricing plans...</p>
+              </div>
+            </div>
+          ) : plans.length === 0 ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="text-center">
+                <p className="text-gray-600">No pricing plans available</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
                 initial={{ opacity: 0, y: 20 }}
@@ -352,73 +415,78 @@ const Pricing = () => {
                   </div>
                 )}
                 
-                <div className={`card p-8 h-full bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 shadow-large`}>
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <plan.icon className="w-8 h-8 text-primary-600" />
+                <div className={`card p-6 h-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 shadow-lg flex flex-col`}>
+                  <div className="text-center mb-6">
+                    <div className="w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3 flex items-center justify-center">
+                      <plan.icon className="w-6 h-6 text-blue-600" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
                       {plan.name}
                     </h3>
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 mb-3 text-sm">
                       {plan.description}
                     </p>
-                                         <div className="mb-4">
-                       <div className="text-sm text-gray-600 mb-2">
-                         {plan.credits}
-                       </div>
-                       <div className="text-3xl font-bold text-gray-900">
-                         {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
-                       </div>
-                       <div className="text-sm text-gray-500">
-                         {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
-                       </div>
-                                               {/* Show yearly savings for Basic and Premium plans */}
-                        {isAnnual && (plan.id === 'basic' || plan.id === 'premium') && (
-                          <div className="mt-2">
-                            <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                              Save ${plan.id === 'basic' ? '930' : '1895'}/year
-                            </span>
-                          </div>
-                        )}
-                     </div>
+                    <div className="mb-4">
+                      <div className="text-xs text-gray-600 mb-1">
+                        {plan.credits}
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
+                      </div>
+                      {/* Show yearly savings for Basic and Premium plans */}
+                      {isAnnual && (plan.id === 'basic' || plan.id === 'premium') && (
+                        <div className="mt-1">
+                          <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                            Save ${plan.id === 'basic' ? '930' : '1895'}/year
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-4 mb-8">
-                    {plan.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-start space-x-3">
-                        <Check className="w-5 h-5 text-accent-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700 text-base">
-                          {feature.includes('Mr. Vik') ? (
-                            <>
-                              {feature.split('Mr. Vik')[0]}
-                              <a 
-                                href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 underline font-medium"
-                              >
-                                Mr. Vik
-                              </a>
-                              {feature.split('Mr. Vik')[1]}
-                            </>
-                          ) : (
-                            feature
-                          )}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-2 mb-6 flex-grow">
+                    {console.log('🔍 Plan features for', plan.name, ':', plan.features)}
+                    {plan.features && plan.features.length > 0 ? (
+                      plan.features.map((feature, featureIndex) => (
+                        <div key={featureIndex} className="flex items-start space-x-2">
+                          <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700 text-sm leading-tight">
+                            {feature.includes('Mr. Vik') ? (
+                              <>
+                                {feature.split('Mr. Vik')[0]}
+                                <a 
+                                  href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                >
+                                  Mr. Vik
+                                </a>
+                                {feature.split('Mr. Vik')[1]}
+                              </>
+                            ) : (
+                              feature
+                            )}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-500 text-sm">No features available</div>
+                    )}
                   </div>
 
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className={`w-full px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                    className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto ${
                       userCurrentPlan === plan.id
                         ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
                         : plan.buttonStyle === 'primary' 
-                          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-soft hover:shadow-medium' 
-                          : 'border-2 border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300'
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg' 
+                          : 'border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300'
                     }`}
                     onClick={() => handlePlanSelect(plan)}
                   >
@@ -430,7 +498,8 @@ const Pricing = () => {
                 </div>
               </motion.div>
             ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -453,25 +522,32 @@ const Pricing = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <feature.icon className="w-8 h-8 text-primary-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
+            {console.log('🔍 General features:', features)}
+            {features && features.length > 0 ? (
+              features.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <feature.icon className="w-8 h-8 text-primary-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600">
+                    {feature.description}
+                  </p>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full text-center text-gray-500">
+                No general features available
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -574,7 +650,7 @@ const Pricing = () => {
         </div>
       </section>
 
-      {showPayment && selectedPlan && (
+      {showPayment && selectedPlan && selectedPlan.id !== 'free' && (
         <StripePayment
           plan={selectedPlan}
           isAnnual={isAnnual}
@@ -583,6 +659,7 @@ const Pricing = () => {
           onClose={() => setShowPayment(false)}
         />
       )}
+      
       {paymentStatus && (
         <div className="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
           {paymentStatus}
