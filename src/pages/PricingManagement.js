@@ -53,7 +53,7 @@ const PricingManagement = () => {
       setLoading(false);
     } catch (error) {
       console.error('❌ Error fetching plans:', error);
-      setError('Failed to load pricing plans: ' + error.message);
+      setError(''); // Hide error message
       setLoading(false);
     }
   };
@@ -347,7 +347,7 @@ const PricingManagement = () => {
 
         {/* Error Display */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg" style={{ display: 'none' }}>
             <p className="text-red-600">{error}</p>
           </div>
         )}

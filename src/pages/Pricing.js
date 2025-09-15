@@ -9,6 +9,8 @@ const Pricing = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
+  const [pricingPlans, setPricingPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
     // Check if user is logged in first
     const token = sessionStorage.getItem('token');
@@ -19,37 +21,28 @@ const Pricing = () => {
     return 'free';
   });
 
-  // Check login status on component mount
-  useEffect(() => {
-    const token = sessionStorage.getItem('token');
-    if (!token) {
-      setUserCurrentPlan(null);
-    } else {
-      // Fetch user plan from backend
-      const fetchUserPlan = async () => {
-        try {
-          const response = await fetch('/api/auth/profile', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            setUserCurrentPlan(data.user?.currentPlan || 'free');
-          }
-        } catch (error) {
-          console.error('Error fetching user plan:', error);
-          setUserCurrentPlan('free');
-        }
-      };
-      
-      fetchUserPlan();
+  // Fetch pricing plans from API
+  const fetchPricingPlans = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/pricing-plans`);
+      if (response.ok) {
+        const data = await response.json();
+        setPricingPlans(data.plans || []);
+      } else {
+        // Fallback to default plans if API fails
+        setPricingPlans(getDefaultPlans());
+      }
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      // Fallback to default plans
+      setPricingPlans(getDefaultPlans());
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
 
-  const plans = [
+  // Default plans fallback
+  const getDefaultPlans = () => [
     {
       id: 'free',
       name: "Free",
@@ -75,7 +68,7 @@ const Pricing = () => {
       description: "Ideal for growing businesses",
       credits: "50 contacts/month",
       monthlyPrice: 390,
-      annualPrice: 3750, // 20% discount
+      annualPrice: 3750,
       planType: 'monthly',
       yearlyPlanType: 'yearly',
       features: [
@@ -100,12 +93,11 @@ const Pricing = () => {
       planType: 'monthly',
       yearlyPlanType: 'yearly',
       features: [
-        "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
         "Pay by credit/debit card",
         "Access to BD Tracker",
-        "1 hr. of BD Consulting with Mr. Vik"
+        "2 hrs. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
@@ -113,6 +105,41 @@ const Pricing = () => {
       buttonStyle: "primary"
     }
   ];
+
+  // Check login status on component mount
+  useEffect(() => {
+    fetchPricingPlans();
+    
+    const token = sessionStorage.getItem('token');
+    if (!token) {
+      setUserCurrentPlan(null);
+    } else {
+      // Fetch user plan from backend
+      const fetchUserPlan = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUserCurrentPlan(data.user?.currentPlan || 'free');
+          }
+        } catch (error) {
+          console.error('Error fetching user plan:', error);
+          setUserCurrentPlan('free');
+        }
+      };
+      
+      fetchUserPlan();
+    }
+  }, []);
+
+  // Use dynamic pricing plans from API
+  const plans = pricingPlans.length > 0 ? pricingPlans : getDefaultPlans();
 
   const features = [
     {
@@ -212,6 +239,17 @@ const Pricing = () => {
   const getPlanPrice = (plan) => {
     return isAnnual ? plan.annualPrice : plan.monthlyPrice;
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading pricing plans...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

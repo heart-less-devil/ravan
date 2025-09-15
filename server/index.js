@@ -7834,6 +7834,111 @@ app.get('/api/test', (req, res) => {
 // on the frontend (GoDaddy hosting). This server only handles API routes.
 // For frontend routing issues, check GoDaddy hosting configuration.
 
+// Public pricing plans endpoint (no authentication required)
+app.get('/api/pricing-plans', async (req, res) => {
+  try {
+    console.log('🔍 Fetching public pricing plans...');
+    
+    // Initialize pricing array if it doesn't exist
+    if (!mockDB.pricing) mockDB.pricing = [];
+    
+    // If no pricing plans exist, create default ones
+    if (mockDB.pricing.length === 0) {
+      console.log('📝 Creating default pricing plans...');
+      const defaultPlans = [
+        {
+          _id: `plan_${Date.now()}_1`,
+          id: 'free',
+          name: 'Free',
+          description: 'Perfect for getting started',
+          credits: '5 credits for 5 days only',
+          monthlyPrice: 0,
+          annualPrice: 0,
+          features: [
+            '1 Seat included',
+            'Get 5 free contacts',
+            'Credits expire after 5 days (including weekends)',
+            'No Credit Card Needed',
+            'No BD Insights Access'
+          ],
+          popular: false,
+          buttonText: 'Get started',
+          buttonStyle: 'outline',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: `plan_${Date.now()}_2`,
+          id: 'basic',
+          name: 'Basic Plan',
+          description: 'Ideal for growing businesses',
+          credits: '50 contacts/month',
+          monthlyPrice: 390,
+          annualPrice: 3750,
+          planType: 'monthly',
+          yearlyPlanType: 'yearly',
+          features: [
+            '1 Seat included',
+            '50 contacts per month',
+            'Pay by credit/debit card',
+            'Access to BD Tracker',
+            '1 hr. of BD Consulting with Mr. Vik'
+          ],
+          popular: false,
+          buttonText: 'Choose plan',
+          buttonStyle: 'primary',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          _id: `plan_${Date.now()}_3`,
+          id: 'premium',
+          name: 'Premium Plan',
+          description: 'For advanced users and teams',
+          credits: '100 contacts/month',
+          monthlyPrice: 790,
+          annualPrice: 7585,
+          planType: 'monthly',
+          yearlyPlanType: 'yearly',
+          features: [
+            '1 Seat included',
+            '100 contacts per month',
+            'Pay by credit/debit card',
+            'Access to BD Tracker',
+            '2 hrs. of BD Consulting with Mr. Vik'
+          ],
+          popular: true,
+          buttonText: 'Choose plan',
+          buttonStyle: 'primary',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+      
+      mockDB.pricing = defaultPlans;
+      
+      // Save to file
+      fs.writeFileSync(path.join(__dirname, 'data', 'pricing.json'), JSON.stringify(mockDB.pricing, null, 2));
+      console.log('💾 Default pricing plans saved to file');
+      
+      // Save all data
+      saveDataToFiles('default_pricing_plans_created');
+    }
+    
+    // Filter only active plans for public display
+    const activePlans = mockDB.pricing.filter(plan => plan.isActive !== false);
+    
+    console.log('✅ Returning public pricing plans:', activePlans.length, 'plans');
+    res.json({ plans: activePlans });
+  } catch (error) {
+    console.error('❌ Error fetching public pricing plans:', error);
+    res.status(500).json({ error: 'Failed to fetch pricing plans' });
+  }
+});
+
 // Pricing Management Routes
 app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
