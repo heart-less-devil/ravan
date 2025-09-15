@@ -7837,11 +7837,14 @@ app.get('/api/test', (req, res) => {
 // Pricing Management Routes
 app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
+    console.log('🔍 Fetching pricing plans...');
+    
     // Initialize pricing array if it doesn't exist
     if (!mockDB.pricing) mockDB.pricing = [];
     
     // If no pricing plans exist, create default ones
     if (mockDB.pricing.length === 0) {
+      console.log('📝 Creating default pricing plans...');
       const defaultPlans = [
         {
           _id: `plan_${Date.now()}_1`,
@@ -7907,9 +7910,10 @@ app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
       saveDataToFiles('default_pricing_plans_created');
     }
     
+    console.log('✅ Returning pricing plans:', mockDB.pricing.length, 'plans');
     res.json({ plans: mockDB.pricing });
   } catch (error) {
-    console.error('Error fetching pricing plans:', error);
+    console.error('❌ Error fetching pricing plans:', error);
     res.status(500).json({ error: 'Failed to fetch pricing plans' });
   }
 });

@@ -30,22 +30,30 @@ const PricingManagement = () => {
   const fetchPlans = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005'}/api/admin/pricing`, {
+      const apiUrl = `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005'}/api/admin/pricing`;
+      console.log('🔍 Fetching pricing plans from:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
+      console.log('📡 Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch plans');
+        const errorText = await response.text();
+        console.error('❌ API Error:', errorText);
+        throw new Error(`Failed to fetch plans: ${response.status} ${errorText}`);
       }
       
       const data = await response.json();
+      console.log('📊 Received data:', data);
       setPlans(data.plans || []);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching plans:', error);
-      setError('Failed to load pricing plans');
+      console.error('❌ Error fetching plans:', error);
+      setError('Failed to load pricing plans: ' + error.message);
       setLoading(false);
     }
   };
