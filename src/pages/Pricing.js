@@ -138,8 +138,11 @@ const Pricing = () => {
     }
   }, []);
 
-  // Use dynamic pricing plans from API
-  const plans = pricingPlans.length > 0 ? pricingPlans : getDefaultPlans();
+  // Use dynamic pricing plans from API and ensure features are arrays
+  const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => ({
+    ...plan,
+    features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+  }));
 
   const features = [
     {

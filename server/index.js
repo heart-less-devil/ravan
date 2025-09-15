@@ -7928,8 +7928,11 @@ app.get('/api/pricing-plans', async (req, res) => {
       saveDataToFiles('default_pricing_plans_created');
     }
     
-    // Filter only active plans for public display
-    const activePlans = mockDB.pricing.filter(plan => plan.isActive !== false);
+    // Filter only active plans for public display and ensure features are arrays
+    const activePlans = mockDB.pricing.filter(plan => plan.isActive !== false).map(plan => ({
+      ...plan,
+      features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+    }));
     
     console.log('✅ Returning public pricing plans:', activePlans.length, 'plans');
     res.json({ plans: activePlans });
@@ -8015,8 +8018,14 @@ app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
       saveDataToFiles('default_pricing_plans_created');
     }
     
-    console.log('✅ Returning pricing plans:', mockDB.pricing.length, 'plans');
-    res.json({ plans: mockDB.pricing });
+    // Ensure features are arrays for all plans
+    const plansWithArrayFeatures = mockDB.pricing.map(plan => ({
+      ...plan,
+      features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+    }));
+    
+    console.log('✅ Returning pricing plans:', plansWithArrayFeatures.length, 'plans');
+    res.json({ plans: plansWithArrayFeatures });
   } catch (error) {
     console.error('❌ Error fetching pricing plans:', error);
     res.status(500).json({ error: 'Failed to fetch pricing plans' });
