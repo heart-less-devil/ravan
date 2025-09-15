@@ -3758,20 +3758,31 @@ const PricingPage = () => {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [StripePaymentComponent, setStripePaymentComponent] = useState(null);
   const [userCurrentPlan, setUserCurrentPlan] = useState('free');
+  const [pricingPlans, setPricingPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Dynamically load StripePayment component when needed
-  const loadStripePayment = async () => {
-    if (!StripePaymentComponent) {
-      try {
-        const { default: StripePayment } = await import('../components/StripePayment');
-        setStripePaymentComponent(() => StripePayment);
-      } catch (error) {
-        console.error('Failed to load StripePayment component:', error);
+  // Fetch pricing plans from API
+  const fetchPricingPlans = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/pricing-plans`);
+      if (response.ok) {
+        const data = await response.json();
+        setPricingPlans(data.plans || []);
+      } else {
+        // Fallback to default plans if API fails
+        setPricingPlans(getDefaultPlans());
       }
+    } catch (error) {
+      console.error('Error fetching pricing plans:', error);
+      // Fallback to default plans
+      setPricingPlans(getDefaultPlans());
+    } finally {
+      setLoading(false);
     }
   };
 
-  const plans = [
+  // Default plans fallback
+  const getDefaultPlans = () => [
     {
       id: 'free',
       name: "Free",
@@ -3830,6 +3841,26 @@ const PricingPage = () => {
       buttonStyle: "primary"
     }
   ];
+
+  // Load pricing plans on component mount
+  useEffect(() => {
+    fetchPricingPlans();
+  }, []);
+
+  // Dynamically load StripePayment component when needed
+  const loadStripePayment = async () => {
+    if (!StripePaymentComponent) {
+      try {
+        const { default: StripePayment } = await import('../components/StripePayment');
+        setStripePaymentComponent(() => StripePayment);
+      } catch (error) {
+        console.error('Failed to load StripePayment component:', error);
+      }
+    }
+  };
+
+  // Use dynamic pricing plans from API
+  const plans = pricingPlans.length > 0 ? pricingPlans : getDefaultPlans();
 
   const features = [
     {
@@ -3934,6 +3965,17 @@ const PricingPage = () => {
       default: return 'from-blue-500 to-blue-600';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading pricing plans...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
