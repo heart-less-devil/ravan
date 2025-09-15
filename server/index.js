@@ -7835,7 +7835,7 @@ app.get('/api/test', (req, res) => {
 // For frontend routing issues, check GoDaddy hosting configuration.
 
 // Pricing Management Routes
-app.get('/api/admin/pricing', authenticateToken, async (req, res) => {
+app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
     // Initialize pricing array if it doesn't exist
     if (!mockDB.pricing) mockDB.pricing = [];
@@ -7914,7 +7914,7 @@ app.get('/api/admin/pricing', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/admin/pricing', authenticateToken, async (req, res) => {
+app.post('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
     const { name, monthlyPrice, yearlyPrice, credits, features, description, isPopular, isActive } = req.body;
     
@@ -7952,7 +7952,7 @@ app.post('/api/admin/pricing', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/admin/pricing/:id', authenticateToken, async (req, res) => {
+app.put('/api/admin/pricing/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, monthlyPrice, yearlyPrice, credits, features, description, isPopular, isActive } = req.body;
@@ -7992,7 +7992,7 @@ app.put('/api/admin/pricing/:id', authenticateToken, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/pricing/:id', authenticateToken, async (req, res) => {
+app.delete('/api/admin/pricing/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     

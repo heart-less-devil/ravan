@@ -30,7 +30,7 @@ const PricingManagement = () => {
   const fetchPlans = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch('/api/admin/pricing', {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005'}/api/admin/pricing`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -55,9 +55,10 @@ const PricingManagement = () => {
     
     try {
       const token = sessionStorage.getItem('token');
+      const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005';
       const url = editingPlan 
-        ? `/api/admin/pricing/${editingPlan._id}`
-        : '/api/admin/pricing';
+        ? `${baseUrl}/api/admin/pricing/${editingPlan._id}`
+        : `${baseUrl}/api/admin/pricing`;
       
       const method = editingPlan ? 'PUT' : 'POST';
       
@@ -117,7 +118,8 @@ const PricingManagement = () => {
 
     try {
       const token = sessionStorage.getItem('token');
-      const response = await fetch(`/api/admin/pricing/${planId}`, {
+      const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005';
+      const response = await fetch(`${baseUrl}/api/admin/pricing/${planId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
