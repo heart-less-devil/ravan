@@ -24,7 +24,7 @@ const connectDB = async () => {
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     
     // Set global query timeout
-    mongoose.set('bufferCommands', false);
+    mongoose.set('bufferCommands', true); // Allow buffering until connection is ready
     mongoose.set('bufferMaxEntries', 0);
     
     // Set global query timeout for all operations

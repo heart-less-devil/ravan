@@ -19,6 +19,11 @@ const connectDB = require('./config/database');
 const User = require('./models/User');
 const BDTracker = require('./models/BDTracker');
 
+// Helper function to check MongoDB connection
+const isMongoConnected = () => {
+  return mongoose.connection.readyState === 1;
+};
+
 const app = express();
 const PORT = process.env.PORT || 3005;
 
@@ -5546,7 +5551,7 @@ app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
     console.log('🔍 Fetching real user activity from MongoDB...');
     
     // Check if MongoDB is connected
-    if (mongoose.connection.readyState !== 1) {
+    if (!isMongoConnected()) {
       console.log('❌ MongoDB not connected, using file-based data...');
       return res.json({
         success: true,
@@ -5609,7 +5614,7 @@ app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
     console.log('🔍 Fetching real trial data from MongoDB...');
     
     // Check if MongoDB is connected
-    if (mongoose.connection.readyState !== 1) {
+    if (!isMongoConnected()) {
       console.log('❌ MongoDB not connected, using file-based data...');
       return res.json({
         success: true,
@@ -5694,7 +5699,7 @@ app.get('/api/admin/potential-customers', authenticateAdmin, async (req, res) =>
     console.log('🔍 Fetching real potential customers from MongoDB...');
     
     // Check if MongoDB is connected
-    if (mongoose.connection.readyState !== 1) {
+    if (!isMongoConnected()) {
       console.log('❌ MongoDB not connected, using file-based data...');
       return res.json({
         success: true,
@@ -5753,8 +5758,18 @@ app.get('/api/admin/subscription-details', authenticateAdmin, async (req, res) =
   try {
     console.log('🔍 Fetching real subscription details from MongoDB...');
     
+    // Check if MongoDB is connected
+    if (!isMongoConnected()) {
+      console.log('❌ MongoDB not connected, using file-based data...');
+      return res.json({
+        success: true,
+        subscriptions: [],
+        message: 'Using file-based storage - MongoDB not available'
+      });
+    }
+    
     // Get real subscription details from MongoDB
-    const users = await User.find({}).lean().sort({ createdAt: -1 });
+    const users = await User.find({}).lean().sort({ createdAt: -1 }).maxTimeMS(15000);
     
     const subscriptionDetails = users.map(user => ({
       id: user.id || user._id,
@@ -5801,7 +5816,7 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
     console.log('🔍 Fetching comprehensive admin data from MongoDB Atlas...');
     
     // Check if MongoDB is connected
-    if (mongoose.connection.readyState !== 1) {
+    if (!isMongoConnected()) {
       console.log('❌ MongoDB not connected, using file-based data...');
       return res.json({
         success: true,
