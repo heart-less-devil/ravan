@@ -5,24 +5,25 @@ const getApiUrl = () => {
     return 'https://bioping-backend.onrender.com';
   }
   
-  // Development
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3005';
-  }
-  
-  // Custom environment variable
+  // Custom environment variable (highest priority)
   if (process.env.REACT_APP_API_BASE_URL) {
     return process.env.REACT_APP_API_BASE_URL;
+  }
+  
+  // Development - but use production backend if localhost not available
+  if (process.env.NODE_ENV === 'development') {
+    // Try localhost first, but fallback to production
+    return 'https://bioping-backend.onrender.com';
   }
   
   // Production fallbacks - try multiple servers
   const productionUrls = [
     'https://bioping-backend.onrender.com',
-    'https://thebioping.com',
-    'https://www.thebioping.com',
     'https://ravan-8n0h.onrender.com',
     'https://ravan-backend.onrender.com',
-    'https://bioping-server.onrender.com'
+    'https://bioping-server.onrender.com',
+    'https://thebioping.com',
+    'https://www.thebioping.com'
   ];
   
   return productionUrls[0]; // Use your correct backend as default
@@ -38,24 +39,24 @@ const getBackendURL = () => {
     return 'https://bioping-backend.onrender.com';
   }
   
-  // Check if we're in development
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3005';
-  }
-  
-  // Check for custom environment variable
+  // Custom environment variable (highest priority)
   if (process.env.REACT_APP_API_BASE_URL) {
     return process.env.REACT_APP_API_BASE_URL;
+  }
+  
+  // Development - but use production backend if localhost not available
+  if (process.env.NODE_ENV === 'development') {
+    return 'https://bioping-backend.onrender.com';
   }
   
   // Production fallbacks
   const possibleURLs = [
     'https://bioping-backend.onrender.com',
-    'https://thebioping.com',
-    'https://www.thebioping.com',
     'https://ravan-8n0h.onrender.com',
     'https://ravan-backend.onrender.com',
-    'https://bioping-server.onrender.com'
+    'https://bioping-server.onrender.com',
+    'https://thebioping.com',
+    'https://www.thebioping.com'
   ];
   
   return possibleURLs[0]; // Use your correct backend as default

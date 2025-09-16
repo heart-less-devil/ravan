@@ -11,6 +11,7 @@ const Pricing = () => {
   const [paymentStatus, setPaymentStatus] = useState('');
   const [pricingPlans, setPricingPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [userCurrentPlan, setUserCurrentPlan] = useState(() => {
     // Check if user is logged in first
     const token = sessionStorage.getItem('token');
@@ -21,11 +22,20 @@ const Pricing = () => {
     return 'free';
   });
 
-  // Fetch pricing plans from API
+  // Fetch pricing plans from API with fallback
   const fetchPricingPlans = async () => {
     try {
       console.log('🔍 Fetching pricing plans from:', `${API_BASE_URL}/api/pricing-plans`);
-      const response = await fetch(`${API_BASE_URL}/api/pricing-plans`);
+      console.log('🌐 Current API_BASE_URL:', API_BASE_URL);
+      
+      const response = await fetch(`${API_BASE_URL}/api/pricing-plans`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Add timeout to prevent hanging
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      });
       
       console.log('📡 Response status:', response.status);
       console.log('📡 Response ok:', response.ok);
@@ -35,15 +45,18 @@ const Pricing = () => {
         console.log('📊 Received pricing data:', data);
         console.log('📊 Plans count:', data.plans ? data.plans.length : 0);
         setPricingPlans(data.plans || []);
+        setUsingFallback(false);
       } else {
         console.error('❌ API response not ok:', response.status, response.statusText);
-        // Fallback to default plans if API fails
+        console.log('🔄 Using fallback default plans');
         setPricingPlans(getDefaultPlans());
+        setUsingFallback(true);
       }
     } catch (error) {
       console.error('❌ Error fetching pricing plans:', error);
-      // Fallback to default plans
+      console.log('🔄 Using fallback default plans due to error');
       setPricingPlans(getDefaultPlans());
+      setUsingFallback(true);
     } finally {
       setLoading(false);
     }
@@ -404,8 +417,19 @@ const Pricing = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map((plan, index) => (
+            <div>
+              {usingFallback && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                    <p className="text-yellow-800 text-sm">
+                      <strong>Note:</strong> Using default pricing plans. Some features may not be available.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {plans.map((plan, index) => (
               <motion.div
                 key={plan.name}
                 initial={{ opacity: 0, y: 20 }}
@@ -505,6 +529,7 @@ const Pricing = () => {
                 </div>
               </motion.div>
             ))}
+              </div>
             </div>
           )}
         </div>
