@@ -1382,6 +1382,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [itemsPerPage] = useState(25);
   const [daysRemaining, setDaysRemaining] = useState(3);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
+  const [allContactsCurrentPage, setAllContactsCurrentPage] = useState(1);
+  const [allContactsItemsPerPage] = useState(25);
 
   // Function to perform search from URL parameters
   const performSearchFromURL = async (searchQuery, searchType) => {
@@ -2388,8 +2390,48 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </motion.button>
           </div>
 
+          {/* Pagination for All Contacts */}
+          {allContactsData.length > allContactsItemsPerPage && (
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-sm text-gray-600">
+                Showing {((allContactsCurrentPage - 1) * allContactsItemsPerPage) + 1} - {Math.min(allContactsCurrentPage * allContactsItemsPerPage, allContactsData.length)} of {allContactsData.length} contacts
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setAllContactsCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={allContactsCurrentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                {Array.from({ length: Math.ceil(allContactsData.length / allContactsItemsPerPage) }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setAllContactsCurrentPage(page)}
+                    className={`px-3 py-2 text-sm font-medium rounded-md ${
+                      page === allContactsCurrentPage
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setAllContactsCurrentPage(prev => Math.min(prev + 1, Math.ceil(allContactsData.length / allContactsItemsPerPage)))}
+                  disabled={allContactsCurrentPage === Math.ceil(allContactsData.length / allContactsItemsPerPage)}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
-            {allContactsData.map((contact, index) => (
+            {allContactsData
+              .slice((allContactsCurrentPage - 1) * allContactsItemsPerPage, allContactsCurrentPage * allContactsItemsPerPage)
+              .map((contact, index) => (
               <div key={contact.id || index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
@@ -2425,10 +2467,38 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        // Show contact details - email will be revealed after credit consumption
-                        setContactDetails([contact]);
-                        setShowContactModal(true);
+                      onClick={async () => {
+                        // Check if we have credits before proceeding
+                        if (userCredits <= 0) {
+                          setShowCreditPopup(true);
+                          return;
+                        }
+                        
+                        try {
+                          // Consume credit first
+                          const creditConsumed = await consumeCredit();
+                          
+                          if (creditConsumed) {
+                            // Only reveal email if credit was successfully consumed
+                            setRevealedEmails(prev => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(contact.id)) {
+                                newSet.delete(contact.id);
+                              } else {
+                                newSet.add(contact.id);
+                              }
+                              return newSet;
+                            });
+                            
+                            // Show contact details
+                            setContactDetails([contact]);
+                            setShowContactModal(true);
+                          } else {
+                            console.log('❌ Failed to consume credit');
+                          }
+                        } catch (error) {
+                          console.error('❌ Error in handleRevealEmail:', error);
+                        }
                       }}
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200"
                     >
@@ -2470,11 +2540,19 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                     </div>
                     <div>
                       <span className="text-gray-500">Email:</span>
-                      <span className="ml-2 text-blue-600 font-medium">{contact.email}</span>
+                      {revealedEmails.has(contact.id) ? (
+                        <span className="ml-2 text-blue-600 font-medium">{contact.email}</span>
+                      ) : (
+                        <span className="ml-2 text-gray-400 italic">Click "Get Contact Info" to reveal</span>
+                      )}
                     </div>
                     <div>
                       <span className="text-gray-500">Phone:</span>
-                      <span className="ml-2 font-medium">{contact.phone}</span>
+                      {revealedEmails.has(contact.id) ? (
+                        <span className="ml-2 font-medium">{contact.phone}</span>
+                      ) : (
+                        <span className="ml-2 text-gray-400 italic">Click "Get Contact Info" to reveal</span>
+                      )}
                     </div>
                     <div>
                       <span className="text-gray-500">Website:</span>
@@ -3765,16 +3843,24 @@ const PricingPage = () => {
   // Fetch pricing plans from API
   const fetchPricingPlans = async () => {
     try {
+      console.log('🔍 Dashboard: Fetching pricing plans from:', `${API_BASE_URL}/api/pricing-plans`);
       const response = await fetch(`${API_BASE_URL}/api/pricing-plans`);
+      
+      console.log('📡 Dashboard: Response status:', response.status);
+      console.log('📡 Dashboard: Response ok:', response.ok);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Dashboard: Received pricing data:', data);
+        console.log('📊 Dashboard: Plans count:', data.plans ? data.plans.length : 0);
         setPricingPlans(data.plans || []);
       } else {
+        console.error('❌ Dashboard: API response not ok:', response.status, response.statusText);
         // Fallback to default plans if API fails
         setPricingPlans(getDefaultPlans());
       }
     } catch (error) {
-      console.error('Error fetching pricing plans:', error);
+      console.error('❌ Dashboard: Error fetching pricing plans:', error);
       // Fallback to default plans
       setPricingPlans(getDefaultPlans());
     } finally {

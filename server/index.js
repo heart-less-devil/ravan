@@ -8026,7 +8026,21 @@ app.get('/api/pricing-plans', async (req, res) => {
   try {
     console.log('🔍 Fetching public pricing plans...');
     
-    // Initialize pricing array if it doesn't exist
+    // First try to get from admin-managed pricing data
+    if (mockDB.pricing && mockDB.pricing.length > 0) {
+      console.log('📊 Using admin-managed pricing data');
+      console.log('📊 Raw pricing data:', JSON.stringify(mockDB.pricing, null, 2));
+      const activePlans = mockDB.pricing.filter(plan => plan.isActive !== false).map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+      }));
+      
+      console.log('✅ Returning admin-managed pricing plans:', activePlans.length, 'plans');
+      console.log('✅ Active plans data:', JSON.stringify(activePlans, null, 2));
+      return res.json({ plans: activePlans });
+    }
+    
+    // Fallback: Initialize pricing array if it doesn't exist
     if (!mockDB.pricing) mockDB.pricing = [];
     
     // If no pricing plans exist, create default ones
@@ -8126,6 +8140,26 @@ app.get('/api/pricing-plans', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching public pricing plans:', error);
     res.status(500).json({ error: 'Failed to fetch pricing plans' });
+  }
+});
+
+// Test endpoint to check pricing data
+app.get('/api/test-pricing', async (req, res) => {
+  try {
+    console.log('🧪 Testing pricing data...');
+    console.log('📊 mockDB.pricing exists:', !!mockDB.pricing);
+    console.log('📊 mockDB.pricing length:', mockDB.pricing ? mockDB.pricing.length : 0);
+    console.log('📊 mockDB.pricing data:', JSON.stringify(mockDB.pricing, null, 2));
+    
+    res.json({ 
+      success: true, 
+      pricingExists: !!mockDB.pricing,
+      pricingLength: mockDB.pricing ? mockDB.pricing.length : 0,
+      pricingData: mockDB.pricing
+    });
+  } catch (error) {
+    console.error('❌ Error testing pricing data:', error);
+    res.status(500).json({ error: 'Failed to test pricing data' });
   }
 });
 

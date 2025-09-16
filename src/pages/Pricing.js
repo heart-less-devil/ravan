@@ -24,17 +24,24 @@ const Pricing = () => {
   // Fetch pricing plans from API
   const fetchPricingPlans = async () => {
     try {
+      console.log('🔍 Fetching pricing plans from:', `${API_BASE_URL}/api/pricing-plans`);
       const response = await fetch(`${API_BASE_URL}/api/pricing-plans`);
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Received pricing data:', data);
+        console.log('📊 Plans count:', data.plans ? data.plans.length : 0);
         setPricingPlans(data.plans || []);
       } else {
+        console.error('❌ API response not ok:', response.status, response.statusText);
         // Fallback to default plans if API fails
         setPricingPlans(getDefaultPlans());
       }
     } catch (error) {
-      console.error('Error fetching pricing plans:', error);
+      console.error('❌ Error fetching pricing plans:', error);
       // Fallback to default plans
       setPricingPlans(getDefaultPlans());
     } finally {

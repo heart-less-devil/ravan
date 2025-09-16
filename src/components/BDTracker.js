@@ -298,7 +298,7 @@ const BDTracker = () => {
     { key: 'outreachDates', label: 'Outreach Dates', icon: Calendar },
     { key: 'contactFunction', label: 'Contact Function', icon: User },
     { key: 'contactPerson', label: 'Contact Person', icon: User },
-    { key: 'cda', label: 'CDA', icon: CheckCircle },
+    { key: 'cda', label: 'CDA', icon: CheckCircle, width: 'w-20' },
     { key: 'feedback', label: 'Feedback', icon: MessageSquare },
     { key: 'nextSteps', label: 'Next Steps', icon: ArrowRight },
     { key: 'priority', label: 'Priority', icon: AlertCircle },
@@ -389,7 +389,7 @@ const BDTracker = () => {
           
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {columns.map((column) => (
-              <div key={column.key}>
+              <div key={column.key} className={column.key === 'cda' ? 'md:col-span-1' : ''}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {column.label}
                 </label>
@@ -399,7 +399,7 @@ const BDTracker = () => {
                     <select
                       value={formData[column.key]}
                       onChange={(e) => handleInputChange(column.key, e.target.value)}
-                        className="w-full px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none"
+                        className={`px-2 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 appearance-none ${column.key === 'cda' ? 'w-24' : 'w-full'}`}
                     >
                       <option value="">Select...</option>
                       <option value="Yes">Yes</option>
@@ -491,7 +491,7 @@ const BDTracker = () => {
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className="border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-100"
+                  className={`border border-gray-300 px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-100 ${column.width || ''}`}
                 >
                   <div className="flex items-center gap-2">
                     <column.icon className="w-4 h-4 text-gray-600" />
@@ -522,7 +522,7 @@ const BDTracker = () => {
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className="border border-gray-300 px-4 py-3 text-sm text-gray-900"
+                      className={`border border-gray-300 px-4 py-3 text-sm text-gray-900 ${column.width || ''}`}
                     >
                       {editingId === entry.id ? (
                         column.key === 'cda' ? (
@@ -530,7 +530,7 @@ const BDTracker = () => {
                             <select
                               value={formData[column.key] || ''}
                               onChange={(e) => handleInputChange(column.key, e.target.value)}
-                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                              className="w-24 px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
                             >
                               <option value="">Select CDA Status</option>
                               <option value="Yes">Yes</option>
