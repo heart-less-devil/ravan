@@ -1,71 +1,81 @@
 [
   {
-    "_id": "existing_1756200398895_0",
-    "name": "Deal Comps Data",
-    "description": "Existing PDF: Deal Comps Data.pdf",
-    "url": "/pdf/Deal Comps Data.pdf",
-    "filename": "Deal Comps Data.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
-    "uploadedBy": "system",
-    "isExisting": true
-  },
-  {
-    "_id": "existing_1756200398895_2",
-    "name": "Big Pharma BD Playbook",
-    "description": "Existing PDF: Big Pharma BD Playbook.pdf",
-    "url": "/pdf/Big Pharma BD Playbook.pdf",
-    "filename": "Big Pharma BD Playbook.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
-    "uploadedBy": "system",
-    "isExisting": true
-  },
-  {
-    "_id": "existing_1756200398895_3",
-    "name": "Biopharma News & Resources",
-    "description": "Existing PDF: Biopharma News & Resources.pdf",
-    "url": "/pdf/Biopharma News & Resources.pdf",
-    "filename": "Biopharma News & Resources.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
-    "uploadedBy": "system",
-    "isExisting": true
-  },
-  {
-    "_id": "existing_1756200398895_4",
-    "name": "Winning BD Pitch Deck",
-    "description": "Existing PDF: Winning BD Pitch Deck.pdf",
-    "url": "/pdf/Winning BD Pitch Deck.pdf",
-    "filename": "Winning BD Pitch Deck.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
-    "uploadedBy": "system",
-    "isExisting": true
-  },
-  {
-    "_id": "existing_1756200398895_5",
-    "name": "BD Process and Tips",
-    "description": "Existing PDF: BD Process and Tips.pdf",
-    "url": "/pdf/BD Process and Tips.pdf",
-    "filename": "BD Process and Tips.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
-    "uploadedBy": "system",
-    "isExisting": true
-  },
-  {
-    "_id": "existing_1756200398895_6",
+    "_id": "existing_1758186731137_aucgkufkp",
     "name": "BD Conferences -  Priority & Budgets",
     "description": "Existing PDF: BD Conferences, Priority & Budgets.pdf",
     "url": "/pdf/BD Conferences, Priority & Budgets.pdf",
     "filename": "BD Conferences, Priority & Budgets.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
     "uploadedBy": "system",
     "isExisting": true
   },
   {
-    "_id": "existing_1756200398895_7",
-    "name": "VC/PE Investor Contacts List",
+    "_id": "existing_1758186731137_gpksxmyfb",
+    "name": "BD Process and Tips",
+    "description": "Existing PDF: BD Process and Tips.pdf",
+    "url": "/pdf/BD Process and Tips.pdf",
+    "filename": "BD Process and Tips.pdf",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
+    "uploadedBy": "system",
+    "isExisting": true
+  },
+  {
+    "_id": "existing_1758186731137_0dksw3z0m",
+    "name": "Big Pharma BD Playbook",
+    "description": "Existing PDF: Big Pharma BD Playbook.pdf",
+    "url": "/pdf/Big Pharma BD Playbook.pdf",
+    "filename": "Big Pharma BD Playbook.pdf",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
+    "uploadedBy": "system",
+    "isExisting": true
+  },
+  {
+    "_id": "existing_1758186731137_sndrjtplm",
+    "name": "Biopharma News & Resources",
+    "description": "Existing PDF: Biopharma News & Resources.pdf",
+    "url": "/pdf/Biopharma News & Resources.pdf",
+    "filename": "Biopharma News & Resources.pdf",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
+    "uploadedBy": "system",
+    "isExisting": true
+  },
+  {
+    "_id": "existing_1758186731137_fz7ojsoxj",
+    "name": "BioPing Training Manual",
+    "description": "Existing PDF: BioPing Training Manual.pdf",
+    "url": "/pdf/BioPing Training Manual.pdf",
+    "filename": "BioPing Training Manual.pdf",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
+    "uploadedBy": "system",
+    "isExisting": true
+  },
+  {
+    "_id": "existing_1758186731137_dl8wx1j7f",
+    "name": "Deal Comps Data",
+    "description": "Existing PDF: Deal Comps Data.pdf",
+    "url": "/pdf/Deal Comps Data.pdf",
+    "filename": "Deal Comps Data.pdf",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
+    "uploadedBy": "system",
+    "isExisting": true
+  },
+  {
+    "_id": "existing_1758186731137_n0t58f9wg",
+    "name": "VC PE Investor Contacts List",
     "description": "Existing PDF: VC_PE_Investor Contacts List.pdf",
-    "url": "/pdf/VC_PE_Investor%20Contacts%20List.pdf",
+    "url": "/pdf/VC_PE_Investor Contacts List.pdf",
     "filename": "VC_PE_Investor Contacts List.pdf",
-    "uploadedAt": "2025-08-26T09:26:38.895Z",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
+    "uploadedBy": "system",
+    "isExisting": true
+  },
+  {
+    "_id": "existing_1758186731137_1t9ld46yv",
+    "name": "Winning BD Pitch Deck",
+    "description": "Existing PDF: Winning BD Pitch Deck.pdf",
+    "url": "/pdf/Winning BD Pitch Deck.pdf",
+    "filename": "Winning BD Pitch Deck.pdf",
+    "uploadedAt": "2025-09-18T09:12:11.137Z",
     "uploadedBy": "system",
     "isExisting": true
   }

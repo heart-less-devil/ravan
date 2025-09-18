@@ -225,8 +225,8 @@ const PricingManagement = () => {
           </div>
         </div>
 
-        {/* Debug Info - Only show in development */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* Debug Info - Hidden for clean UI */}
+        {false && (
           <div className="mb-4 p-4 bg-gray-100 rounded-lg">
             <h3 className="font-bold text-sm text-gray-700">Debug Info:</h3>
             <p className="text-xs text-gray-600">API URL: {API_BASE_URL}</p>
