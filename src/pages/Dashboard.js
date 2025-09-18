@@ -4158,6 +4158,20 @@ const PricingPage = () => {
 
   return (
     <div className="space-y-8">
+      {/* Debug Info - Hidden */}
+      {false && (
+        <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-4 mb-4">
+          <h3 className="font-bold text-yellow-800">Debug Info:</h3>
+          <p className="text-yellow-700">Current User Plan: {userCurrentPlan || 'Not set'}</p>
+          <p className="text-yellow-700">Plans loaded: {plans.length}</p>
+          {plans.map(plan => (
+            <p key={plan.id} className="text-yellow-700 text-sm">
+              {plan.name} (ID: {plan.id}) - Button: {plan.buttonText}
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="text-center mb-8">
@@ -4203,10 +4217,11 @@ const PricingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: index * 0.1 }}
-            className={`relative ${plan.popular ? 'lg:scale-105 z-10' : ''}`}
+            className={`relative ${plan.popular ? 'lg:scale-105 z-20' : 'z-10'}`}
+            style={{ zIndex: plan.popular ? 20 : 10 }}
           >
             {plan.popular && (
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-30" style={{ pointerEvents: 'none' }}>
                 <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-1 shadow-lg">
                   <Star className="w-4 h-4" />
                   <span>Most Popular</span>
@@ -4219,9 +4234,11 @@ const PricingPage = () => {
                    plan.name === 'Free' ? 'border-green-200 hover:border-green-300 shadow-lg shadow-green-100/50 hover:ring-2 hover:ring-green-200' :
                    plan.name === 'Basic Plan' ? 'border-blue-200 hover:border-blue-300 shadow-lg shadow-blue-100/50 hover:ring-2 hover:ring-blue-200' :
                    'border-gray-200 hover:border-gray-300 shadow-lg hover:ring-2 hover:ring-gray-200'
-                 } rounded-2xl flex flex-col hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden`}>
+                 } rounded-2xl flex flex-col hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden`}
+                 style={{ position: 'relative', zIndex: plan.popular ? 15 : 5 }}
+                >
                    {plan.popular && (
-                     <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl"></div>
+                     <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl" style={{ pointerEvents: 'none' }}></div>
                    )}
                    <div className="text-center mb-4 relative z-10">
                      <div className={`w-16 h-16 ${
@@ -4289,7 +4306,12 @@ const PricingPage = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={userCurrentPlan === plan.id}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto cursor-pointer ${
+                style={{ 
+                  pointerEvents: userCurrentPlan === plan.id ? 'none' : 'auto',
+                  position: 'relative',
+                  zIndex: 50
+                }}
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto cursor-pointer relative z-50 ${
                   (plan.id === 'free' && userCurrentPlan === 'free') || userCurrentPlan === plan.id
                     ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg cursor-default'
                     : plan.popular
@@ -4298,10 +4320,20 @@ const PricingPage = () => {
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg cursor-pointer' 
                         : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer'
                 }`}
-                onClick={() => {
-                  console.log('🖱️ Button clicked for plan:', plan.name, plan.id);
-                  console.log('🔍 Current user plan:', userCurrentPlan);
-                  console.log('🔍 Plan comparison:', plan.id === userCurrentPlan);
+                onMouseDown={(e) => {
+                  console.log('🖱️ MOUSEDOWN on plan:', plan.name, plan.id);
+                }}
+                onMouseUp={(e) => {
+                  console.log('🖱️ MOUSEUP on plan:', plan.name, plan.id);
+                }}
+                onClick={(e) => {
+                  console.log('🖱️ CLICK EVENT on plan:', plan.name, plan.id);
+                  
+                  // Special debug for Premium Plan
+                  if (plan.id === 'premium') {
+                    console.log('🎯 PREMIUM PLAN CLICKED!');
+                    console.log('🎯 Premium plan object:', plan);
+                  }
                   
                   // Don't allow clicking on current plan
                   if (plan.id === 'free' && userCurrentPlan === 'free') {
