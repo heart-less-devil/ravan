@@ -501,40 +501,19 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         }
       }
       
-      // Generate invoice for successful payment
+      // Generate automatic invoice for successful payment
       try {
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
+        const planId = paymentIntent.metadata?.planId || 'monthly';
+        
         if (customerEmail) {
-          // Find user in database to add invoice
-          const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
-          if (userIndex !== -1) {
-            // Initialize invoices array if it doesn't exist
-            if (!mockDB.users[userIndex].invoices) {
-              mockDB.users[userIndex].invoices = [];
-            }
-            
-            // Generate unique invoice ID
-            const invoiceId = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const planName = paymentIntent.metadata?.planId || 'Basic Plan';
-            
-            const newInvoice = {
-              id: invoiceId,
-              date: new Date().toISOString(),
-              amount: paymentIntent.amount / 100,
-              currency: paymentIntent.currency || 'usd',
-              status: 'paid',
-              description: `${planName} Subscription`,
-              plan: planName,
-              paymentIntentId: paymentIntent.id,
-              customerEmail: customerEmail
-            };
-            
-            mockDB.users[userIndex].invoices.push(newInvoice);
-            console.log(`✅ Invoice generated for ${customerEmail}: ${invoiceId}`);
-          }
+          console.log('🎯 Triggering automatic invoice generation...');
+          await generateAutomaticInvoice(paymentIntent, customerEmail, planId);
+        } else {
+          console.log('⚠️ No customer email found for invoice generation');
         }
       } catch (invoiceError) {
-        console.error('❌ Error generating invoice:', invoiceError);
+        console.error('❌ Error generating automatic invoice:', invoiceError);
       }
       
       // Send payment confirmation email
@@ -2546,6 +2525,29 @@ app.post('/api/create-subscription', async (req, res) => {
       } catch (emailError) {
         console.error('❌ Email sending error:', emailError);
         // Continue even if email fails
+      }
+      
+      // Generate automatic invoice for successful subscription
+      try {
+        console.log('🎯 Generating automatic invoice for subscription...');
+        
+        // Create a mock payment intent for invoice generation
+        const mockPaymentIntent = {
+          id: `pi_subscription_${result.subscription.id}`,
+          amount: result.subscription.items.data[0].price.unit_amount,
+          currency: result.subscription.currency || 'usd',
+          status: 'succeeded',
+          metadata: {
+            planId: planId,
+            customerEmail: customerEmail
+          }
+        };
+        
+        await generateAutomaticInvoice(mockPaymentIntent, customerEmail, planId);
+        console.log('✅ Automatic invoice generated for subscription');
+      } catch (invoiceError) {
+        console.error('❌ Error generating subscription invoice:', invoiceError);
+        // Don't fail the subscription if invoice generation fails
       }
       
       res.json({
@@ -6104,6 +6106,110 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
     });
   }
 });
+
+// ============================================================================
+// AUTOMATIC INVOICE GENERATION FUNCTION
+// ============================================================================
+
+// Function to automatically generate invoice after successful payment
+async function generateAutomaticInvoice(paymentIntent, customerEmail, planId) {
+  try {
+    console.log('📄 Generating automatic invoice for payment:', paymentIntent.id);
+    
+    // Find user data
+    let user = null;
+    try {
+      user = await User.findOne({ email: customerEmail });
+      if (!user) {
+        const fileUser = mockDB.users.find(u => u.email === customerEmail);
+        if (fileUser) {
+          user = fileUser;
+        }
+      }
+    } catch (error) {
+      console.log('Using file-based user data');
+      user = mockDB.users.find(u => u.email === customerEmail);
+    }
+    
+    if (!user) {
+      console.log('❌ User not found for automatic invoice generation');
+      return;
+    }
+    
+    // Create invoice data
+    const invoiceData = {
+      id: `INV-${Date.now()}`,
+      paymentIntentId: paymentIntent.id,
+      customerEmail: customerEmail,
+      amount: paymentIntent.amount / 100, // Convert cents to dollars
+      currency: paymentIntent.currency.toUpperCase(),
+      planId: planId,
+      status: 'paid',
+      created: new Date().toISOString(),
+      date: new Date().toISOString(),
+      description: getPlanDescription(planId),
+      user: {
+        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.name || customerEmail,
+        email: customerEmail,
+        company: user.company || 'N/A'
+      }
+    };
+    
+    // Generate PDF invoice
+    const pdfBuffer = await generatePDFInvoice(invoiceData, invoiceData.user);
+    
+    // Save invoice data to database/file
+    try {
+      // Try to save to MongoDB first
+      if (isMongoConnected()) {
+        await User.findOneAndUpdate(
+          { email: customerEmail },
+          { 
+            $push: { 
+              invoices: invoiceData 
+            }
+          }
+        );
+        console.log('✅ Invoice saved to MongoDB');
+      } else {
+        // Fallback to file storage
+        const userIndex = mockDB.users.findIndex(u => u.email === customerEmail);
+        if (userIndex !== -1) {
+          if (!mockDB.users[userIndex].invoices) {
+            mockDB.users[userIndex].invoices = [];
+          }
+          mockDB.users[userIndex].invoices.push(invoiceData);
+          saveDataToFiles();
+          console.log('✅ Invoice saved to file storage');
+        }
+      }
+    } catch (saveError) {
+      console.error('❌ Error saving invoice:', saveError);
+    }
+    
+    console.log('✅ Automatic invoice generated successfully:', invoiceData.id);
+    return invoiceData;
+    
+  } catch (error) {
+    console.error('❌ Error generating automatic invoice:', error);
+  }
+}
+
+// Helper function to get plan description
+function getPlanDescription(planId) {
+  const planDescriptions = {
+    'monthly': 'BioPing Monthly Subscription',
+    'yearly': 'BioPing Yearly Subscription',
+    'basic': 'BioPing Basic Plan',
+    'premium': 'BioPing Premium Plan',
+    'basic-yearly': 'BioPing Basic Plan (Yearly)',
+    'premium-yearly': 'BioPing Premium Plan (Yearly)',
+    'daily-12': 'BioPing 12-Day Trial Plan',
+    'simple-1': 'BioPing Simple Plan'
+  };
+  
+  return planDescriptions[planId] || 'BioPing Subscription';
+}
 
 // Function to generate PDF invoice
 const generatePDFInvoice = (invoice, user) => {
