@@ -3717,30 +3717,64 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
         
         console.log('Checking region for:', item.companyName, 'Item region:', itemRegion, 'Search region:', region);
         
+        // Use continent field for better matching
+        const itemContinent = item.continent || '';
+        
         // Handle region variations and abbreviations
         if (region === 'North America') {
-          isMatch = itemRegion.toLowerCase().includes('usa') || 
+          isMatch = itemContinent === 'North America' || 
+                   itemRegion.toLowerCase().includes('usa') || 
                    itemRegion.toLowerCase().includes('united states') ||
                    itemRegion.toLowerCase().includes('us') ||
-                   itemRegion.toLowerCase().includes('canada');
+                   itemRegion.toLowerCase().includes('canada') ||
+                   itemRegion.toLowerCase().includes('mexico');
         } else if (region === 'Europe') {
-          isMatch = itemRegion.toLowerCase().includes('germany') || 
+          isMatch = itemContinent === 'Europe' ||
+                   itemRegion.toLowerCase().includes('germany') || 
                    itemRegion.toLowerCase().includes('france') ||
                    itemRegion.toLowerCase().includes('switzerland') ||
                    itemRegion.toLowerCase().includes('denmark') ||
-                   itemRegion.toLowerCase().includes('uk');
+                   itemRegion.toLowerCase().includes('uk') ||
+                   itemRegion.toLowerCase().includes('spain') ||
+                   itemRegion.toLowerCase().includes('italy') ||
+                   itemRegion.toLowerCase().includes('netherlands') ||
+                   itemRegion.toLowerCase().includes('belgium') ||
+                   itemRegion.toLowerCase().includes('austria') ||
+                   itemRegion.toLowerCase().includes('finland') ||
+                   itemRegion.toLowerCase().includes('poland') ||
+                   itemRegion.toLowerCase().includes('norway') ||
+                   itemRegion.toLowerCase().includes('hungary') ||
+                   itemRegion.toLowerCase().includes('sweden');
         } else if (region === 'Asia') {
-          isMatch = itemRegion.toLowerCase().includes('japan') || 
-                   itemRegion.toLowerCase().includes('china');
+          isMatch = itemContinent === 'Asia' ||
+                   itemRegion.toLowerCase().includes('japan') || 
+                   itemRegion.toLowerCase().includes('china') ||
+                   itemRegion.toLowerCase().includes('india') ||
+                   itemRegion.toLowerCase().includes('south korea') ||
+                   itemRegion.toLowerCase().includes('israel') ||
+                   itemRegion.toLowerCase().includes('taiwan') ||
+                   itemRegion.toLowerCase().includes('uae') ||
+                   itemRegion.toLowerCase().includes('singapore') ||
+                   itemRegion.toLowerCase().includes('hong kong') ||
+                   itemRegion.toLowerCase().includes('saudi arabia') ||
+                   itemRegion.toLowerCase().includes('turkey');
+        } else if (region === 'Oceania') {
+          isMatch = itemContinent === 'Oceania' ||
+                   itemRegion.toLowerCase().includes('australia') ||
+                   itemRegion.toLowerCase().includes('new zealand');
         } else if (region === 'Africa') {
-          // No African companies in your data currently
-          isMatch = false;
+          isMatch = itemContinent === 'Africa' ||
+                   itemRegion.toLowerCase().includes('egypt');
         } else if (region === 'South America') {
-          // No South American companies in your data currently
-          isMatch = false;
+          isMatch = itemContinent === 'South America' ||
+                   itemRegion.toLowerCase().includes('brazil') ||
+                   itemRegion.toLowerCase().includes('chile') ||
+                   itemRegion.toLowerCase().includes('colombia') ||
+                   itemRegion.toLowerCase().includes('uruguay');
         } else {
           // Fallback to general search for specific countries
-          isMatch = itemRegion.toLowerCase().includes(region.toLowerCase());
+          isMatch = itemRegion.toLowerCase().includes(region.toLowerCase()) ||
+                   itemContinent.toLowerCase().includes(region.toLowerCase());
         }
         
         console.log('Region match result:', isMatch, 'for company:', item.companyName);

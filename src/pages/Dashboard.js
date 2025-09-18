@@ -1989,6 +1989,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   <option value="Asia">Asia</option>
                   <option value="Europe">Europe</option>
                   <option value="North America">North America</option>
+                  <option value="Oceania">Oceania</option>
                   <option value="South America">South America</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
