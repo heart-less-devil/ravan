@@ -2648,7 +2648,7 @@ Timestamp: ${new Date().toLocaleString()}
 
         const mailOptions = {
           from: process.env.EMAIL_USER,
-          to: 'universalx0242@gmail.com',
+          to: 'info@bioping.com',
           subject: 'New Contact Form Submission - BioPing',
           text: emailContent,
           html: `
@@ -2669,7 +2669,7 @@ Timestamp: ${new Date().toLocaleString()}
         });
 
         const result = await transporter.sendMail(mailOptions);
-        console.log('✅ Email sent successfully to universalx0242@gmail.com');
+        console.log('✅ Email sent successfully to info@bioping.com');
         console.log('📧 Email result:', result.messageId);
       } catch (emailError) {
         console.error('❌ Error sending email:', emailError);
