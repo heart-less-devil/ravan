@@ -4288,20 +4288,34 @@ const PricingPage = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto ${
+                disabled={userCurrentPlan === plan.id}
+                className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto cursor-pointer ${
                   (plan.id === 'free' && userCurrentPlan === 'free') || userCurrentPlan === plan.id
-                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg cursor-default'
                     : plan.popular
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg cursor-pointer'
                       : plan.buttonStyle === 'primary' 
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg' 
-                        : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg cursor-pointer' 
+                        : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer'
                 }`}
                 onClick={() => {
+                  console.log('🖱️ Button clicked for plan:', plan.name, plan.id);
+                  console.log('🔍 Current user plan:', userCurrentPlan);
+                  console.log('🔍 Plan comparison:', plan.id === userCurrentPlan);
+                  
                   // Don't allow clicking on current plan
                   if (plan.id === 'free' && userCurrentPlan === 'free') {
+                    console.log('❌ Free plan already active, ignoring click');
                     return;
                   }
+                  
+                  // Don't allow clicking on current plan for any plan
+                  if (userCurrentPlan === plan.id) {
+                    console.log('❌ Current plan clicked, ignoring');
+                    return;
+                  }
+                  
+                  console.log('✅ Proceeding with plan selection');
                   handleSelectPlan(plan);
                 }}
               >
