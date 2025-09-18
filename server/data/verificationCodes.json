@@ -1,0 +1,40 @@
+[
+  {
+    "email": "amankk0007@gmail.com",
+    "code": "608323",
+    "createdAt": "2025-07-23T09:57:04.307Z",
+    "expiresAt": "2025-07-23T10:07:04.307Z"
+  },
+  {
+    "email": "charusharma3261@gmail.com",
+    "code": "698091",
+    "createdAt": "2025-08-31T10:50:26.959Z",
+    "expiresAt": "2025-08-31T11:00:26.959Z"
+  },
+  {
+    "email": "charusharma3261@gmail.com",
+    "code": "491026",
+    "createdAt": "2025-08-31T10:51:00.569Z",
+    "expiresAt": "2025-08-31T11:01:00.569Z"
+  },
+  {
+    "email": "charusharma3261@gmail.com",
+    "code": "127986",
+    "createdAt": "2025-08-31T10:58:53.063Z",
+    "expiresAt": "2025-08-31T11:08:53.063Z"
+  },
+  {
+    "email": "amankk0007@gmail.com",
+    "code": "490958",
+    "createdAt": "2025-09-04T16:54:02.099Z",
+    "expiresAt": "2025-09-04T17:04:02.099Z",
+    "type": "password-reset"
+  },
+  {
+    "email": "universalx0242@gmail.com",
+    "code": "918162",
+    "createdAt": "2025-09-10T14:31:59.003Z",
+    "expiresAt": "2025-09-10T14:41:59.003Z",
+    "type": "password-reset"
+  }
+]

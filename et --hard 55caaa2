@@ -1,0 +1,10 @@
+[33m16a3e6d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Deploy all latest changes - security cleaned
+[33mc3a8373[m Security fix: Replace exposed Stripe API keys with placeholders
+[33m77cddfd[m Deploy latest changes: Stripe payment fixes, server updates, and new deployment guides
+[33m7e14932[m  Add Secure Stripe Deployment Guide and Templates
+[33m25cde2b[m  Add Stripe Deployment Guide and Templates
+[33m55caaa2[m[33m ([m[1;31morigin/main[m[33m)[m  12-Day Auto-Cut Subscription System Complete
+[33md1a0fbb[m  Fix Live Website Stripe Key Issue
+[33m55f5af0[m  Auto-Cut Subscription System - Live Mode Ready
+[33mcc83884[m 🚀 Complete Auto-Cut Subscription System Implementation
+[33m04a39fd[m Production build complete: Frontend + Backend with live Stripe integration and 12-day subscription system

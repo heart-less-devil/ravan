@@ -1,0 +1,20 @@
+{
+  "websiteUrl": "https://biopingweb.com",
+  "loginUrl": "https://biopingweb.com/login",
+  "apiHealthUrl": "https://bioping-backend.onrender.com/api/health",
+  "intervalMinutes": 4,
+  "logFile": "keepalive.log",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+  "additionalPages": [
+    "/about",
+    "/contact",
+    "/pricing",
+    "/resources",
+    "/how-it-works",
+    "/our-value"
+  ],
+  "waitBetweenRequests": 2000,
+  "requestTimeout": 30000,
+  "enableLogging": true,
+  "enableConsoleOutput": true
+}
