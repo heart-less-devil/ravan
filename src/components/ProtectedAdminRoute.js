@@ -64,17 +64,17 @@ const ProtectedAdminRoute = ({ children }) => {
   
   // Check if user is logged in
   if (!token) {
-    console.log('ProtectedAdminRoute - No token, redirecting to login');
-    return <Navigate to="/login" replace />;
+    console.log('ProtectedAdminRoute - No token, redirecting to admin login');
+    return <Navigate to="/dashboard/admin-login?admin=true" replace />;
   }
   
   
   // Check if user is logged in and has data
   if (!user) {
-    console.log('ProtectedAdminRoute - No user data, redirecting to login');
+    console.log('ProtectedAdminRoute - No user data, redirecting to admin login');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/dashboard/admin-login?admin=true" replace />;
   }
   
   // Check if user is admin (multiple admin emails)
@@ -84,12 +84,15 @@ const ProtectedAdminRoute = ({ children }) => {
     'your-email@gmail.com' // Add your email here
   ];
   
+  console.log('🔍 ProtectedAdminRoute: User email:', user.email);
+  console.log('🔍 ProtectedAdminRoute: Is admin?', adminEmails.includes(user.email));
+  
   if (!adminEmails.includes(user.email)) {
-    console.log('ProtectedAdminRoute - Not admin, redirecting to login with admin message');
-    // If not admin, redirect to login with admin message
+    console.log('❌ ProtectedAdminRoute - Not admin, redirecting to admin login');
+    // If not admin, redirect to admin login with message
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
-    return <Navigate to="/login?admin=true" replace />;
+    return <Navigate to="/dashboard/admin-login?admin=true" replace />;
   }
   
   console.log('ProtectedAdminRoute - Admin access granted');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 const PricingManagement = () => {
   const [plans, setPlans] = useState([]);
@@ -24,18 +25,42 @@ const PricingManagement = () => {
   });
 
   useEffect(() => {
+    console.log('🔍 PricingManagement: Component mounted');
+    console.log('🔍 PricingManagement: API_BASE_URL:', API_BASE_URL);
+    console.log('🔍 PricingManagement: Token exists:', !!sessionStorage.getItem('token'));
     fetchPlans();
   }, []);
 
   const fetchPlans = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      const apiUrl = `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005'}/api/admin/pricing`;
-      console.log('🔍 Fetching pricing plans from:', apiUrl);
+      const apiUrl = `${API_BASE_URL}/api/admin/pricing`;
+      console.log('🔍 PricingManagement: Fetching pricing plans from:', apiUrl);
+      console.log('🔍 PricingManagement: Token preview:', token ? token.substring(0, 20) + '...' : 'No token');
+      
+      // First test admin health check
+      try {
+        const healthResponse = await fetch(`${API_BASE_URL}/api/admin/health`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        console.log('🔍 PricingManagement: Admin health check status:', healthResponse.status);
+        if (healthResponse.ok) {
+          const healthData = await healthResponse.json();
+          console.log('✅ PricingManagement: Admin health check passed:', healthData);
+        } else {
+          console.log('❌ PricingManagement: Admin health check failed');
+        }
+      } catch (healthError) {
+        console.log('❌ PricingManagement: Admin health check error:', healthError);
+      }
       
       const response = await fetch(apiUrl, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
       
@@ -49,11 +74,14 @@ const PricingManagement = () => {
       
       const data = await response.json();
       console.log('📊 Received data:', data);
+      console.log('📊 Plans array:', data.plans);
+      console.log('📊 Success status:', data.success);
       setPlans(data.plans || []);
       setLoading(false);
     } catch (error) {
-      console.error('❌ Error fetching plans:', error);
-      setError(''); // Hide error message
+      console.error('❌ PricingManagement: Error fetching plans:', error);
+      console.error('❌ PricingManagement: Error details:', error.message);
+      setError(`Failed to fetch pricing plans: ${error.message}`);
       setLoading(false);
     }
   };
@@ -63,10 +91,9 @@ const PricingManagement = () => {
     
     try {
       const token = sessionStorage.getItem('token');
-      const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005';
       const url = editingPlan 
-        ? `${baseUrl}/api/admin/pricing/${editingPlan._id}`
-        : `${baseUrl}/api/admin/pricing`;
+        ? `${API_BASE_URL}/api/admin/pricing/${editingPlan._id}`
+        : `${API_BASE_URL}/api/admin/pricing`;
       
       const method = editingPlan ? 'PUT' : 'POST';
       
@@ -197,6 +224,23 @@ const PricingManagement = () => {
             </button>
           </div>
         </div>
+
+        {/* Debug Info */}
+        <div className="mb-4 p-4 bg-gray-100 rounded-lg">
+          <h3 className="font-bold text-sm text-gray-700">Debug Info:</h3>
+          <p className="text-xs text-gray-600">API URL: {API_BASE_URL}</p>
+          <p className="text-xs text-gray-600">Token: {sessionStorage.getItem('token') ? 'Present' : 'Missing'}</p>
+          <p className="text-xs text-gray-600">Plans Count: {plans.length}</p>
+          <p className="text-xs text-gray-600">Error: {error || 'None'}</p>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg">
+            <h3 className="font-bold text-red-800">Error:</h3>
+            <p className="text-red-700">{error}</p>
+          </div>
+        )}
 
         {/* Add New Plan Button */}
         {!showAddForm && (

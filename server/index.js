@@ -8269,10 +8269,28 @@ app.get('/api/test-pricing', async (req, res) => {
   }
 });
 
+// Admin Health Check
+app.get('/api/admin/health', authenticateAdmin, async (req, res) => {
+  try {
+    console.log('🔍 Admin Health Check - User:', req.user?.email);
+    res.json({ 
+      success: true, 
+      message: 'Admin access working',
+      user: req.user?.email,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Admin health check error:', error);
+    res.status(500).json({ error: 'Admin health check failed' });
+  }
+});
+
 // Pricing Management Routes
 app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
-    console.log('🔍 Fetching pricing plans...');
+    console.log('🔍 Admin Pricing: Fetching pricing plans...');
+    console.log('🔍 Admin Pricing: User email:', req.user?.email);
+    console.log('🔍 Admin Pricing: Request headers:', req.headers);
     
     // Initialize pricing array if it doesn't exist
     if (!mockDB.pricing) mockDB.pricing = [];
@@ -8371,8 +8389,13 @@ app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
       features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
     }));
     
-    console.log('✅ Returning pricing plans:', plansWithArrayFeatures.length, 'plans');
-    res.json({ plans: plansWithArrayFeatures });
+    console.log('✅ Admin Pricing: Returning pricing plans:', plansWithArrayFeatures.length, 'plans');
+    console.log('✅ Admin Pricing: First plan sample:', plansWithArrayFeatures[0]);
+    res.json({ 
+      success: true,
+      plans: plansWithArrayFeatures,
+      total: plansWithArrayFeatures.length
+    });
   } catch (error) {
     console.error('❌ Error fetching pricing plans:', error);
     res.status(500).json({ error: 'Failed to fetch pricing plans' });

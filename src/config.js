@@ -1,8 +1,13 @@
-// API Configuration with fallback URLs - URGENT REBUILD REQUIRED
+// API Configuration with fallback URLs - FIXED FOR LIVE DEPLOYMENT
 const getApiUrl = () => {
-  // Check if we're on the live website
-  if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
-    return 'https://bioping-backend.onrender.com';
+  // Check if we're on the live website (GoDaddy or Netlify)
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname.includes('thebioping.com')) {
+      return 'https://ravan-8n0h.onrender.com';
+    }
+    if (window.location.hostname.includes('netlify.app')) {
+      return 'https://ravan-8n0h.onrender.com';
+    }
   }
   
   // Custom environment variable (highest priority)
@@ -10,56 +15,22 @@ const getApiUrl = () => {
     return process.env.REACT_APP_API_BASE_URL;
   }
   
-  // Development - but use production backend if localhost not available
+  // Development - use localhost first, then fallback
   if (process.env.NODE_ENV === 'development') {
-    // Try localhost first, but fallback to production
-    return 'https://bioping-backend.onrender.com';
+    return 'http://localhost:3005';
   }
   
-  // Production fallbacks - try multiple servers
-  const productionUrls = [
-    'https://bioping-backend.onrender.com',
-    'https://ravan-8n0h.onrender.com',
-    'https://ravan-backend.onrender.com',
-    'https://bioping-server.onrender.com',
-    'https://thebioping.com',
-    'https://www.thebioping.com'
-  ];
-  
-  return productionUrls[0]; // Use your correct backend as default
+  // Production fallbacks - use the correct Render backend
+  return 'https://ravan-8n0h.onrender.com';
 };
 
 export const API_BASE_URL = getApiUrl();
 export const ADMIN_API_BASE_URL = getApiUrl();
 
-// Fallback URLs for different deployment scenarios
+// Fallback URLs for different deployment scenarios - UNIFIED CONFIG
 const getBackendURL = () => {
-  // Check if we're on the live website
-  if (typeof window !== 'undefined' && window.location.hostname.includes('thebioping.com')) {
-    return 'https://bioping-backend.onrender.com';
-  }
-  
-  // Custom environment variable (highest priority)
-  if (process.env.REACT_APP_API_BASE_URL) {
-    return process.env.REACT_APP_API_BASE_URL;
-  }
-  
-  // Development - but use production backend if localhost not available
-  if (process.env.NODE_ENV === 'development') {
-    return 'https://bioping-backend.onrender.com';
-  }
-  
-  // Production fallbacks
-  const possibleURLs = [
-    'https://bioping-backend.onrender.com',
-    'https://ravan-8n0h.onrender.com',
-    'https://ravan-backend.onrender.com',
-    'https://bioping-server.onrender.com',
-    'https://thebioping.com',
-    'https://www.thebioping.com'
-  ];
-  
-  return possibleURLs[0]; // Use your correct backend as default
+  // Use the same logic as getApiUrl for consistency
+  return getApiUrl();
 };
 
 // Stripe Configuration with better error handling

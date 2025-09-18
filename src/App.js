@@ -214,6 +214,7 @@ function App() {
               <PDFManagement />
             </ProtectedAdminRoute>
           } />
+          
           <Route path="/dashboard/pricing-management" element={
             <ProtectedAdminRoute>
               <PricingManagement />

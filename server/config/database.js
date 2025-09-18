@@ -5,16 +5,19 @@ const connectDB = async () => {
     // MongoDB URI - using the provided connection string
     const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://universal:universal07@cluster0.f2z1iic.mongodb.net/bioping?retryWrites=true&w=majority&appName=Cluster0';
     
+    console.log('🔄 Attempting MongoDB connection...');
+    console.log('🔍 MongoDB URI (masked):', mongoURI.replace(/\/\/.*@/, '//***:***@'));
+    
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 30000, // 30 seconds
-      socketTimeoutMS: 45000, // 45 seconds
+      serverSelectionTimeoutMS: 15000, // Reduced to 15 seconds
+      socketTimeoutMS: 20000, // Reduced timeout
       bufferCommands: false,
-      maxPoolSize: 10,
-      minPoolSize: 5,
-      maxIdleTimeMS: 30000,
-      connectTimeoutMS: 30000,
+      maxPoolSize: 5, // Reduced pool size
+      minPoolSize: 1,
+      maxIdleTimeMS: 20000,
+      connectTimeoutMS: 15000,
       retryWrites: true,
       w: 'majority',
       appName: 'BioPing'
@@ -78,8 +81,25 @@ const connectDB = async () => {
     }
     
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    console.log('🔄 Continuing with file-based storage...');
+    console.error('❌ MongoDB connection error:', error.message);
+    
+    // Check for specific error types
+    if (error.message.includes('IP') || error.message.includes('whitelist') || error.message.includes('network')) {
+      console.log('🚨 IP WHITELIST ISSUE DETECTED!');
+      console.log('📋 SOLUTION:');
+      console.log('   1. Go to MongoDB Atlas Dashboard');
+      console.log('   2. Navigate to Network Access');
+      console.log('   3. Add IP Address: 0.0.0.0/0 (Allow all)');
+      console.log('   4. Or add your current IP address');
+      console.log('🌐 Current connection attempt from local machine');
+    }
+    
+    if (error.message.includes('authentication')) {
+      console.log('🔑 AUTHENTICATION ISSUE - Check username/password');
+    }
+    
+    console.log('🔄 Continuing with file-based storage for now...');
+    console.log('💾 All data will be saved to server/data/ files');
     // Don't throw error, let the app continue with file-based storage
   }
 };
