@@ -2267,7 +2267,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                             </button>
                           )}
                         </div>
-                        <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
+                        <div className="text-sm text-gray-500 underline decoration-dotted cursor-pointer -mt-1" onClick={() => handleViewMoreDetails(result.id)}>
                           {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
                           <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -2277,16 +2277,12 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                     </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
                         <button
                           onClick={() => handleRevealEmail(result.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200"
                         >
-                          Get Contact Info
+                          <Mail className="w-4 h-4" />
+                          <span>Get Contact Info</span>
                         </button>
                       </div>
                     </td>
@@ -2314,7 +2310,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           </div>
                                 <div className="space-y-2">
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">REGION:</span>
+                                    <span className="text-sm text-gray-500">HQ:</span>
                                     <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
         </div>
                                 </div>
