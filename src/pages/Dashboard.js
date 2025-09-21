@@ -1373,6 +1373,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [revealedEmails, setRevealedEmails] = useState(new Set());
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [allContactsData, setAllContactsData] = useState([]);
+  const [showCompanyList, setShowCompanyList] = useState(false);
+  const [uniqueCompaniesList, setUniqueCompaniesList] = useState([]);
   const [expandedContactDetails, setExpandedContactDetails] = useState(new Set());
   const [currentSearchType, setCurrentSearchType] = useState(searchType);
   const [currentSearchQuery, setCurrentSearchQuery] = useState('');
@@ -1503,17 +1505,38 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     return () => clearTimeout(timer);
   }, [globalSearchResults, setGlobalSearchResults]);
 
+  // Sorting function to sort by company name alphabetically
+  const sortSearchResults = (results) => {
+    return [...results].sort((a, b) => {
+      const companyA = (a.companyName || '').toLowerCase();
+      const companyB = (b.companyName || '').toLowerCase();
+      
+      // First sort by company name
+      if (companyA !== companyB) {
+        return companyA.localeCompare(companyB);
+      }
+      
+      // If company names are the same, sort by contact person name
+      const contactA = (a.contactPerson || '').toLowerCase();
+      const contactB = (b.contactPerson || '').toLowerCase();
+      return contactA.localeCompare(contactB);
+    });
+  };
+
+  // Sort search results
+  const sortedSearchResults = sortSearchResults(searchResults);
+
   // Process search results to group by company
   useEffect(() => {
-    console.log('Processing search results:', { searchResults: searchResults.length, isGlobalSearch, currentSearchType });
+    console.log('Processing search results:', { searchResults: sortedSearchResults.length, isGlobalSearch, currentSearchType });
     
     // For Contact Name searches, don't group - show individual contacts
-    if (searchResults.length > 0 && isGlobalSearch && currentSearchType === 'Contact Name') {
+    if (sortedSearchResults.length > 0 && isGlobalSearch && currentSearchType === 'Contact Name') {
       console.log('Contact Name search - showing individual contacts');
       setGroupedResults({}); // Don't group for contact searches
-    } else if (searchResults.length > 0 && isGlobalSearch) {
+    } else if (sortedSearchResults.length > 0 && isGlobalSearch) {
       // Group ONLY for Company Name searches
-      const grouped = searchResults.reduce((acc, item) => {
+      const grouped = sortedSearchResults.reduce((acc, item) => {
         if (!acc[item.companyName]) {
           acc[item.companyName] = {
             companyInfo: {
@@ -1532,8 +1555,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
       setGroupedResults(grouped);
       
       // Auto-populate Contact Name field with first contact when searching by company
-      if (currentSearchType === 'Company Name' && searchResults.length > 0) {
-        const firstContact = searchResults[0];
+      if (currentSearchType === 'Company Name' && sortedSearchResults.length > 0) {
+        const firstContact = sortedSearchResults[0];
         if (firstContact.contactPerson) {
           setFormData(prev => ({
             ...prev,
@@ -1545,7 +1568,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     } else {
       setGroupedResults({});
     }
-  }, [searchResults, currentSearchType, isGlobalSearch]);
+  }, [sortedSearchResults, currentSearchType, isGlobalSearch]);
 
   const handleChange = (e) => {
     setFormData({
@@ -1686,10 +1709,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   };
 
   // Pagination logic
-  const totalPages = Math.ceil(searchResults.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedSearchResults.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentResults = searchResults.slice(startIndex, endIndex);
+  const currentResults = sortedSearchResults.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -1697,6 +1720,19 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   
   const closeCreditPopup = () => {
     setShowCreditPopup(false);
+  };
+
+  // Function to get unique companies from search results
+  const getUniqueCompanies = () => {
+    const uniqueCompanies = [...new Set(sortedSearchResults.map(result => result.companyName).filter(Boolean))];
+    return uniqueCompanies.sort(); // Sort alphabetically
+  };
+
+  // Function to handle company list click
+  const handleShowCompanyList = () => {
+    const companies = getUniqueCompanies();
+    setUniqueCompaniesList(companies);
+    setShowCompanyList(true);
   };
 
   // daysRemaining is passed as a prop from parent component
@@ -1769,10 +1805,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         console.log('SearchPage Render:', { 
           isGlobalSearch, 
           currentSearchType, 
-          searchResultsLength: searchResults.length,
-          hasResults: searchResults.length > 0
+          searchResultsLength: sortedSearchResults.length,
+          hasResults: sortedSearchResults.length > 0
         });
-        const shouldHideForm = searchResults.length > 0;
+        const shouldHideForm = sortedSearchResults.length > 0;
         console.log('Should hide form:', shouldHideForm);
         return !shouldHideForm;
       })() && (
@@ -1789,10 +1825,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               </span>
               Asset Profile
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-6">
             
             {/* Drug Name */}
-            <div>
+            <div className="md:col-span-1">
               <label htmlFor="drugName" className="block text-sm font-semibold text-gray-900 mb-2">
                 Drug Name <span className="text-red-500">*</span>
               </label>
@@ -1812,7 +1848,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
 
             {/* Disease Area */}
-            <div>
+            <div className="md:col-span-2">
               <label htmlFor="diseaseArea" className="block text-sm font-semibold text-gray-900 mb-2">
                 Disease Area <span className="text-red-500">*</span>
               </label>
@@ -1822,7 +1858,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   name="diseaseArea"
                   value={formData.diseaseArea}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none bg-white"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none bg-white text-sm"
                   required
                 >
                   <option value="">Select Disease Area</option>
@@ -1854,7 +1890,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </div>
 
             {/* Stage of Development */}
-            <div>
+            <div className="md:col-span-2">
               <label htmlFor="stageOfDevelopment" className="block text-sm font-semibold text-gray-900 mb-2">
                 Stage of Development
               </label>
@@ -1883,7 +1919,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </div>
 
             {/* Modality */}
-            <div>
+            <div className="md:col-span-2">
               <label htmlFor="modality" className="block text-sm font-semibold text-gray-900 mb-2">
                 Modality
               </label>
@@ -2069,26 +2105,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             </div>
             <div className="text-center">
               <h3 className="text-2xl font-bold text-blue-700 mb-3">No Results Found</h3>
-              <p className="text-blue-600 font-semibold text-lg mb-4">{error}</p>
-              <div className="bg-white rounded-xl p-4 border border-blue-200 shadow-sm">
-                <div className="flex items-center justify-center space-x-2 mb-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+              <p className="text-blue-600 font-semibold text-lg">{error}</p>
                   </div>
-                  <span className="text-sm font-semibold text-gray-700">Quick Tip</span>
-                </div>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Try searching for <span className="font-semibold text-blue-600">"UCB"</span> in the Company Name field to see available companies in our database.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       )}
 
-      {searchResults.length > 0 && (
+      {sortedSearchResults.length > 0 && (
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           {/* Search Results Summary */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-blue-200">
@@ -2096,9 +2119,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white rounded-lg p-4 border border-blue-200">
                 <div className="text-sm font-medium text-gray-600 mb-1">Number of Unique Companies</div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div 
+                  className="text-2xl font-bold text-blue-600 cursor-pointer hover:text-blue-800 transition-colors duration-200"
+                  onClick={handleShowCompanyList}
+                  title="Click to view all companies"
+                >
                   {(() => {
-                    const uniqueCompanies = new Set(searchResults.map(result => result.companyName));
+                    const uniqueCompanies = new Set(sortedSearchResults.map(result => result.companyName));
                     return uniqueCompanies.size;
                   })()}
                 </div>
@@ -2111,8 +2138,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => {
-                        if (searchResults.length > 0) {
-                          setAllContactsData(searchResults);
+                        if (sortedSearchResults.length > 0) {
+                          setAllContactsData(sortedSearchResults);
                           setShowAllContacts(true);
                         }
                       }}
@@ -2123,7 +2150,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   )}
                 </div>
                 <div className="text-2xl font-bold text-blue-600">
-                  {searchResults.length}
+                  {sortedSearchResults.length}
                 </div>
               </div>
             </div>
@@ -2133,7 +2160,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <div>
               <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
               <p className="text-gray-600">
-                Showing {startIndex + 1} - {Math.min(endIndex, searchResults.length)} of {searchResults.length} results
+                Showing {startIndex + 1} - {Math.min(endIndex, sortedSearchResults.length)} of {sortedSearchResults.length} results
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -2510,6 +2537,42 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Company List Modal */}
+      {showCompanyList && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">All Companies</h3>
+              <button
+                onClick={() => setShowCompanyList(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-600">
+                Showing {uniqueCompaniesList.length} unique companies from your search results
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+              {uniqueCompaniesList.map((company, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">{company}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
