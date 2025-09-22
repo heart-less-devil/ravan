@@ -4714,14 +4714,14 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
     console.log('BD Tracker POST - User Email:', req.user.email);
     console.log('BD Tracker POST - Request Body:', req.body);
     
-    const { projectName, company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
+    const { type, company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
 
     // Validate required fields
-    if (!projectName || !company || !contactPerson) {
-      console.log('BD Tracker POST - Validation failed:', { projectName, company, contactPerson });
+    if (!company || !contactPerson) {
+      console.log('BD Tracker POST - Validation failed:', { company, contactPerson });
       return res.status(400).json({
         success: false,
-        message: 'Project Name, Company, and Contact Person are required'
+        message: 'Company and Contact Person are required'
       });
     }
 
@@ -4731,7 +4731,7 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
     try {
       newEntry = new BDTracker({
         userId: req.user.id,
-        projectName,
+        type: type || '',
         company,
         programPitched: programPitched || '',
         outreachDates: outreachDates || '',
@@ -4753,7 +4753,7 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
       // Fallback to file-based storage
       newEntry = {
         id: Date.now().toString(),
-        projectName,
+        type: type || '',
         company,
         programPitched: programPitched || '',
         outreachDates: outreachDates || '',

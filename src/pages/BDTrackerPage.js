@@ -27,6 +27,7 @@ const BDTrackerPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
+    type: '',
     company: '',
     programPitched: '',
     outreachDates: '',
@@ -36,8 +37,7 @@ const BDTrackerPage = () => {
     feedback: '',
     nextSteps: '',
     priority: '',
-    followUp: '',
-    projectName: ''
+    followUp: ''
   });
 
   // Load data from backend on component mount
@@ -124,18 +124,22 @@ const BDTrackerPage = () => {
   };
 
   const validateForm = () => {
-    return formData.projectName.trim() !== '' && formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
+    return formData.company.trim() !== '' && formData.contactPerson.trim() !== '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert('Please fill in Project Name, Company, and Contact Person fields');
+      alert('Please fill in Company and Contact Person fields');
       return;
     }
 
     try {
       const token = sessionStorage.getItem('token');
+      console.log('🔍 Submitting form data:', formData);
+      console.log('🔍 API URL:', `${API_BASE_URL}/api/bd-tracker`);
+      console.log('🔍 Token available:', !!token);
+      
       const response = await fetch(`${API_BASE_URL}/api/bd-tracker`, {
         method: 'POST',
         headers: {
@@ -144,6 +148,9 @@ const BDTrackerPage = () => {
         },
         body: JSON.stringify(formData)
       });
+      
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response ok:', response.ok);
 
       if (response.ok) {
         const result = await response.json();
@@ -159,6 +166,7 @@ const BDTrackerPage = () => {
         }
         
         setFormData({
+          type: '',
           company: '',
           programPitched: '',
           outreachDates: '',
@@ -175,7 +183,9 @@ const BDTrackerPage = () => {
         // Show success message
         alert('Entry added successfully!');
       } else {
-        alert('Failed to add entry');
+        const errorData = await response.json();
+        console.error('Failed to add entry:', errorData);
+        alert(`Failed to add entry: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding entry:', error);
@@ -193,7 +203,7 @@ const BDTrackerPage = () => {
     console.log('Using entry ID for editing:', entryId);
     
     setFormData({
-      projectName: entry.projectName || '',
+      type: entry.type || '',
       company: entry.company || '',
       programPitched: entry.programPitched || '',
       outreachDates: entry.outreachDates || '',
@@ -213,7 +223,7 @@ const BDTrackerPage = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setFormData({
-      projectName: '',
+      type: '',
       company: '',
       programPitched: '',
       outreachDates: '',
@@ -232,7 +242,7 @@ const BDTrackerPage = () => {
   const handleSaveEdit = async () => {
     // Validate form before updating
     if (!validateForm()) {
-      alert('Please fill in Project Name, Company, and Contact Person fields');
+      alert('Please fill in Company and Contact Person fields');
       return;
     }
 
@@ -406,6 +416,7 @@ const BDTrackerPage = () => {
   });
 
   const [columnHeadings, setColumnHeadings] = useState({
+    type: 'Type',
     programPitched: 'Program',
     company: 'Target Co.',
     priority: 'Priority',
@@ -432,6 +443,7 @@ const BDTrackerPage = () => {
   };
 
   const columns = [
+    { key: 'type', label: columnHeadings.type, editable: true },
     { key: 'programPitched', label: columnHeadings.programPitched, editable: true },
     { key: 'company', label: columnHeadings.company, editable: true },
     { key: 'priority', label: columnHeadings.priority, editable: true },
@@ -566,7 +578,19 @@ const BDTrackerPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {column.label}
                   </label>
-                  {column.key === 'cda' ? (
+                  {column.key === 'type' ? (
+                    <div className="relative">
+                      <select
+                        value={formData[column.key]}
+                        onChange={(e) => handleInputChange(column.key, e.target.value)}
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
+                      >
+                        <option value="">Select Type</option>
+                        <option value="Inbound / In-Lic.">Inbound / In-Lic.</option>
+                        <option value="Outbound / Out-Lic.">Outbound / Out-Lic.</option>
+                      </select>
+                    </div>
+                  ) : column.key === 'cda' ? (
                     <div className="relative">
                       <select
                         value={formData[column.key]}
@@ -646,7 +670,8 @@ const BDTrackerPage = () => {
                       column.key === 'feedback' ? 'min-w-[250px]' : 
                       column.key === 'contactPerson' ? 'min-w-[200px]' :
                       column.key === 'cda' ? 'w-20' : 
-                      column.key === 'priority' ? 'w-24' : 'min-w-[150px]'
+                      column.key === 'priority' ? 'w-24' : 
+                      column.key === 'type' ? 'w-32' : 'min-w-[150px]'
                     }`}
                   >
                     {editingColumn === column.key ? (

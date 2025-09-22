@@ -75,7 +75,18 @@
     ],
     "subscriptionId": "sub_1S0zusLf1iznKy11yxNSf5E5",
     "subscriptionEndAt": "2025-09-09T07:06:31.834Z",
-    "subscriptionOnHold": false
+    "subscriptionOnHold": false,
+    "bdTrackerColumnHeadings": {
+      "type": "Typecsac",
+      "programPitched": "Program",
+      "company": "Target Co.",
+      "priority": "Priority",
+      "contactPerson": "Contact Person & Function",
+      "cda": "CDA",
+      "outreachDates": "Outreach Context & Dates",
+      "feedback": "Feedback",
+      "actions": "Actions"
+    }
   },
   {
     "id": 5,

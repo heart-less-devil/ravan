@@ -74,8 +74,9 @@ const Pricing = () => {
       features: [
         "1 Seat included",
         "Get 5 free contacts",
-        "Credits expire after 5 days (including weekends)",
-        "No Credit Card Needed",
+        "Credits expire after 5 days\n(including weekends)",
+        "No credit card needed",
+        "No BD Tracker Access",
         "No BD Insights Access"
       ],
       icon: Building2,
@@ -95,9 +96,9 @@ const Pricing = () => {
       features: [
         "1 Seat included",
         "50 contacts per month",
-        "Pay by credit/debit card",
         "Access to BD Tracker",
-        "1 hr. of BD Consulting with Mr. Vik"
+        "1 hr. of BD Consulting with Mr. Vik",
+        "Pay by credit/debit card"
       ],
       icon: Users,
       popular: false,
@@ -114,12 +115,13 @@ const Pricing = () => {
       planType: 'monthly',
       yearlyPlanType: 'yearly',
       features: [
-        "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
-        "Pay by credit/debit card",
         "Access to BD Tracker",
-        "1 hr. of BD Consulting with Mr. Vik"
+        "Access to BD Insights",
+        "Free Deal Comps & VC Contacts",
+        "2 hrs. of BD Consulting with Mr. Vik",
+        "Pay by credit/debit card"
       ],
       icon: Target,
       popular: true,
