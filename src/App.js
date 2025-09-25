@@ -39,13 +39,13 @@ const CacheBuster = ({ children }) => {
   const location = useLocation();
   
   useEffect(() => {
-    // Only add cache busting in development
+    // Only add cache busting in development and only once
     if (process.env.NODE_ENV === 'development') {
       const currentTime = Date.now();
       const version = `v=${currentTime}`;
       
-      // Add version to URL if not present
-      if (!window.location.search.includes('v=')) {
+      // Add version to URL if not present and only on initial load
+      if (!window.location.search.includes('v=') && window.location.pathname === '/') {
         const separator = window.location.search ? '&' : '?';
         window.history.replaceState(
           null, 
@@ -54,7 +54,7 @@ const CacheBuster = ({ children }) => {
         );
       }
     }
-  }, [location]);
+  }, []); // Only run once on mount
 
   return children;
 };
