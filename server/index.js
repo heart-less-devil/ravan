@@ -3804,17 +3804,17 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemFunction.toLowerCase().includes('r&d business development') ||
                    itemFunction.toLowerCase().includes('international business development');
         } else if (contactFunction === 'Non-BD') {
-          // Find all non-BD functions (exclude BD-related)
+          // Find all non-BD functions (exclude BD-related, but include NA/Not Defined)
           const isBD = itemFunction.toLowerCase().includes('business development') || 
                       itemFunction.toLowerCase().includes('bd') ||
                       itemFunction.toLowerCase().includes('business dev') ||
                       itemFunction.toLowerCase().includes('regulatory bd') ||
                       itemFunction.toLowerCase().includes('r&d business development') ||
                       itemFunction.toLowerCase().includes('international business development');
-          isMatch = !isBD && itemFunction.toLowerCase() !== 'na' && itemFunction.toLowerCase() !== 'not defined';
+          isMatch = !isBD; // Include all non-BD functions including NA/Not Defined
         } else if (contactFunction === 'All') {
-          // Show both BD and non-BD functions (include all valid functions)
-          isMatch = itemFunction.toLowerCase() !== 'na' && itemFunction.toLowerCase() !== 'not defined';
+          // Show both BD and non-BD functions (include all functions including NA/Not Defined)
+          isMatch = true; // Include all functions
         } else {
           // Fallback to general search for specific functions
           isMatch = itemFunction.toLowerCase().includes(contactFunction.toLowerCase());
@@ -3893,7 +3893,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       bdPersonTAFocus: item.bdPersonTAFocus
     }));
 
-    // Deduplicate results for Contact Name searches
+    // Deduplicate results ONLY for Contact Name searches
     if (searchType === 'Contact Name') {
       console.log('Deduplicating contact results...');
       const seenContacts = new Set();
@@ -3908,6 +3908,9 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
         return true;
       });
       console.log('After deduplication, contacts found:', limitedData.length);
+    } else {
+      // For all other search types, don't deduplicate - show all results
+      console.log('No deduplication for search type:', searchType);
     }
 
     res.json({
