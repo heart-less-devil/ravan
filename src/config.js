@@ -2,12 +2,12 @@
 const getApiUrl = () => {
   // Check if we're on the live website (GoDaddy or Netlify)
   if (typeof window !== 'undefined') {
-    if (window.location.hostname.includes('thebioping.com')) {
-      return 'https://ravan-8n0h.onrender.com';
-    }
-    if (window.location.hostname.includes('netlify.app')) {
-      return 'https://ravan-8n0h.onrender.com';
-    }
+  if (window.location.hostname.includes('thebioping.com')) {
+    return 'https://bioping-backend.onrender.com';
+  }
+  if (window.location.hostname.includes('netlify.app')) {
+    return 'https://bioping-backend.onrender.com';
+  }
   }
   
   // Custom environment variable (highest priority)
@@ -21,7 +21,7 @@ const getApiUrl = () => {
   }
   
   // Production fallbacks - use the correct Render backend
-  return 'https://ravan-8n0h.onrender.com';
+  return 'https://bioping-backend.onrender.com';
 };
 
 export const API_BASE_URL = getApiUrl();

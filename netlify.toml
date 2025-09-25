@@ -15,7 +15,7 @@
 # Handle API routes for backend
 [[redirects]]
   from = "/api/*"
-  to = "https://ravan-8n0h.onrender.com/:splat"
+  to = "https://bioping-backend.onrender.com/:splat"
   status = 200
   force = true
 
