@@ -985,7 +985,7 @@ const Dashboard = () => {
                       `You have <span className="font-bold text-blue-600">${userCredits || 5} free credits</span> to explore our platform!`
                     )}
                   </p>
-                  <div className="bg-white rounded-lg p-3 border border-blue-200">
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Credits Remaining:</span>
                       <span className="text-lg font-bold text-blue-600">{userCredits || 5}</span>
@@ -1109,7 +1109,7 @@ const Dashboard = () => {
                   <p className="text-gray-600 mb-3">
                     We couldn't find any results for your search. Try adjusting your search criteria or using different keywords.
                   </p>
-                  <div className="bg-white rounded-lg p-3 border border-blue-200">
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Search Query:</span>
                       <span className="text-sm font-medium text-blue-600">{error?.replace('No results found for "', '').replace('"', '')}</span>
@@ -2276,7 +2276,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-blue-200">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Search Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg p-4 border border-blue-200">
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-sm font-medium text-gray-600">Number of Unique Companies</div>
                   {(() => {
@@ -2304,7 +2304,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   })()}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-4 border border-blue-200">
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-sm font-medium text-gray-600">Number of Unique Contacts</div>
                   {currentSearchType === 'Company Name' && (
@@ -2396,19 +2396,20 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             ) : (
               // CONTACT SEARCH OR DRUG SEARCH: Detailed contact table
               <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200 min-w-full">
-                <thead className="bg-gray-50">
+                <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">COMPANY</th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">CONTACT</th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">CONTACT INFORMATION</th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">ACTIONS</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentResults.map((result) => (
                     <Fragment key={result.id}>
-                      <tr className="hover:bg-gray-50">
+                      <tr className="hover:bg-blue-50/30 transition-colors duration-200 border-b border-gray-100">
                           <td className="px-3 py-3 whitespace-nowrap">
                           <div className="flex items-center">
                               <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-2">
@@ -2432,6 +2433,9 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                         </div>
                       </div>
                     </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
+                          </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="space-y-1">
                         <div className="flex items-center space-x-2">
@@ -2621,13 +2625,14 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
 
           {/* All Contacts Table - Same format as main search results */}
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200 min-w-full">
-              <thead className="bg-gray-50">
+            <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">COMPANY</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">CONTACT</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">CONTACT INFORMATION</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">ACTIONS</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2635,7 +2640,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   .slice((allContactsCurrentPage - 1) * allContactsItemsPerPage, allContactsCurrentPage * allContactsItemsPerPage)
                   .map((result, index) => (
                     <Fragment key={result.id || index}>
-                      <tr className="hover:bg-gray-50">
+                      <tr className="hover:bg-blue-50/30 transition-colors duration-200 border-b border-gray-100">
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-2">
@@ -2658,6 +2663,9 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                               <div className="text-sm font-medium text-gray-900 truncate">{result.contactPerson}</div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="space-y-1">
