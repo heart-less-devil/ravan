@@ -744,6 +744,24 @@ const Dashboard = () => {
                           setShowCustomerProfile(false);
                         }
                         
+                        // Special handling for Advanced Search - clear all search state
+                        if (item.name === 'Advanced Search') {
+                          console.log('🔄 Advanced Search clicked - clearing all search state');
+                          
+                          // Clear global search results
+                          setGlobalSearchResults(null);
+                          
+                          // Clear URL parameters
+                          window.history.replaceState({}, document.title, '/dashboard/search');
+                          
+                          // Force re-render to clear any cached state
+                          setForceRender(prev => prev + 1);
+                          
+                          // Navigate to search page
+                          navigate('/dashboard/search');
+                          return;
+                        }
+                        
                         // Navigate to the selected page immediately
                         const cleanPath = item.path.split('?')[0];
                         console.log('🔄 Clean path:', cleanPath);
@@ -2249,13 +2267,45 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                // Clear search results and show form again
+                // Clear ALL search-related state
                 setSearchResults([]);
                 setGlobalSearchResults(null);
                 setIsGlobalSearch(false);
                 setCurrentSearchType('Company Name');
                 setCurrentSearchQuery('');
                 setError(null);
+                setLoading(false);
+                
+                // Clear form data
+                setFormData({
+                  drugName: '',
+                  diseaseArea: '',
+                  stageOfDevelopment: '',
+                  modality: '',
+                  lookingFor: '',
+                  region: '',
+                  function: ''
+                });
+                
+                // Clear UI state
+                setShowContactModal(false);
+                setContactDetails([]);
+                setExpandedRows(new Set());
+                setRevealedEmails(new Set());
+                setShowAllContacts(false);
+                setAllContactsData([]);
+                setShowCompanyList(false);
+                setUniqueCompaniesList([]);
+                setExpandedContactDetails(new Set());
+                setGroupedResults({});
+                setCurrentPage(1);
+                setAllContactsCurrentPage(1);
+                setHasAutoPopulated(false);
+                setShowCreditPopup(false);
+                
+                // Clear URL parameters
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
                 // Scroll to top
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
