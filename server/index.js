@@ -3584,12 +3584,19 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       // Map disease area to actual columns in your data (TA1-TA3, T4-T17)
       let taColumn = '';
       switch(diseaseArea) {
+        case 'Oncology':
         case 'TA1 - Oncology': taColumn = 'ta1_oncology'; break;
+        case 'Cardiovascular':
         case 'TA2 - Cardiovascular': taColumn = 'ta2_cardiovascular'; break;
+        case 'Neurology':
         case 'TA3 - Neuroscience': taColumn = 'ta3_neuroscience'; break;
+        case 'Immunology':
         case 'TA4 - Immunology & Autoimmune': taColumn = 'ta4_immunology_autoimmune'; break;
+        case 'Infectious Diseases':
         case 'TA5 - Infectious Diseases': taColumn = 'ta5_infectious_diseases'; break;
+        case 'Rare Diseases':
         case 'TA6 - Respiratory': taColumn = 'ta6_respiratory'; break;
+        case 'Metabolic Disorders':
         case 'TA7 - Endocrinology & Metabolic': taColumn = 'ta7_endocrinology_metabolic'; break;
         case 'TA8 - Rare / Orphan': taColumn = 'ta8_rare_orphan'; break;
         case 'TA9 - Hematology': taColumn = 'ta9_hematology'; break;
@@ -3634,12 +3641,24 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
           
           console.log('Checking tier for:', item.companyName, 'Item tier:', itemTier, 'Search tier:', partnerType);
           
-                      if (partnerType === 'Tier 1 - Large Pharma') {
-            isMatch = itemTier.toLowerCase().includes('large pharma') || itemTier.toLowerCase().includes('large');
-          } else if (partnerType === 'Tier 2 - Mid-Size') {
-            isMatch = itemTier.toLowerCase().includes('mid') || itemTier.toLowerCase().includes('mid cap');
-          } else if (partnerType === 'Tier 3 - Small Biotech\'s') {
-            isMatch = itemTier.toLowerCase().includes('small') || itemTier.toLowerCase().includes('small cap');
+          // Handle both frontend options and direct tier values
+          if (partnerType === 'Tier 1 - Large Pharma' || partnerType === 'Large Pharma') {
+            isMatch = itemTier.toLowerCase().includes('large pharma') || 
+                     itemTier.toLowerCase().includes('large') ||
+                     itemTier.toLowerCase().includes('tier 1');
+          } else if (partnerType === 'Tier 2 - Mid-Size' || partnerType === 'Mid-Size') {
+            isMatch = itemTier.toLowerCase().includes('mid') || 
+                     itemTier.toLowerCase().includes('mid cap') ||
+                     itemTier.toLowerCase().includes('tier 2') ||
+                     itemTier.toLowerCase().includes('mid-size');
+          } else if (partnerType === 'Tier 3 - Small Biotech\'s' || partnerType === 'Small Biotech') {
+            isMatch = itemTier.toLowerCase().includes('small') || 
+                     itemTier.toLowerCase().includes('small cap') ||
+                     itemTier.toLowerCase().includes('tier 3') ||
+                     itemTier.toLowerCase().includes('biotech');
+          } else {
+            // Fallback to direct matching
+            isMatch = itemTier.toLowerCase().includes(partnerType.toLowerCase());
           }
           
           console.log('Tier match result:', isMatch, 'for company:', item.companyName);
@@ -3744,7 +3763,22 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('poland') ||
                    itemRegion.toLowerCase().includes('norway') ||
                    itemRegion.toLowerCase().includes('hungary') ||
-                   itemRegion.toLowerCase().includes('sweden');
+                   itemRegion.toLowerCase().includes('sweden') ||
+                   itemRegion.toLowerCase().includes('iceland') ||
+                   itemRegion.toLowerCase().includes('greece');
+        } else if (region === 'Asia-Pacific') {
+          isMatch = itemContinent === 'Asia' ||
+                   itemRegion.toLowerCase().includes('japan') || 
+                   itemRegion.toLowerCase().includes('china') ||
+                   itemRegion.toLowerCase().includes('india') ||
+                   itemRegion.toLowerCase().includes('south korea') ||
+                   itemRegion.toLowerCase().includes('israel') ||
+                   itemRegion.toLowerCase().includes('taiwan') ||
+                   itemRegion.toLowerCase().includes('uae') ||
+                   itemRegion.toLowerCase().includes('singapore') ||
+                   itemRegion.toLowerCase().includes('hong kong') ||
+                   itemRegion.toLowerCase().includes('saudi arabia') ||
+                   itemRegion.toLowerCase().includes('turkey');
         } else if (region === 'Asia') {
           isMatch = itemContinent === 'Asia' ||
                    itemRegion.toLowerCase().includes('japan') || 
@@ -3762,9 +3796,22 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
           isMatch = itemContinent === 'Oceania' ||
                    itemRegion.toLowerCase().includes('australia') ||
                    itemRegion.toLowerCase().includes('new zealand');
+        } else if (region === 'Middle East & Africa') {
+          isMatch = itemContinent === 'Africa' ||
+                   itemRegion.toLowerCase().includes('egypt') ||
+                   itemRegion.toLowerCase().includes('uae') ||
+                   itemRegion.toLowerCase().includes('saudi arabia') ||
+                   itemRegion.toLowerCase().includes('israel') ||
+                   itemRegion.toLowerCase().includes('turkey');
         } else if (region === 'Africa') {
           isMatch = itemContinent === 'Africa' ||
                    itemRegion.toLowerCase().includes('egypt');
+        } else if (region === 'Latin America') {
+          isMatch = itemContinent === 'South America' ||
+                   itemRegion.toLowerCase().includes('brazil') ||
+                   itemRegion.toLowerCase().includes('chile') ||
+                   itemRegion.toLowerCase().includes('colombia') ||
+                   itemRegion.toLowerCase().includes('uruguay');
         } else if (region === 'South America') {
           isMatch = itemContinent === 'South America' ||
                    itemRegion.toLowerCase().includes('brazil') ||

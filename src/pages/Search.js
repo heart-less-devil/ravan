@@ -61,7 +61,14 @@ const Search = () => {
         },
         body: JSON.stringify({
           searchType: searchType,
-          searchQuery: searchData.drugName.trim()
+          searchQuery: searchData.drugName.trim(),
+          drugName: searchData.drugName,
+          diseaseArea: searchData.diseaseArea,
+          developmentStage: searchData.stageOfDevelopment,
+          modality: searchData.modality,
+          partnerType: searchData.lookingFor,
+          region: searchData.region,
+          function: searchData.function
         })
       });
 
@@ -97,13 +104,23 @@ const Search = () => {
   };
 
   const diseaseAreas = [
-    'Oncology',
-    'Cardiovascular',
-    'Neurology',
-    'Immunology',
-    'Rare Diseases',
-    'Infectious Diseases',
-    'Metabolic Disorders'
+    'TA1 - Oncology',
+    'TA2 - Cardiovascular',
+    'TA3 - Neuroscience',
+    'TA4 - Immunology & Autoimmune',
+    'TA5 - Infectious Diseases',
+    'TA6 - Respiratory',
+    'TA7 - Endocrinology & Metabolic',
+    'TA8 - Rare / Orphan',
+    'TA9 - Hematology',
+    'TA10 - Gastroenterology',
+    'TA11 - Dermatology',
+    'TA12 - Ophthalmology',
+    'TA13 - Kidney / Renal',
+    'TA14 - MSK Disease',
+    'TA15 - Women\'s Health',
+    'TA16 - Pain',
+    'TA17 - Urology'
   ];
 
   const developmentStages = [
@@ -125,12 +142,9 @@ const Search = () => {
   ];
 
   const partnerTypes = [
-    'Licensing Partner',
-    'Co-development Partner',
-    'Merger & Acquisition',
-    'Investment Partner',
-    'Manufacturing Partner',
-    'Distribution Partner'
+    'Tier 1 - Large Pharma',
+    'Tier 2 - Mid-Size',
+    'Tier 3 - Small Biotech\'s'
   ];
 
   const regions = [
@@ -138,17 +152,16 @@ const Search = () => {
     'Europe',
     'Asia-Pacific',
     'Latin America',
-    'Middle East & Africa'
+    'Middle East & Africa',
+    'Oceania',
+    'Africa',
+    'South America'
   ];
 
   const functions = [
     'Business Development',
-    'R&D',
-    'Clinical Development',
-    'Regulatory Affairs',
-    'Manufacturing',
-    'Commercial',
-    'Executive'
+    'Non-BD',
+    'All'
   ];
 
   return (

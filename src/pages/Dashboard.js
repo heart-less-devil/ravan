@@ -2449,11 +2449,11 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Company</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/3">Title & Function</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact Info</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2483,8 +2483,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                         </div>
                       </div>
                     </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
+                          <td className="px-3 py-3">
+                            <div className="text-sm text-gray-900">
+                              {result.contactTitle && result.contactFunction 
+                                ? `${result.contactTitle}, ${result.contactFunction}`
+                                : result.contactTitle || result.contactFunction || 'N/A'
+                              }
+                            </div>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="space-y-1">
@@ -2678,11 +2683,11 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Company</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/3">Title & Function</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact Info</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2714,8 +2719,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-3 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
+                        <td className="px-3 py-3">
+                          <div className="text-sm text-gray-900">
+                            {result.contactTitle && result.contactFunction 
+                              ? `${result.contactTitle}, ${result.contactFunction}`
+                              : result.contactTitle || result.contactFunction || 'N/A'
+                            }
+                          </div>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="space-y-1">
