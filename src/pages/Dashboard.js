@@ -379,8 +379,11 @@ const Dashboard = () => {
           
           console.log('💳 Frontend credits updated immediately:', newCredits);
           
-          // Credits updated successfully - no need to refresh the page
-          console.log('💳 Credits updated without page refresh');
+          // Force dashboard refresh to show updated credits
+          setTimeout(() => {
+            console.log('🔄 Forcing dashboard refresh after credit consumption...');
+            fetchUserData();
+          }, 500); // Increased delay to ensure backend processes the update
           
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
@@ -2549,19 +2552,14 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                     </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                        <div
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.nativeEvent.stopImmediatePropagation();
-                            handleRevealEmail(result.id, e);
-                            return false;
-                          }}
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm cursor-pointer"
+                        <button
+                          type="button"
+                          onClick={(e) => handleRevealEmail(result.id, e)}
+                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm"
                         >
                           <Mail className="w-4 h-4" />
                           <span>Get Contact Info</span>
-                        </div>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -2786,19 +2784,14 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                e.nativeEvent.stopImmediatePropagation();
-                                handleRevealEmail(result.id, e);
-                                return false;
-                              }}
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm cursor-pointer"
+                            <button
+                              type="button"
+                              onClick={(e) => handleRevealEmail(result.id, e)}
+                              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm"
                             >
                               <Mail className="w-4 h-4" />
                               <span>Get Contact Info</span>
-                            </div>
+                            </button>
                           </div>
                         </td>
                       </tr>

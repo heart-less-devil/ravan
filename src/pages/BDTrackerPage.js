@@ -514,7 +514,7 @@ const BDTrackerPage = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search project names, companies, contacts, or programs..."
+                  placeholder="Search companies, contacts, or programs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -684,13 +684,19 @@ const BDTrackerPage = () => {
                       />
                     ) : (
                       <div 
-                        className="cursor-pointer hover:bg-blue-50 hover:border-blue-200 px-2 py-1 rounded border border-transparent transition-all duration-200 group"
-                        onClick={() => setEditingColumn(column.key)}
-                        title="Click to edit column heading"
+                        className={`px-2 py-1 rounded border border-transparent transition-all duration-200 group ${
+                          ['type', 'priority', 'cda'].includes(column.key) 
+                            ? 'cursor-default' 
+                            : 'cursor-pointer hover:bg-blue-50 hover:border-blue-200'
+                        }`}
+                        onClick={() => !['type', 'priority', 'cda'].includes(column.key) && setEditingColumn(column.key)}
+                        title={['type', 'priority', 'cda'].includes(column.key) ? "This column heading cannot be edited" : "Click to edit column heading"}
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold text-gray-900">{column.label}</span>
-                          <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                          {!['type', 'priority', 'cda'].includes(column.key) && (
+                            <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                          )}
                         </div>
                       </div>
                     )}
@@ -749,18 +755,33 @@ const BDTrackerPage = () => {
                       <td
                         key={column.key}
                         className={`border border-gray-200 px-4 py-3 text-sm text-gray-900 ${
+                          column.key === 'type' ? 'min-w-[180px]' :
                           column.key === 'contactPerson' ? 'min-w-[200px]' :
-                          column.key === 'cda' ? 'w-20' : 
-                          column.key === 'priority' ? 'w-24' : 'min-w-[150px]'
+                          column.key === 'programPitched' ? 'min-w-[120px]' :
+                          column.key === 'outreachDates' ? 'min-w-[140px]' :
+                          column.key === 'cda' ? 'w-24' : 
+                          column.key === 'priority' ? 'w-28' : 'min-w-[120px]'
                         }`}
                       >
                         {editingId === (entry.id || entry._id) ? (
-                          column.key === 'cda' ? (
+                          column.key === 'type' ? (
                             <div className="relative">
                               <select
                                 value={formData[column.key] || ''}
                                 onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-2 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium"
+                                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium min-w-[160px]"
+                              >
+                                <option value="">Select Type</option>
+                                <option value="Inbound / In-Lic.">Inbound / In-Lic.</option>
+                                <option value="Outbound / Out-Lic.">Outbound / Out-Lic.</option>
+                              </select>
+                            </div>
+                          ) : column.key === 'cda' ? (
+                            <div className="relative">
+                              <select
+                                value={formData[column.key] || ''}
+                                onChange={(e) => handleInputChange(column.key, e.target.value)}
+                                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium min-w-[100px]"
                               >
                                 <option value="">Select</option>
                                 <option value="Yes">Yes</option>
@@ -774,7 +795,7 @@ const BDTrackerPage = () => {
                               <select
                                 value={formData[column.key] || ''}
                                 onChange={(e) => handleInputChange(column.key, e.target.value)}
-                                className="w-full px-2 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium"
+                                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm font-medium min-w-[120px]"
                               >
                                 <option value="">Select</option>
                                 <option value="Low">Low</option>
@@ -793,7 +814,11 @@ const BDTrackerPage = () => {
                           )
                         ) : (
                           <div className="flex items-center gap-2">
-                            {column.key === 'cda' && entry[column.key] ? (
+                            {column.key === 'type' && entry[column.key] ? (
+                              <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                {entry[column.key]}
+                              </span>
+                            ) : column.key === 'cda' && entry[column.key] ? (
                               <span className={`px-2 py-1 rounded-full text-xs ${
                                 entry[column.key].toLowerCase() === 'yes' 
                                   ? 'bg-green-100 text-green-800' 
