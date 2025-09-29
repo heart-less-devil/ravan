@@ -66,19 +66,19 @@ const Pricing = () => {
   const getDefaultPlans = () => [
     {
       id: 'free',
-      name: "Free",
+      name: "",
       description: "Perfect for getting started",
       credits: "5 credits for 5 days only",
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
         "1 Seat included",
-        "Get 5 free contacts",
-        "Credits expire after 5 days\n(including weekends)",
-        "No credit card needed",
+        "Get 5 contacts",
+        "Credits expire after 5 days",
+        "(including weekends)",
+        "no credit card needed",
         "No BD Tracker Access",
-        "No BD Insights Access",
-        "Pay by credit/debit card"
+        "No BD Insights Access"
       ],
       icon: Building2,
       popular: false,
@@ -98,8 +98,7 @@ const Pricing = () => {
         "1 Seat included",
         "50 contacts per month",
         "Access to BD Tracker",
-        "1 hr. of BD Consulting with Mr. Vik",
-        "Pay by credit/debit card"
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Users,
       popular: false,
@@ -121,8 +120,7 @@ const Pricing = () => {
         "Access to BD Tracker",
         "Access to BD Insights",
         "Free Deal Comps & VC Contacts",
-        "2 hrs. of BD Consulting with Mr. Vik",
-        "Pay by credit/debit card"
+        "2 hrs. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
@@ -554,6 +552,11 @@ const Pricing = () => {
               Every plan comes with our core features designed to help you find 
               and connect with the right business opportunities.
             </p>
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 font-medium">
+                All plans: Pay by credit/debit card
+              </p>
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

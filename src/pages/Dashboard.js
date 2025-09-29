@@ -2483,7 +2483,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                   <tr>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title & Function</th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
                       <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
                 </tr>
@@ -2516,7 +2516,12 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                       </div>
                     </td>
                           <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
+                            <div className="text-sm text-gray-900">
+                              <div className="font-medium">{result.contactTitle || 'N/A'}</div>
+                              {result.contactFunction && (
+                                <div className="text-xs text-gray-500 mt-1">{result.contactFunction}</div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="space-y-1">
@@ -2713,7 +2718,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 <tr>
                   <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
                   <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title & Function</th>
                   <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
                   <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
                 </tr>
@@ -2748,7 +2753,12 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                           </div>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">
+                            <div className="font-medium">{result.contactTitle || 'N/A'}</div>
+                            {result.contactFunction && (
+                              <div className="text-xs text-gray-500 mt-1">{result.contactFunction}</div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="space-y-1">
