@@ -77,7 +77,8 @@ const Pricing = () => {
         "Credits expire after 5 days\n(including weekends)",
         "No credit card needed",
         "No BD Tracker Access",
-        "No BD Insights Access"
+        "No BD Insights Access",
+        "Pay by credit/debit card"
       ],
       icon: Building2,
       popular: false,
@@ -88,7 +89,7 @@ const Pricing = () => {
       id: 'basic',
       name: "Basic Plan",
       description: "Ideal for growing businesses",
-      credits: "50 contacts/month",
+      credits: "",
       monthlyPrice: 390,
       annualPrice: 3750,
       planType: 'monthly',
@@ -109,7 +110,7 @@ const Pricing = () => {
       id: 'premium',
       name: "Premium Plan",
       description: "For advanced users and teams",
-      credits: "100 contacts/month",
+      credits: "",
       monthlyPrice: 790,
       annualPrice: 7585,
       planType: 'monthly',
@@ -464,7 +465,7 @@ const Pricing = () => {
                         {plan.credits}
                       </div>
                       <div className="text-2xl font-bold text-gray-900">
-                        {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                        {plan.monthlyPrice === 0 ? '' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
                       </div>
                       <div className="text-xs text-gray-500">
                         {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}

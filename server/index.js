@@ -3503,6 +3503,122 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
   }
 });
 
+// Debug endpoint to check search criteria
+app.post('/api/debug-search', authenticateToken, (req, res) => {
+  try {
+    const { diseaseArea, partnerType, region, contactFunction } = req.body;
+    
+    console.log('🔍 Debug Search Criteria:', { diseaseArea, partnerType, region, contactFunction });
+    console.log('📊 Total biotech data available:', biotechData.length);
+    
+    // Check TA11 dermatology data
+    if (diseaseArea === 'TA11 - Dermatology') {
+      const ta11Data = biotechData.filter(item => item.ta11_dermatology === '1' || item.ta11_dermatology === 1);
+      console.log('🧬 TA11 Dermatology records:', ta11Data.length);
+      
+      // Check by tier
+      if (partnerType === 'Tier 2 - Mid-Size') {
+        const ta11MidSize = ta11Data.filter(item => {
+          const tier = item.tier || '';
+          return tier.toLowerCase().includes('mid') || 
+                 tier.toLowerCase().includes('mid cap') ||
+                 tier.toLowerCase().includes('tier 2') ||
+                 tier.toLowerCase().includes('mid-size');
+        });
+        console.log('🏢 TA11 + Mid-Size records:', ta11MidSize.length);
+        
+        // Check by region
+        if (region === 'Europe') {
+          const ta11MidSizeEurope = ta11MidSize.filter(item => {
+            const itemRegion = item.region || '';
+            const itemContinent = item.continent || '';
+            return itemContinent === 'Europe' ||
+                   itemRegion.toLowerCase().includes('germany') || 
+                   itemRegion.toLowerCase().includes('france') ||
+                   itemRegion.toLowerCase().includes('switzerland') ||
+                   itemRegion.toLowerCase().includes('denmark') ||
+                   itemRegion.toLowerCase().includes('uk') ||
+                   itemRegion.toLowerCase().includes('spain') ||
+                   itemRegion.toLowerCase().includes('italy') ||
+                   itemRegion.toLowerCase().includes('netherlands') ||
+                   itemRegion.toLowerCase().includes('belgium') ||
+                   itemRegion.toLowerCase().includes('austria') ||
+                   itemRegion.toLowerCase().includes('finland') ||
+                   itemRegion.toLowerCase().includes('poland') ||
+                   itemRegion.toLowerCase().includes('norway') ||
+                   itemRegion.toLowerCase().includes('hungary') ||
+                   itemRegion.toLowerCase().includes('sweden') ||
+                   itemRegion.toLowerCase().includes('iceland') ||
+                   itemRegion.toLowerCase().includes('greece') ||
+                   itemRegion.toLowerCase().includes('ireland') ||
+                   itemRegion.toLowerCase().includes('czech republic') ||
+                   itemRegion.toLowerCase().includes('czech') ||
+                   itemRegion.toLowerCase().includes('portugal') ||
+                   itemRegion.toLowerCase().includes('estonia') ||
+                   itemRegion.toLowerCase().includes('luxembourg') ||
+                   itemRegion.toLowerCase().includes('malta') ||
+                   itemRegion.toLowerCase().includes('slovenia') ||
+                   itemRegion.toLowerCase().includes('romania') ||
+                   itemRegion.toLowerCase().includes('slovakia') ||
+                   itemRegion.toLowerCase().includes('lithuania');
+          });
+          console.log('🌍 TA11 + Mid-Size + Europe records:', ta11MidSizeEurope.length);
+          
+          // Check by function
+          if (contactFunction === 'Business Development') {
+            const finalResults = ta11MidSizeEurope.filter(item => {
+              const itemFunction = item.contactFunction || '';
+              return itemFunction.toLowerCase().includes('business development') || 
+                     itemFunction.toLowerCase().includes('bd') ||
+                     itemFunction.toLowerCase().includes('business dev') ||
+                     itemFunction.toLowerCase().includes('regulatory bd') ||
+                     itemFunction.toLowerCase().includes('r&d business development') ||
+                     itemFunction.toLowerCase().includes('international business development');
+            });
+            console.log('👔 TA11 + Mid-Size + Europe + BD records:', finalResults.length);
+            
+            // Count unique companies and contacts
+            const uniqueCompanies = new Set(finalResults.map(item => item.companyName));
+            const uniqueContacts = new Set(finalResults.map(item => item.email));
+            
+            console.log('🏢 Unique companies:', uniqueCompanies.size);
+            console.log('👥 Unique contacts:', uniqueContacts.size);
+            
+            // Show UCB specifically
+            const ucbRecords = finalResults.filter(item => 
+              item.companyName && item.companyName.toLowerCase().includes('ucb')
+            );
+            console.log('🏢 UCB records found:', ucbRecords.length);
+            console.log('🏢 UCB unique contacts:', new Set(ucbRecords.map(item => item.email)).size);
+            
+            return res.json({
+              success: true,
+              debug: {
+                totalData: biotechData.length,
+                ta11Records: ta11Data.length,
+                ta11MidSizeRecords: ta11MidSize.length,
+                ta11MidSizeEuropeRecords: ta11MidSizeEurope.length,
+                finalResults: finalResults.length,
+                uniqueCompanies: uniqueCompanies.size,
+                uniqueContacts: uniqueContacts.size,
+                ucbRecords: ucbRecords.length,
+                ucbUniqueContacts: new Set(ucbRecords.map(item => item.email)).size,
+                sampleUcbRecords: ucbRecords.slice(0, 5)
+              }
+            });
+          }
+        }
+      }
+    }
+    
+    res.json({ success: true, message: 'Debug search completed' });
+    
+  } catch (error) {
+    console.error('Error in debug search:', error);
+    res.status(500).json({ success: false, message: 'Debug search failed' });
+  }
+});
+
 // Search biotech data (public endpoint with limits)
 app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
   body('drugName').optional(),
@@ -3741,14 +3857,86 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
         
         // Handle region variations and abbreviations
         if (region === 'North America') {
-          isMatch = itemContinent === 'North America' || 
+          // Exclude Australia and other non-North American countries explicitly
+          const isAustralia = itemRegion.toLowerCase().includes('australia');
+          const isNewZealand = itemRegion.toLowerCase().includes('new zealand');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea') ||
+                         itemRegion.toLowerCase().includes('israel') ||
+                         itemRegion.toLowerCase().includes('taiwan') ||
+                         itemRegion.toLowerCase().includes('uae') ||
+                         itemRegion.toLowerCase().includes('singapore') ||
+                         itemRegion.toLowerCase().includes('hong kong') ||
+                         itemRegion.toLowerCase().includes('saudi arabia') ||
+                         itemRegion.toLowerCase().includes('turkey');
+          
+          isMatch = !isAustralia && !isNewZealand && !isEuropean && !isAsian && (
+                   itemContinent === 'North America' || 
                    itemRegion.toLowerCase().includes('usa') || 
                    itemRegion.toLowerCase().includes('united states') ||
                    itemRegion.toLowerCase().includes('us') ||
                    itemRegion.toLowerCase().includes('canada') ||
-                   itemRegion.toLowerCase().includes('mexico');
+                   itemRegion.toLowerCase().includes('mexico')
+          );
         } else if (region === 'Europe') {
-          isMatch = itemContinent === 'Europe' ||
+          // Exclude non-European countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea') ||
+                         itemRegion.toLowerCase().includes('israel') ||
+                         itemRegion.toLowerCase().includes('taiwan') ||
+                         itemRegion.toLowerCase().includes('uae') ||
+                         itemRegion.toLowerCase().includes('singapore') ||
+                         itemRegion.toLowerCase().includes('hong kong') ||
+                         itemRegion.toLowerCase().includes('saudi arabia') ||
+                         itemRegion.toLowerCase().includes('turkey');
+          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
+                           itemRegion.toLowerCase().includes('south africa');
+          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
+                                 itemRegion.toLowerCase().includes('chile') ||
+                                 itemRegion.toLowerCase().includes('colombia') ||
+                                 itemRegion.toLowerCase().includes('uruguay');
+          
+          isMatch = !isNorthAmerican && !isAustralian && !isAsian && !isAfrican && !isSouthAmerican && (
+                   itemContinent === 'Europe' ||
                    itemRegion.toLowerCase().includes('germany') || 
                    itemRegion.toLowerCase().includes('france') ||
                    itemRegion.toLowerCase().includes('switzerland') ||
@@ -3765,9 +3953,65 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('hungary') ||
                    itemRegion.toLowerCase().includes('sweden') ||
                    itemRegion.toLowerCase().includes('iceland') ||
-                   itemRegion.toLowerCase().includes('greece');
+                   itemRegion.toLowerCase().includes('greece') ||
+                   itemRegion.toLowerCase().includes('ireland') ||
+                   itemRegion.toLowerCase().includes('czech republic') ||
+                   itemRegion.toLowerCase().includes('czech') ||
+                   itemRegion.toLowerCase().includes('portugal') ||
+                   itemRegion.toLowerCase().includes('estonia') ||
+                   itemRegion.toLowerCase().includes('luxembourg') ||
+                   itemRegion.toLowerCase().includes('malta') ||
+                   itemRegion.toLowerCase().includes('slovenia') ||
+                   itemRegion.toLowerCase().includes('romania') ||
+                   itemRegion.toLowerCase().includes('slovakia') ||
+                   itemRegion.toLowerCase().includes('lithuania')
+          );
         } else if (region === 'Asia-Pacific') {
-          isMatch = itemContinent === 'Asia' ||
+          // Exclude non-Asian countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
+                           itemRegion.toLowerCase().includes('south africa');
+          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
+                                 itemRegion.toLowerCase().includes('chile') ||
+                                 itemRegion.toLowerCase().includes('colombia') ||
+                                 itemRegion.toLowerCase().includes('uruguay');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAustralian && !isAfrican && !isSouthAmerican && (
+                   itemContinent === 'Asia' ||
                    itemRegion.toLowerCase().includes('japan') || 
                    itemRegion.toLowerCase().includes('china') ||
                    itemRegion.toLowerCase().includes('india') ||
@@ -3778,9 +4022,54 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('singapore') ||
                    itemRegion.toLowerCase().includes('hong kong') ||
                    itemRegion.toLowerCase().includes('saudi arabia') ||
-                   itemRegion.toLowerCase().includes('turkey');
+                   itemRegion.toLowerCase().includes('turkey')
+          );
         } else if (region === 'Asia') {
-          isMatch = itemContinent === 'Asia' ||
+          // Exclude non-Asian countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
+                           itemRegion.toLowerCase().includes('south africa');
+          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
+                                 itemRegion.toLowerCase().includes('chile') ||
+                                 itemRegion.toLowerCase().includes('colombia') ||
+                                 itemRegion.toLowerCase().includes('uruguay');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAustralian && !isAfrican && !isSouthAmerican && (
+                   itemContinent === 'Asia' ||
                    itemRegion.toLowerCase().includes('japan') || 
                    itemRegion.toLowerCase().includes('china') ||
                    itemRegion.toLowerCase().includes('india') ||
@@ -3791,33 +4080,293 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('singapore') ||
                    itemRegion.toLowerCase().includes('hong kong') ||
                    itemRegion.toLowerCase().includes('saudi arabia') ||
-                   itemRegion.toLowerCase().includes('turkey');
+                   itemRegion.toLowerCase().includes('turkey')
+          );
         } else if (region === 'Oceania') {
-          isMatch = itemContinent === 'Oceania' ||
+          // Exclude non-Oceania countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea') ||
+                         itemRegion.toLowerCase().includes('israel') ||
+                         itemRegion.toLowerCase().includes('taiwan') ||
+                         itemRegion.toLowerCase().includes('uae') ||
+                         itemRegion.toLowerCase().includes('singapore') ||
+                         itemRegion.toLowerCase().includes('hong kong') ||
+                         itemRegion.toLowerCase().includes('saudi arabia') ||
+                         itemRegion.toLowerCase().includes('turkey');
+          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
+                           itemRegion.toLowerCase().includes('south africa');
+          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
+                                 itemRegion.toLowerCase().includes('chile') ||
+                                 itemRegion.toLowerCase().includes('colombia') ||
+                                 itemRegion.toLowerCase().includes('uruguay');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAfrican && !isSouthAmerican && (
+                   itemContinent === 'Oceania' ||
                    itemRegion.toLowerCase().includes('australia') ||
-                   itemRegion.toLowerCase().includes('new zealand');
+                   itemRegion.toLowerCase().includes('new zealand')
+          );
         } else if (region === 'Middle East & Africa') {
-          isMatch = itemContinent === 'Africa' ||
+          // Exclude non-Middle East & African countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
+                                 itemRegion.toLowerCase().includes('chile') ||
+                                 itemRegion.toLowerCase().includes('colombia') ||
+                                 itemRegion.toLowerCase().includes('uruguay');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAustralian && !isSouthAmerican && (
+                   itemContinent === 'Africa' ||
                    itemRegion.toLowerCase().includes('egypt') ||
                    itemRegion.toLowerCase().includes('uae') ||
                    itemRegion.toLowerCase().includes('saudi arabia') ||
                    itemRegion.toLowerCase().includes('israel') ||
-                   itemRegion.toLowerCase().includes('turkey');
+                   itemRegion.toLowerCase().includes('turkey')
+          );
         } else if (region === 'Africa') {
-          isMatch = itemContinent === 'Africa' ||
-                   itemRegion.toLowerCase().includes('egypt');
+          // Exclude non-African countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea') ||
+                         itemRegion.toLowerCase().includes('israel') ||
+                         itemRegion.toLowerCase().includes('taiwan') ||
+                         itemRegion.toLowerCase().includes('uae') ||
+                         itemRegion.toLowerCase().includes('singapore') ||
+                         itemRegion.toLowerCase().includes('hong kong') ||
+                         itemRegion.toLowerCase().includes('saudi arabia') ||
+                         itemRegion.toLowerCase().includes('turkey');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
+                                 itemRegion.toLowerCase().includes('chile') ||
+                                 itemRegion.toLowerCase().includes('colombia') ||
+                                 itemRegion.toLowerCase().includes('uruguay');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAustralian && !isSouthAmerican && (
+                   itemContinent === 'Africa' ||
+                   itemRegion.toLowerCase().includes('egypt')
+          );
         } else if (region === 'Latin America') {
-          isMatch = itemContinent === 'South America' ||
+          // Exclude non-South American countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea') ||
+                         itemRegion.toLowerCase().includes('israel') ||
+                         itemRegion.toLowerCase().includes('taiwan') ||
+                         itemRegion.toLowerCase().includes('uae') ||
+                         itemRegion.toLowerCase().includes('singapore') ||
+                         itemRegion.toLowerCase().includes('hong kong') ||
+                         itemRegion.toLowerCase().includes('saudi arabia') ||
+                         itemRegion.toLowerCase().includes('turkey');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
+                           itemRegion.toLowerCase().includes('south africa');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAustralian && !isAfrican && (
+                   itemContinent === 'South America' ||
                    itemRegion.toLowerCase().includes('brazil') ||
                    itemRegion.toLowerCase().includes('chile') ||
                    itemRegion.toLowerCase().includes('colombia') ||
-                   itemRegion.toLowerCase().includes('uruguay');
+                   itemRegion.toLowerCase().includes('uruguay')
+          );
         } else if (region === 'South America') {
-          isMatch = itemContinent === 'South America' ||
+          // Exclude non-South American countries explicitly
+          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
+                                itemRegion.toLowerCase().includes('united states') ||
+                                itemRegion.toLowerCase().includes('us') ||
+                                itemRegion.toLowerCase().includes('canada') ||
+                                itemRegion.toLowerCase().includes('mexico');
+          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
+                           itemRegion.toLowerCase().includes('france') ||
+                           itemRegion.toLowerCase().includes('uk') ||
+                           itemRegion.toLowerCase().includes('spain') ||
+                           itemRegion.toLowerCase().includes('italy') ||
+                           itemRegion.toLowerCase().includes('netherlands') ||
+                           itemRegion.toLowerCase().includes('belgium') ||
+                           itemRegion.toLowerCase().includes('austria') ||
+                           itemRegion.toLowerCase().includes('finland') ||
+                           itemRegion.toLowerCase().includes('poland') ||
+                           itemRegion.toLowerCase().includes('norway') ||
+                           itemRegion.toLowerCase().includes('hungary') ||
+                           itemRegion.toLowerCase().includes('sweden') ||
+                           itemRegion.toLowerCase().includes('iceland') ||
+                           itemRegion.toLowerCase().includes('greece') ||
+                           itemRegion.toLowerCase().includes('switzerland') ||
+                           itemRegion.toLowerCase().includes('denmark') ||
+                           itemRegion.toLowerCase().includes('ireland') ||
+                           itemRegion.toLowerCase().includes('czech republic') ||
+                           itemRegion.toLowerCase().includes('czech') ||
+                           itemRegion.toLowerCase().includes('portugal') ||
+                           itemRegion.toLowerCase().includes('estonia') ||
+                           itemRegion.toLowerCase().includes('luxembourg') ||
+                           itemRegion.toLowerCase().includes('malta') ||
+                           itemRegion.toLowerCase().includes('slovenia') ||
+                           itemRegion.toLowerCase().includes('romania') ||
+                           itemRegion.toLowerCase().includes('slovakia') ||
+                           itemRegion.toLowerCase().includes('lithuania');
+          const isAsian = itemRegion.toLowerCase().includes('japan') || 
+                         itemRegion.toLowerCase().includes('china') ||
+                         itemRegion.toLowerCase().includes('india') ||
+                         itemRegion.toLowerCase().includes('south korea') ||
+                         itemRegion.toLowerCase().includes('israel') ||
+                         itemRegion.toLowerCase().includes('taiwan') ||
+                         itemRegion.toLowerCase().includes('uae') ||
+                         itemRegion.toLowerCase().includes('singapore') ||
+                         itemRegion.toLowerCase().includes('hong kong') ||
+                         itemRegion.toLowerCase().includes('saudi arabia') ||
+                         itemRegion.toLowerCase().includes('turkey');
+          const isAustralian = itemRegion.toLowerCase().includes('australia') ||
+                              itemRegion.toLowerCase().includes('new zealand');
+          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
+                           itemRegion.toLowerCase().includes('south africa');
+          
+          isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAustralian && !isAfrican && (
+                   itemContinent === 'South America' ||
                    itemRegion.toLowerCase().includes('brazil') ||
                    itemRegion.toLowerCase().includes('chile') ||
                    itemRegion.toLowerCase().includes('colombia') ||
-                   itemRegion.toLowerCase().includes('uruguay');
+                   itemRegion.toLowerCase().includes('uruguay')
+          );
         } else {
           // Fallback to general search for specific countries
           isMatch = itemRegion.toLowerCase().includes(region.toLowerCase()) ||
@@ -3875,6 +4424,19 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
     
     console.log('Search criteria provided:', searchCriteria);
     console.log('Filtered data count:', filteredData.length);
+    
+    // Debug: Count unique companies and contacts in filtered data
+    const uniqueCompanies = new Set(filteredData.map(item => item.companyName));
+    const uniqueContacts = new Set(filteredData.map(item => item.email));
+    console.log('🔍 Debug - Unique companies in filtered data:', uniqueCompanies.size);
+    console.log('🔍 Debug - Unique contacts in filtered data:', uniqueContacts.size);
+    
+    // Debug: Check UCB specifically
+    const ucbRecords = filteredData.filter(item => 
+      item.companyName && item.companyName.toLowerCase().includes('ucb')
+    );
+    console.log('🔍 Debug - UCB records found:', ucbRecords.length);
+    console.log('🔍 Debug - UCB unique contacts:', new Set(ucbRecords.map(item => item.email)).size);
 
     // If no search criteria provided, return empty results
     if (!hasSearchCriteria) {
@@ -4844,10 +5406,10 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
     const { projectName, company, programPitched, outreachDates, contactFunction, contactPerson, cda, feedback, nextSteps, timelines, reminders } = req.body;
 
     // Validate required fields
-    if (!projectName || !company || !contactPerson) {
+    if (!company || !contactPerson) {
       return res.status(400).json({
         success: false,
-        message: 'Project Name, Company, and Contact Person are required'
+        message: 'Company and Contact Person are required'
       });
     }
 

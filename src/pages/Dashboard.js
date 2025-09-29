@@ -379,11 +379,8 @@ const Dashboard = () => {
           
           console.log('💳 Frontend credits updated immediately:', newCredits);
           
-          // Force dashboard refresh to show updated credits
-          setTimeout(() => {
-            console.log('🔄 Forcing dashboard refresh after credit consumption...');
-            fetchUserData();
-          }, 500); // Increased delay to ensure backend processes the update
+          // Credits updated successfully - no need to refresh the page
+          console.log('💳 Credits updated without page refresh');
           
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
@@ -1508,6 +1505,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [allContactsData, setAllContactsData] = useState([]);
   const [showCompanyList, setShowCompanyList] = useState(false);
   const [uniqueCompaniesList, setUniqueCompaniesList] = useState([]);
+  const [filteredSearchResults, setFilteredSearchResults] = useState(null);
   const [expandedContactDetails, setExpandedContactDetails] = useState(new Set());
   const [currentSearchType, setCurrentSearchType] = useState(searchType);
   const [currentSearchQuery, setCurrentSearchQuery] = useState('');
@@ -1655,8 +1653,13 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     });
   };
 
-  // Sort search results
-  const sortedSearchResults = sortSearchResults(searchResults);
+  // Sort search results (use filtered results if available, otherwise original)
+  const sortedSearchResults = sortSearchResults(filteredSearchResults || searchResults);
+
+  // Clear filtered results when search results change
+  useEffect(() => {
+    setFilteredSearchResults(null);
+  }, [searchResults]);
 
   // Process search results to group by company
   useEffect(() => {
@@ -1785,7 +1788,10 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     });
   };
 
-  const handleRevealEmail = async (companyId) => {
+  const handleRevealEmail = async (companyId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     console.log('🔍 handleRevealEmail called for company:', companyId);
     
     // Check if we have credits before proceeding
@@ -1868,6 +1874,11 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     const companies = getUniqueCompanies();
     setUniqueCompaniesList(companies);
     setShowCompanyList(true);
+  };
+
+  // Function to reset company filter
+  const handleResetCompanyFilter = () => {
+    setFilteredSearchResults(null); // Reset to original results
   };
 
   // daysRemaining is passed as a prop from parent component
@@ -2384,9 +2395,27 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
           
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xl font-bold text-gray-900">Search Results</h3>
+                {filteredSearchResults && (
+                  <div className="flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      Filtered by Company
+                    </span>
+                    <button
+                      onClick={handleResetCompanyFilter}
+                      className="text-blue-600 hover:text-blue-800 text-xs font-medium underline"
+                    >
+                      Show All
+                    </button>
+                  </div>
+                )}
+              </div>
               <p className="text-gray-600">
                 Showing {startIndex + 1} - {Math.min(endIndex, sortedSearchResults.length)} of {sortedSearchResults.length} results
+                {filteredSearchResults && (
+                  <span className="text-blue-600 ml-1">(filtered from {searchResults.length} total)</span>
+                )}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -2449,11 +2478,11 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                 <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                   <tr>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Company</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/3">Title & Function</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact Info</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Actions</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
+                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2483,13 +2512,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                         </div>
                       </div>
                     </td>
-                          <td className="px-3 py-3">
-                            <div className="text-sm text-gray-900">
-                              {result.contactTitle && result.contactFunction 
-                                ? `${result.contactTitle}, ${result.contactFunction}`
-                                : result.contactTitle || result.contactFunction || 'N/A'
-                              }
-                            </div>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="space-y-1">
@@ -2525,13 +2549,19 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                     </td>
                           <td className="px-3 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                        <button
-                          onClick={() => handleRevealEmail(result.id)}
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm"
+                        <div
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.nativeEvent.stopImmediatePropagation();
+                            handleRevealEmail(result.id, e);
+                            return false;
+                          }}
+                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm cursor-pointer"
                         >
                           <Mail className="w-4 h-4" />
                           <span>Get Contact Info</span>
-                        </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -2683,11 +2713,11 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Company</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/3">Title & Function</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Contact Info</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/6">Actions</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2719,13 +2749,8 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-3">
-                          <div className="text-sm text-gray-900">
-                            {result.contactTitle && result.contactFunction 
-                              ? `${result.contactTitle}, ${result.contactFunction}`
-                              : result.contactTitle || result.contactFunction || 'N/A'
-                            }
-                          </div>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 truncate">{result.contactTitle || 'N/A'}</div>
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="space-y-1">
@@ -2761,13 +2786,19 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
                           <div className="flex items-center">
-                            <button
-                              onClick={() => handleRevealEmail(result.id)}
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm"
+                            <div
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.nativeEvent.stopImmediatePropagation();
+                                handleRevealEmail(result.id, e);
+                                return false;
+                              }}
+                              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm cursor-pointer"
                             >
                               <Mail className="w-4 h-4" />
                               <span>Get Contact Info</span>
-                            </button>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -2842,7 +2873,18 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
               {uniqueCompaniesList.map((company, index) => (
-                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div 
+                  key={index} 
+                  onClick={() => {
+                    // Filter search results to show only this company
+                    const filteredResults = searchResults.filter(result => 
+                      result.companyName === company
+                    );
+                    setFilteredSearchResults(filteredResults);
+                    setShowCompanyList(false); // Close the modal
+                  }}
+                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-all duration-200 cursor-pointer hover:shadow-md transform hover:scale-105"
+                >
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <Building2 className="w-4 h-4 text-white" />
                   </div>

@@ -47,7 +47,7 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 50,
+    "currentCredits": 42,
     "lastCreditRenewal": "2025-09-28T12:37:31.816Z",
     "nextCreditRenewal": "2025-10-28T12:37:31.816Z",
     "company": "Company",
@@ -77,7 +77,7 @@
     "subscriptionEndAt": "2025-09-09T07:06:31.834Z",
     "subscriptionOnHold": false,
     "bdTrackerColumnHeadings": {
-      "type": "Typecsac",
+      "type": "",
       "programPitched": "Program",
       "company": "Target Co.",
       "priority": "Priority",
@@ -86,7 +86,58 @@
       "outreachDates": "Outreach Context & Dates",
       "feedback": "Feedback",
       "actions": "Actions"
-    }
+    },
+    "creditUsageHistory": [
+      {
+        "action": "search",
+        "timestamp": "2025-09-28T15:47:53.521Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-28T18:59:41.996Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-28T19:12:23.015Z",
+        "creditsUsed": 1,
+        "remainingCredits": 47
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-29T06:02:02.300Z",
+        "creditsUsed": 1,
+        "remainingCredits": 46
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-29T06:14:31.468Z",
+        "creditsUsed": 1,
+        "remainingCredits": 45
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-29T06:17:44.471Z",
+        "creditsUsed": 1,
+        "remainingCredits": 44
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-29T06:23:11.597Z",
+        "creditsUsed": 1,
+        "remainingCredits": 43
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-09-29T06:23:13.698Z",
+        "creditsUsed": 1,
+        "remainingCredits": 42
+      }
+    ],
+    "lastCreditUsage": "2025-09-29T06:23:13.698Z"
   },
   {
     "id": 5,
