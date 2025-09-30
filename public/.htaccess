@@ -4,9 +4,22 @@ RewriteEngine On
 # Allow access to all files
 Options +FollowSymLinks -Indexes
 
-# Handle API routes - redirect to backend server (GoDaddy compatible)
+# Enable CORS for API requests
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+
+# Handle preflight OPTIONS requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Handle API routes - proxy to backend server (GoDaddy compatible)
 RewriteCond %{REQUEST_URI} ^/api/(.*)$
-RewriteRule ^api/(.*)$ https://ravan-8n0h.onrender.com/$1 [R=302,L]
+RewriteRule ^api/(.*)$ https://bioping-backend.onrender.com/api/$1 [P,L]
+
+# Alternative API handling with different backend URL if needed
+RewriteCond %{REQUEST_URI} ^/backend/(.*)$
+RewriteRule ^backend/(.*)$ https://bioping-backend.onrender.com/$1 [P,L]
 
 # Handle React Router - redirect all other requests to index.html
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -20,6 +33,29 @@ RewriteRule ^(.*)$ /index.html [QSA,L]
     AddType image/svg+xml .svg
     AddType application/pdf .pdf
     AddType application/json .json
+    AddType application/wasm .wasm
+</IfModule>
+
+# Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
 # Allow access to all file types
