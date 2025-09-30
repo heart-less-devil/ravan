@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Star, ArrowRight, Building2, Users, Target, Zap, CreditCard, Calendar, Globe } from 'lucide-react';
+import { Check, Star, ArrowRight, Building2, Users, Target, Zap, CreditCard, Calendar, Globe, Gift } from 'lucide-react';
 import StripePayment from '../components/StripePayment';
 import { API_BASE_URL } from '../config';
 
@@ -66,30 +66,29 @@ const Pricing = () => {
   const getDefaultPlans = () => [
     {
       id: 'free',
-      name: "",
+      name: "Free",
       description: "Perfect for getting started",
       credits: "5 credits for 5 days only",
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
         "1 Seat included",
-        "Get 5 contacts",
+        "Get 5 free contacts",
         "Credits expire after 5 days",
         "(including weekends)",
         "no credit card needed",
-        "No BD Tracker Access",
         "No BD Insights Access"
       ],
-      icon: Building2,
+      icon: Gift,
       popular: false,
-      buttonText: "Get started",
+      buttonText: "Get Started",
       buttonStyle: "outline"
     },
     {
       id: 'basic',
       name: "Basic Plan",
       description: "Ideal for growing businesses",
-      credits: "",
+      credits: "50 contacts/month",
       monthlyPrice: 390,
       annualPrice: 3750,
       planType: 'monthly',
@@ -109,7 +108,7 @@ const Pricing = () => {
       id: 'premium',
       name: "Premium Plan",
       description: "For advanced users and teams",
-      credits: "",
+      credits: "100 contacts/month",
       monthlyPrice: 790,
       annualPrice: 7585,
       planType: 'monthly',
@@ -118,8 +117,6 @@ const Pricing = () => {
         "1 Seat included",
         "100 contacts per month",
         "Access to BD Tracker",
-        "Access to BD Insights",
-        "Free Deal Comps & VC Contacts",
         "2 hrs. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
@@ -172,7 +169,7 @@ const Pricing = () => {
 
   // Icon mapping for plans
   const iconMap = {
-    'free': Building2,
+    'free': Gift,
     'basic': Users,
     'premium': Target,
     'pro': Target,
@@ -429,107 +426,136 @@ const Pricing = () => {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
                 {plans.map((plan, index) => (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className={`relative ${plan.popular ? 'lg:scale-105' : ''}`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-1">
-                      <Star className="w-4 h-4" />
-                      <span>Most Popular</span>
-                    </div>
-                  </div>
-                )}
-                
-                <div className={`card p-6 h-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 shadow-lg flex flex-col`}>
-                  <div className="text-center mb-6">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3 flex items-center justify-center">
-                      <plan.icon className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {plan.name}
-                    </h3>
-                    <p className="text-gray-600 mb-3 text-sm">
-                      {plan.description}
-                    </p>
-                    <div className="mb-4">
-                      <div className="text-xs text-gray-600 mb-1">
-                        {plan.credits}
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900">
-                        {plan.monthlyPrice === 0 ? '' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
-                      </div>
-                      {/* Show yearly savings for Basic and Premium plans */}
-                      {isAnnual && (plan.id === 'basic' || plan.id === 'premium') && (
-                        <div className="mt-1">
-                          <span className="inline-block bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                            Save ${plan.id === 'basic' ? '930' : '1895'}/year
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-6 flex-grow">
-                    {console.log('🔍 Plan features for', plan.name, ':', plan.features)}
-                    {plan.features && plan.features.length > 0 ? (
-                      plan.features.map((feature, featureIndex) => (
-                        <div key={featureIndex} className="flex items-start space-x-2">
-                          <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-gray-700 text-sm leading-tight">
-                            {feature.includes('Mr. Vik') ? (
-                              <>
-                                {feature.split('Mr. Vik')[0]}
-                                <a 
-                                  href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:text-blue-800 underline font-medium"
-                                >
-                                  Mr. Vik
-                                </a>
-                                {feature.split('Mr. Vik')[1]}
-                              </>
-                            ) : (
-                              feature
-                            )}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-gray-500 text-sm">No features available</div>
-                    )}
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto ${
-                      userCurrentPlan === plan.id
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg'
-                        : plan.buttonStyle === 'primary' 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg' 
-                          : 'border-2 border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300'
-                    }`}
-                    onClick={() => handlePlanSelect(plan)}
+                  <motion.div
+                    key={plan.id || plan._id || index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    className={`relative ${plan.popular ? 'lg:scale-105 z-20' : 'z-10'}`}
+                    style={{ zIndex: plan.popular ? 20 : 10 }}
                   >
-                    {userCurrentPlan === plan.id 
-                      ? 'Current Plan' 
-                      : plan.buttonText
-                    }
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
+                    {plan.popular && (
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-30" style={{ pointerEvents: 'none' }}>
+                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-1 shadow-lg">
+                          <Star className="w-4 h-4" />
+                          <span>Most Popular</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className={`card p-6 h-full bg-white border-2 ${
+                      plan.popular ? 'border-transparent bg-gradient-to-r from-purple-50 to-pink-50 shadow-xl shadow-purple-200/50 ring-2 ring-purple-200' : 
+                      plan.name === 'Free' ? 'border-green-200 hover:border-green-300 shadow-lg shadow-green-100/50 hover:ring-2 hover:ring-green-200' :
+                      plan.name === 'Basic Plan' ? 'border-blue-200 hover:border-blue-300 shadow-lg shadow-blue-100/50 hover:ring-2 hover:ring-blue-200' :
+                      'border-gray-200 hover:border-gray-300 shadow-lg hover:ring-2 hover:ring-gray-200'
+                    } rounded-2xl flex flex-col hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden`}
+                    style={{ position: 'relative', zIndex: plan.popular ? 15 : 5 }}
+                    >
+                      {plan.popular && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 rounded-2xl" style={{ pointerEvents: 'none' }}></div>
+                      )}
+                      <div className="text-center mb-4 relative z-10">
+                        <div className={`w-16 h-16 ${
+                          plan.popular ? 'bg-gradient-to-br from-purple-100 to-pink-100' : 
+                          plan.name === 'Free' ? 'bg-gradient-to-br from-green-100 to-emerald-100' :
+                          plan.name === 'Basic Plan' ? 'bg-gradient-to-br from-blue-100 to-indigo-100' :
+                          'bg-gradient-to-br from-gray-100 to-slate-100'
+                        } rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg`}>
+                          <plan.icon className={`w-8 h-8 ${
+                            plan.popular ? 'text-purple-600' : 
+                            plan.name === 'Free' ? 'text-green-600' :
+                            plan.name === 'Basic Plan' ? 'text-blue-600' :
+                            'text-gray-600'
+                          }`} />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                          {plan.name}
+                        </h3>
+                        <p className="text-gray-600 mb-4 text-sm">
+                          {plan.description}
+                        </p>
+                        <div className="mb-4">
+                          <div className="text-sm text-gray-600 mb-2">{plan.credits}</div>
+                          <div className="text-3xl font-bold text-gray-900">
+                            {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
+                          </div>
+                          {isAnnual && plan.monthlyPrice > 0 && (
+                            <div className="text-xs text-green-600 font-medium mt-1">
+                              Save ${(plan.monthlyPrice * 12) - plan.annualPrice}/year
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 mb-6 flex-grow relative z-10">
+                        {plan.features.map((feature, featureIndex) => (
+                          <div key={featureIndex} className="flex items-start space-x-3">
+                            <Check className={`w-4 h-4 ${plan.popular ? 'text-purple-500' : 'text-green-500'} mt-0.5 flex-shrink-0`} />
+                            <span className="text-gray-700 text-sm leading-relaxed">
+                              {feature.includes('Mr. Vik') ? (
+                                <>
+                                  {feature.split('Mr. Vik')[0]}
+                                  <a 
+                                    href="https://www.linkedin.com/in/gauravvij1?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 underline font-medium"
+                                  >
+                                    Mr. Vik
+                                  </a>
+                                  {feature.split('Mr. Vik')[1]}
+                                </>
+                              ) : (
+                                feature
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={userCurrentPlan === plan.id}
+                        style={{ 
+                          pointerEvents: userCurrentPlan === plan.id ? 'none' : 'auto',
+                          position: 'relative',
+                          zIndex: 50
+                        }}
+                        className={`w-full px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 mt-auto cursor-pointer relative z-50 ${
+                          (plan.id === 'free' && userCurrentPlan === 'free') || userCurrentPlan === plan.id
+                            ? 'bg-gradient-to-r from-green-600 to-green-700 text-white border-2 border-green-500 shadow-lg cursor-default'
+                            : plan.popular
+                              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg cursor-pointer'
+                              : plan.buttonStyle === 'primary' 
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg cursor-pointer' 
+                                : 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer'
+                        }`}
+                        onClick={() => handlePlanSelect(plan)}
+                      >
+                        {(() => {
+                          // Free plan logic
+                          if (plan.id === 'free') {
+                            return userCurrentPlan === 'free' ? 'Current Plan' : 'Get Started';
+                          }
+                          
+                          // Other plans logic
+                          if (userCurrentPlan === plan.id) {
+                            return 'Current Plan';
+                          }
+                          
+                          // Default: show plan's button text
+                          return plan.buttonText;
+                        })()}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </div>
           )}
@@ -703,6 +729,16 @@ const Pricing = () => {
           {paymentStatus}
         </div>
       )}
+
+      {/* All Plans Section */}
+      <section className="section bg-white">
+        <div className="container-custom">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">All plans:</h2>
+            <p className="text-lg text-gray-600">Pay by credit/debit card</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

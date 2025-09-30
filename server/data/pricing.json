@@ -4,14 +4,15 @@
     "id": "free",
     "name": "Free",
     "description": "Perfect for getting started",
-    "credits": "5 credits for 5 days only",
+    "credits": "",
     "monthlyPrice": 0,
     "annualPrice": 0,
     "features": [
       "1 Seat included",
       "Get 5 free contacts",
-      "Credits expire after 5 days (including weekends)",
-      "No Credit Card Needed",
+      "Credits expire after 5 days",
+      "(including weekends)",
+      "No credit card needed",
       "No BD Insights Access"
     ],
     "popular": false,
@@ -26,7 +27,6 @@
     "id": "basic",
     "name": "Basic Plan",
     "description": "Ideal for growing businesses",
-    "credits": "50 contacts/month",
     "monthlyPrice": 390,
     "annualPrice": 3750,
     "planType": "monthly",
@@ -34,9 +34,9 @@
     "features": [
       "1 Seat included",
       "50 contacts per month",
-      "Pay by credit/debit card",
       "Access to BD Tracker",
-      "1 hr. of BD Consulting with Mr. Vik"
+      "1 hr. of BD Consulting with Mr. Vik",
+      "Pay by credit/debit card "
     ],
     "popular": false,
     "buttonText": "Choose plan",
@@ -50,7 +50,6 @@
     "id": "premium",
     "name": "Premium Plan",
     "description": "For advanced users and teams",
-    "credits": "100 contacts/month",
     "monthlyPrice": 790,
     "annualPrice": 7585,
     "planType": "monthly",
@@ -58,9 +57,9 @@
     "features": [
       "1 Seat included",
       "100 contacts per month",
-      "Pay by credit/debit card",
       "Access to BD Tracker",
-      "2 hrs. of BD Consulting with Mr. Vik"
+      "2 hrs. of BD Consulting with Mr. Vik",
+      "Pay by credit/debit card "
     ],
     "popular": true,
     "buttonText": "Choose plan",

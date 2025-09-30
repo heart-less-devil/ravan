@@ -4260,14 +4260,15 @@ const PricingPage = () => {
       id: 'free',
       name: "Free",
       description: "Perfect for getting started",
-      credits: "5 credits for 5 days only",
+      credits: "",
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
         "1 Seat included",
         "Get 5 free contacts",
-        "Credits expire after 5 days (including weekends)",
-        "No Credit Card Needed",
+        "Credits expire after 5 days",
+        "(including weekends)",
+        "no credit card needed",
         "No BD Insights Access"
       ],
       icon: Gift,
@@ -4284,7 +4285,6 @@ const PricingPage = () => {
       features: [
         "1 Seat included",
         "50 contacts per month",
-        "Pay by credit/debit card",
         "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
@@ -4304,7 +4304,6 @@ const PricingPage = () => {
         "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
-        "Pay by credit/debit card",
         "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
@@ -4645,7 +4644,7 @@ const PricingPage = () => {
                      <div className="mb-4">
                        <div className="text-sm text-gray-600 mb-2">{plan.credits}</div>
                        <div className="text-3xl font-bold text-gray-900">
-                         {plan.monthlyPrice === 0 ? 'Free' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
+                         {plan.monthlyPrice === 0 ? '' : `$${isAnnual ? plan.annualPrice : plan.monthlyPrice} USD`}
                        </div>
                        <div className="text-sm text-gray-500">
                          {plan.monthlyPrice === 0 ? '' : (isAnnual ? '/ yearly' : '/ monthly')}
@@ -4774,7 +4773,7 @@ const PricingPage = () => {
           </div>
           <div className="border-b border-gray-200 pb-6">
             <h3 className="font-semibold text-gray-900 mb-2">How do free credits work?</h3>
-            <p className="text-gray-600">Free plan users get 5 credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan.</p>
+            <p className="text-gray-600">Free plan users get credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan.</p>
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">What kind of support do you provide?</h3>
@@ -4822,6 +4821,16 @@ const PricingPage = () => {
           {paymentStatus}
         </div>
       )}
+
+      {/* All Plans Section */}
+      <section className="section bg-white">
+        <div className="container-custom">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">All plans:</h2>
+            <p className="text-lg text-gray-600">Pay by credit/debit card</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
