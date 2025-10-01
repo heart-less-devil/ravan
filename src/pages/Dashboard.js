@@ -379,12 +379,6 @@ const Dashboard = () => {
           
           console.log('💳 Frontend credits updated immediately:', newCredits);
           
-          // Force dashboard refresh to show updated credits
-          setTimeout(() => {
-            console.log('🔄 Forcing dashboard refresh after credit consumption...');
-            fetchUserData();
-          }, 500); // Increased delay to ensure backend processes the update
-          
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
           return true;
