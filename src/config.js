@@ -1,9 +1,9 @@
 // API Configuration with fallback URLs - FIXED FOR LIVE DEPLOYMENT
 const getApiUrl = () => {
-  // Check if we're on the live website (GoDaddy) - use relative path for proxy
+  // Check if we're on the live website (GoDaddy) - use direct backend URL
   if (typeof window !== 'undefined') {
     if (window.location.hostname.includes('thebioping.com')) {
-      return ''; // Use relative path - .htaccess will proxy to backend
+      return 'https://bioping-backend.onrender.com'; // Direct API calls to backend
     }
     if (window.location.hostname.includes('netlify.app')) {
       return 'https://bioping-backend.onrender.com';
@@ -20,8 +20,8 @@ const getApiUrl = () => {
     return 'http://localhost:3005';
   }
   
-  // Production fallbacks - use relative path for proxy
-  return '';
+  // Production fallbacks - use direct backend URL
+  return 'https://bioping-backend.onrender.com';
 };
 
 export const API_BASE_URL = getApiUrl();

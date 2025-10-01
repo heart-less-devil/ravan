@@ -1,14 +1,8 @@
 # BioPing Complete Site Configuration
-# Single .htaccess file for entire website
+# GoDaddy Compatible - No Proxy Required
 
 # Enable URL rewriting
 RewriteEngine On
-
-# Enable proxy module for API calls
-<IfModule mod_proxy.c>
-    ProxyPreserveHost On
-    ProxyRequests Off
-</IfModule>
 
 # Allow access to all files and directories
 Options +FollowSymLinks -Indexes
@@ -18,15 +12,6 @@ RewriteCond %{REQUEST_URI} !^/public/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ /public/$1 [L]
-
-# Handle API routes - proxy to backend server (GoDaddy compatible)
-# Try proxy first, fallback to redirect if proxy not available
-RewriteCond %{REQUEST_URI} ^/api/(.*)$
-RewriteRule ^api/(.*)$ https://bioping-backend.onrender.com/api/$1 [P,L]
-
-# Fallback: If proxy fails, use redirect (less ideal but works)
-# RewriteCond %{REQUEST_URI} ^/api/(.*)$
-# RewriteRule ^api/(.*)$ https://bioping-backend.onrender.com/api/$1 [R=302,L]
 
 # Handle React Router - redirect all other requests to index.html
 RewriteCond %{REQUEST_FILENAME} !-f
