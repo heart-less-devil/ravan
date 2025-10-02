@@ -2237,6 +2237,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         </div>
       )}
 
+
       {/* Search Results */}
       {error && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-8 mb-6 shadow-lg">
@@ -2328,6 +2329,53 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
         </div>
       )}
 
+      {/* Compact Search Criteria Display - Only show for Advanced Search with results */}
+      {sortedSearchResults.length > 0 && !isGlobalSearch && currentSearchType === 'Advanced Search' && (
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Filter className="w-4 h-4 text-gray-600" />
+            <span className="text-sm font-medium text-gray-700">Search Criteria Used:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {formData.drugName && (
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                Drug: {formData.drugName}
+              </span>
+            )}
+            {formData.diseaseArea && (
+              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                Disease: {formData.diseaseArea}
+              </span>
+            )}
+            {formData.stageOfDevelopment && (
+              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                Stage: {formData.stageOfDevelopment}
+              </span>
+            )}
+            {formData.modality && (
+              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full">
+                Modality: {formData.modality}
+              </span>
+            )}
+            {formData.lookingFor && (
+              <span className="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded-full">
+                Partner: {formData.lookingFor}
+              </span>
+            )}
+            {formData.region && (
+              <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">
+                Region: {formData.region}
+              </span>
+            )}
+            {formData.function && (
+              <span className="bg-teal-100 text-teal-800 text-xs px-2 py-1 rounded-full">
+                Function: {formData.function}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {sortedSearchResults.length > 0 && (
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
           {/* Search Results Summary */}
@@ -2389,6 +2437,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
               </div>
             </div>
           </div>
+
           
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -4261,9 +4310,12 @@ const PricingPage = () => {
         "1 Seat included",
         "Get 5 free contacts",
         "Credits expire after 5 days",
-        "(including weekends)",
-        "no credit card needed",
-        "No BD Insights Access"
+    
+        
+        "No BD Insights Access",
+        "No BD TRACKER Access",
+        "No credit card needed"
+       
       ],
       icon: Gift,
       popular: false,
@@ -4299,6 +4351,7 @@ const PricingPage = () => {
         "1 Seat included",
         "100 contacts per month",
         "Access to BD Tracker",
+        "Free Deal Comps & VC Contacts",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
@@ -4344,7 +4397,8 @@ const PricingPage = () => {
   };
 
   // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
-  const plans = (pricingPlans.length > 0 ? pricingPlans : getDefaultPlans()).map(plan => {
+  // Temporarily force using local plans to ensure updated features are shown
+  const plans = getDefaultPlans().map(plan => {
     return {
       ...plan,
       // Map yearlyPrice to annualPrice for consistency
@@ -4776,20 +4830,6 @@ const PricingPage = () => {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center">
-        <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
-        <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
-          Join several business development professionals who trust BioPing to find their next partnership opportunities.
-        </p>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="bg-white text-blue-600 font-semibold py-3 px-8 rounded-xl hover:bg-gray-100 transition-all duration-200"
-        >
-          Start Free Trial
-        </motion.button>
-      </div>
 
       {/* Payment Modal */}
       {showPayment && selectedPlan && selectedPlan.id !== 'free' && StripePaymentComponent && (

@@ -77,7 +77,8 @@ const Pricing = () => {
         "Credits expire after 5 days",
         "(including weekends)",
         "no credit card needed",
-        "No BD Insights Access"
+        "No BD Insights Access",
+        "No BD TRACKER Access"
       ],
       icon: Gift,
       popular: false,
@@ -117,6 +118,7 @@ const Pricing = () => {
         "1 Seat included",
         "100 contacts per month",
         "Access to BD Tracker",
+        "Free Deal Comps & VC Contacts",
         "2 hrs. of BD Consulting with Mr. Vik"
       ],
       icon: Target,

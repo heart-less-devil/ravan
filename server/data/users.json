@@ -47,7 +47,7 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 42,
+    "currentCredits": 38,
     "lastCreditRenewal": "2025-09-28T12:37:31.816Z",
     "nextCreditRenewal": "2025-10-28T12:37:31.816Z",
     "company": "Company",
@@ -135,9 +135,33 @@
         "timestamp": "2025-09-29T06:23:13.698Z",
         "creditsUsed": 1,
         "remainingCredits": 42
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-01T10:19:00.525Z",
+        "creditsUsed": 1,
+        "remainingCredits": 41
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-01T10:19:23.914Z",
+        "creditsUsed": 1,
+        "remainingCredits": 40
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-01T10:24:33.043Z",
+        "creditsUsed": 1,
+        "remainingCredits": 39
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-01T10:24:35.719Z",
+        "creditsUsed": 1,
+        "remainingCredits": 38
       }
     ],
-    "lastCreditUsage": "2025-09-29T06:23:13.698Z"
+    "lastCreditUsage": "2025-10-01T10:24:35.719Z"
   },
   {
     "id": 5,
