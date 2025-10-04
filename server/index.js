@@ -1255,10 +1255,18 @@ let transporter = null;
 // Email configuration - Use environment variables for security
 try {
   console.log('📧 Initializing email service...');
+  console.log('🔧 Environment Variables Debug:');
+  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
+  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+  console.log('  - NODE_ENV:', process.env.NODE_ENV);
   
   // Use Gmail App Password for authentication
   const emailUser = process.env.EMAIL_USER || 'universalx0242@gmail.com';
   const emailPass = process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'; // Gmail App Password
+  
+  console.log('📧 Final Email Config:');
+  console.log('  - emailUser:', emailUser);
+  console.log('  - emailPass:', emailPass ? 'Set' : 'Not set');
   
   // Use Gmail App Password for email configuration
   transporter = nodemailer.createTransport({
