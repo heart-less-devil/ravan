@@ -1252,10 +1252,45 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 // Email configuration with custom SMTP setup
 let transporter = null;
 
-// Email configuration - Disable email service for now
-console.log('📧 Email service temporarily disabled for debugging');
-console.log('🔧 All OTP codes will be returned in API response');
-transporter = null; // Disable email functionality
+// Email configuration - Use working Gmail SMTP
+try {
+  console.log('📧 Initializing email service...');
+  
+  // Use Gmail SMTP with proper configuration
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'support@thebioping.com',
+      pass: 'Shivam1984!!'
+    },
+    // Fast configuration for quick delivery
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,    // 5 seconds
+    socketTimeout: 10000,     // 10 seconds
+    pool: false,              // No connection pooling
+    maxConnections: 1,        // Single connection
+    maxMessages: 1,           // One message per connection
+    rateLimit: 1              // Send immediately
+  });
+  
+  // Test connection
+  transporter.verify((error, success) => {
+    if (error) {
+      console.log('❌ Gmail SMTP failed:', error.message);
+      console.log('🔧 Email service disabled - Gmail not accessible');
+      transporter = null;
+    } else {
+      console.log('✅ Gmail SMTP connection successful');
+    }
+  });
+  
+  console.log('✅ Email service configured successfully');
+  
+} catch (error) {
+  console.log('❌ Email configuration failed:', error.message);
+  console.log('🔧 Email functionality will be disabled');
+  transporter = null; // Disable email functionality
+}
 
 // Email templates
 const emailTemplates = {
@@ -1659,31 +1694,21 @@ app.post('/api/auth/send-verification', [
         return;
       }
 
-      // Use the main transporter or create a fresh one
-      let emailTransporter = transporter;
-      
-      if (!emailTransporter) {
-        // Try to create a fresh transporter as fallback
-        try {
-          emailTransporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-              user: 'support@thebioping.com',
-              pass: 'Shivam1984!!'
-            },
-            connectionTimeout: 5000,
-            greetingTimeout: 3000,
-            socketTimeout: 5000,
-            pool: false,
-            maxConnections: 1,
-            maxMessages: 1,
-            rateLimit: 1
-          });
-        } catch (fallbackError) {
-          console.log('❌ Fallback transporter also failed:', fallbackError.message);
-          throw fallbackError;
-        }
-      }
+      // Always create a fresh transporter for each email to ensure delivery
+      const emailTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: 'support@thebioping.com',
+          pass: 'Shivam1984!!'
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 5000,
+        socketTimeout: 10000,
+        pool: false,
+        maxConnections: 1,
+        maxMessages: 1,
+        rateLimit: 1
+      });
 
       const mailOptions = {
         from: 'support@thebioping.com',
@@ -1700,10 +1725,8 @@ app.post('/api/auth/send-verification', [
 
       await Promise.race([emailPromise, timeoutPromise]);
       
-      // Close the transporter if it's a fresh one
-      if (emailTransporter !== transporter) {
-        emailTransporter.close();
-      }
+      // Close the transporter after sending
+      emailTransporter.close();
       
       console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
 
