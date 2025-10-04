@@ -9,6 +9,12 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: EMAIL_USER
+        value: universalx0242@gmail.com
+      - key: EMAIL_PASS
+        value: nxyh whmt krdk ayqb
+      - key: JWT_SECRET
+        value: bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string
     healthCheckPath: /api/health
     autoDeploy: true
     headers:

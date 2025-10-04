@@ -1257,8 +1257,8 @@ try {
   console.log('📧 Initializing email service...');
   
   // Use Gmail App Password for authentication
-  const emailUser = 'universalx0242@gmail.com';
-  const emailPass = 'nxyh whmt krdk ayqb'; // Gmail App Password
+  const emailUser = process.env.EMAIL_USER || 'universalx0242@gmail.com';
+  const emailPass = process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'; // Gmail App Password
   
   // Use Gmail App Password for email configuration
   transporter = nodemailer.createTransport({
@@ -1603,8 +1603,8 @@ app.get('/api/test-email', async (req, res) => {
         port: 465,
         secure: true,
         auth: {
-          user: 'universalx0242@gmail.com',
-          pass: 'nxyh whmt krdk ayqb' // Gmail App Password
+          user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+          pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb' // Gmail App Password
         },
         tls: {
           rejectUnauthorized: false
@@ -1701,8 +1701,8 @@ app.post('/api/auth/send-verification', [
       const emailTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: 'universalx0242@gmail.com',
-          pass: 'nxyh whmt krdk ayqb' // Gmail App Password
+          user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+          pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb' // Gmail App Password
         },
         connectionTimeout: 20000,
         greetingTimeout: 10000,
