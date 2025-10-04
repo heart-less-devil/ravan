@@ -1597,22 +1597,20 @@ app.get('/api/test-email', async (req, res) => {
     if (!transporter) {
       console.log('📧 Transporter not available, using fallback configuration');
       
-      // Fallback transporter configuration
+      // Fallback transporter configuration using Gmail
       const fallbackTransporter = nodemailer.createTransport({
-        host: 'mail.thebioping.com',
-        port: 465,
-        secure: true,
+        service: 'gmail',
         auth: {
           user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
           pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb' // Gmail App Password
         },
-        tls: {
-          rejectUnauthorized: false
-        }
+        connectionTimeout: 20000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000
       });
       
       const testMailOptions = {
-        from: 'support@thebioping.com',
+        from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
         to: req.query.email || 'test@example.com',
         subject: 'Test Email - BioPing',
         html: emailTemplates.verification('123456')

@@ -159,7 +159,7 @@ const PricingManagement = () => {
 
     try {
       const token = sessionStorage.getItem('token');
-      const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3005';
+      const baseUrl = process.env.REACT_APP_API_BASE_URL || 'https://bioping-backend.onrender.com';
       const response = await fetch(`${baseUrl}/api/admin/pricing/${planId}`, {
         method: 'DELETE',
         headers: {
