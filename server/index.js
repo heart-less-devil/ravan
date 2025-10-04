@@ -1255,13 +1255,17 @@ let transporter = null;
 // Email configuration - Use working Gmail SMTP
 try {
   console.log('📧 Initializing email service...');
+  console.log('🔧 Environment check:');
+  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
+  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+  console.log('  - Using fallback credentials for live deployment');
   
-  // Use Gmail SMTP with proper configuration
+  // Use Gmail SMTP with environment variables (for live) or fallback to hardcoded
   transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'support@thebioping.com',
-      pass: 'Shivam1984!!'
+      user: process.env.EMAIL_USER || 'support@thebioping.com',
+      pass: process.env.EMAIL_PASS || 'Shivam1984!!'
     },
     // Fast configuration for quick delivery
     connectionTimeout: 10000, // 10 seconds
@@ -1698,8 +1702,8 @@ app.post('/api/auth/send-verification', [
       const emailTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: 'support@thebioping.com',
-          pass: 'Shivam1984!!'
+          user: process.env.EMAIL_USER || 'support@thebioping.com',
+          pass: process.env.EMAIL_PASS || 'Shivam1984!!'
         },
         connectionTimeout: 10000,
         greetingTimeout: 5000,
@@ -1711,7 +1715,7 @@ app.post('/api/auth/send-verification', [
       });
 
       const mailOptions = {
-        from: 'support@thebioping.com',
+        from: process.env.EMAIL_USER || 'support@thebioping.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
