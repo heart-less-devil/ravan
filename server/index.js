@@ -1260,17 +1260,23 @@ try {
   console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
   console.log('  - Using fallback credentials for live deployment');
   
-  // Use Gmail SMTP with environment variables (for live) or fallback to hardcoded
+  // Use Gmail SMTP with Render-optimized configuration
   transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use STARTTLS
     auth: {
       user: process.env.EMAIL_USER || 'support@thebioping.com',
       pass: process.env.EMAIL_PASS || 'Shivam1984!!'
     },
-    // Fast configuration for quick delivery
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000,    // 5 seconds
-    socketTimeout: 10000,     // 10 seconds
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    // Render-optimized configuration
+    connectionTimeout: 30000, // 30 seconds for Render
+    greetingTimeout: 15000,   // 15 seconds
+    socketTimeout: 30000,     // 30 seconds
     pool: false,              // No connection pooling
     maxConnections: 1,        // Single connection
     maxMessages: 1,           // One message per connection
@@ -1700,14 +1706,20 @@ app.post('/api/auth/send-verification', [
 
       // Always create a fresh transporter for each email to ensure delivery
       const emailTransporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // Use STARTTLS
         auth: {
           user: process.env.EMAIL_USER || 'support@thebioping.com',
           pass: process.env.EMAIL_PASS || 'Shivam1984!!'
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000,
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: 'SSLv3'
+        },
+        connectionTimeout: 30000,
+        greetingTimeout: 15000,
+        socketTimeout: 30000,
         pool: false,
         maxConnections: 1,
         maxMessages: 1,
@@ -1721,10 +1733,10 @@ app.post('/api/auth/send-verification', [
         html: emailTemplates.verification(verificationCode).html
       };
 
-      // Send email with timeout
+      // Send email with longer timeout for Render
       const emailPromise = emailTransporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 8000)
+        setTimeout(() => reject(new Error('Email timeout')), 45000)
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
