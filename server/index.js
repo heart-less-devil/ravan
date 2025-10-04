@@ -1252,50 +1252,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 // Email configuration with custom SMTP setup
 let transporter = null;
 
-// Email configuration with custom SMTP setup
-try {
-  console.log('📧 Initializing email service...');
-  
-  // Use hosting server SMTP configuration (cPanel settings)
-  transporter = nodemailer.createTransport({
-    host: '50.62.143.88', // Direct IP address
-    port: 465,
-    secure: true, // SSL/TLS
-    auth: {
-      user: 'support@thebioping.com',
-      pass: 'Shivam1984!!'
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    // Optimize for live deployment (longer timeouts)
-    connectionTimeout: 30000, // 30 seconds for live
-    greetingTimeout: 15000,   // 15 seconds
-    socketTimeout: 30000,     // 30 seconds
-    pool: true,               // Use connection pooling
-    maxConnections: 3,        // Fewer connections for live
-    maxMessages: 50,          // Fewer messages per connection
-    rateLimit: 5              // Slower rate for live
-  });
-  
-  // Test connection to hosting server
-  transporter.verify((error, success) => {
-    if (error) {
-      console.log('❌ Hosting server SMTP failed:', error.message);
-      console.log('🔧 Email service disabled - hosting server not accessible');
-      transporter = null;
-    } else {
-      console.log('✅ Hosting server SMTP connection successful');
-    }
-  });
-  
-  console.log('✅ Email service configured successfully');
-  
-} catch (error) {
-  console.log('❌ Email configuration failed:', error.message);
-  console.log('🔧 Email functionality will be disabled');
-  transporter = null; // Disable email functionality
-}
+// Email configuration - Disable email service for now
+console.log('📧 Email service temporarily disabled for debugging');
+console.log('🔧 All OTP codes will be returned in API response');
+transporter = null; // Disable email functionality
 
 // Email templates
 const emailTemplates = {
@@ -1699,6 +1659,32 @@ app.post('/api/auth/send-verification', [
         return;
       }
 
+      // Use the main transporter or create a fresh one
+      let emailTransporter = transporter;
+      
+      if (!emailTransporter) {
+        // Try to create a fresh transporter as fallback
+        try {
+          emailTransporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: 'support@thebioping.com',
+              pass: 'Shivam1984!!'
+            },
+            connectionTimeout: 5000,
+            greetingTimeout: 3000,
+            socketTimeout: 5000,
+            pool: false,
+            maxConnections: 1,
+            maxMessages: 1,
+            rateLimit: 1
+          });
+        } catch (fallbackError) {
+          console.log('❌ Fallback transporter also failed:', fallbackError.message);
+          throw fallbackError;
+        }
+      }
+
       const mailOptions = {
         from: 'support@thebioping.com',
         to: email,
@@ -1706,7 +1692,19 @@ app.post('/api/auth/send-verification', [
         html: emailTemplates.verification(verificationCode).html
       };
 
-      await transporter.sendMail(mailOptions);
+      // Send email with timeout
+      const emailPromise = emailTransporter.sendMail(mailOptions);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email timeout')), 8000)
+      );
+
+      await Promise.race([emailPromise, timeoutPromise]);
+      
+      // Close the transporter if it's a fresh one
+      if (emailTransporter !== transporter) {
+        emailTransporter.close();
+      }
+      
       console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
 
       res.json({
@@ -2642,29 +2640,19 @@ Timestamp: ${new Date().toLocaleString()}
         // Use the same transporter configuration as the main email setup
         const isCustomDomain = true;
         
-        const transporter = isCustomDomain ? 
-          nodemailer.createTransport({
-            host: 'mail.thebioping.com',
-            port: 465,
-            secure: true,
-            auth: {
-              user: 'support@thebioping.com',
-              pass: 'Shivam1984!!'
-            },
-            tls: {
-              rejectUnauthorized: false
-            }
-          }) :
-          nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS
-            }
-          });
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: 'support@thebioping.com',
+            pass: 'Shivam1984!!'
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 5000,
+          socketTimeout: 10000
+        });
 
         const mailOptions = {
-          from: process.env.EMAIL_USER,
+          from: 'support@thebioping.com',
           to: 'info@bioping.com',
           subject: 'New Contact Form Submission - BioPing',
           text: emailContent,
