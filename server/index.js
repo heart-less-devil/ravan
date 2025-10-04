@@ -1252,58 +1252,66 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 // Email configuration with custom SMTP setup
 let transporter = null;
 
-// Only initialize email if credentials are provided
-if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  try {
-    // Check if using custom domain email or Gmail
-    const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
-    
-    if (isCustomDomain) {
-      // Custom domain email configuration
-      transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'y3o.c8f.mytemp.website',
-        port: process.env.SMTP_PORT || 465,
-        secure: process.env.SMTP_SECURE === 'true' || true,
-        auth: {
-          user: process.env.EMAIL_USER || 'info@thebioping.com',
-          pass: process.env.EMAIL_PASS
-        },
-        tls: {
-          rejectUnauthorized: false
-        }
-      });
-      console.log('📧 Using custom domain email configuration');
-    } else {
-      // Gmail configuration
+// Email configuration with custom SMTP setup
+try {
+  console.log('📧 Initializing email service...');
+  
+  // Use hosting server SMTP configuration (cPanel settings)
+  transporter = nodemailer.createTransport({
+    host: '50.62.143.88', // Direct IP address
+    port: 465,
+    secure: true, // SSL/TLS
+    auth: {
+      user: 'support@thebioping.com',
+      pass: 'Shivam1984!!'
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    // Optimize for faster email delivery
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 5000,    // 5 seconds
+    socketTimeout: 10000,     // 10 seconds
+    pool: true,               // Use connection pooling
+    maxConnections: 5,        // Max concurrent connections
+    maxMessages: 100,         // Max messages per connection
+    rateLimit: 14             // Max 14 emails per second
+  });
+  
+  // Test connection to hosting server
+  transporter.verify((error, success) => {
+    if (error) {
+      console.log('❌ Hosting server SMTP failed:', error.message);
+      console.log('🔄 Falling back to Gmail SMTP...');
+      
+      // Fallback to Gmail SMTP
       transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
+          user: 'universalx0242@gmail.com',
+          pass: 'bioping123456'
         }
       });
-      console.log('📧 Using Gmail email configuration');
+      
+      transporter.verify((fallbackError, fallbackSuccess) => {
+        if (fallbackError) {
+          console.log('❌ Gmail SMTP also failed:', fallbackError.message);
+          transporter = null;
+        } else {
+          console.log('✅ Gmail SMTP fallback successful');
+        }
+      });
+    } else {
+      console.log('✅ Hosting server SMTP connection successful');
     }
-
-    // Verify transporter configuration
-    transporter.verify(function(error, success) {
-      if (error) {
-        console.log('❌ Email configuration error:', error.message);
-        console.log('🔧 Email functionality will be disabled');
-        transporter = null; // Disable email functionality
-      } else {
-        console.log('✅ Email server is ready to send messages');
-      }
-    });
-  } catch (error) {
-    console.log('❌ Email configuration failed:', error.message);
-    console.log('🔧 Email functionality will be disabled');
-    transporter = null; // Disable email functionality
-  }
-} else {
-  console.log('📧 Email credentials not provided - Email functionality disabled');
-  console.log('💡 To enable email, set EMAIL_USER and EMAIL_PASS in .env file');
-  transporter = null;
+  });
+  
+  console.log('✅ Email service configured successfully');
+  
+} catch (error) {
+  console.log('❌ Email configuration failed:', error.message);
+  console.log('🔧 Email functionality will be disabled');
+  transporter = null; // Disable email functionality
 }
 
 // Email templates
@@ -1604,16 +1612,42 @@ app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
 // Test email configuration
 app.get('/api/test-email', async (req, res) => {
   try {
+    // Always try to send email with hardcoded configuration
     if (!transporter) {
-      return res.status(503).json({
-        success: false,
-        message: 'Email service is not configured',
-        error: 'Transporter is null'
+      console.log('📧 Transporter not available, using fallback configuration');
+      
+      // Fallback transporter configuration
+      const fallbackTransporter = nodemailer.createTransport({
+        host: 'mail.thebioping.com',
+        port: 465,
+        secure: true,
+        auth: {
+          user: 'support@thebioping.com',
+          pass: 'Shivam1984!!'
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+      
+      const testMailOptions = {
+        from: 'support@thebioping.com',
+        to: req.query.email || 'test@example.com',
+        subject: 'Test Email - BioPing',
+        html: emailTemplates.verification('123456')
+      };
+
+      const result = await fallbackTransporter.sendMail(testMailOptions);
+      return res.json({
+        success: true,
+        message: 'Test email sent successfully with fallback configuration',
+        messageId: result.messageId,
+        to: req.query.email || 'test@example.com'
       });
     }
 
     const testMailOptions = {
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      from: 'support@thebioping.com',
       to: req.query.email || 'test@example.com',
       subject: 'Test Email - BioPing',
       html: emailTemplates.verification('123456')
@@ -1683,7 +1717,7 @@ app.post('/api/auth/send-verification', [
       }
 
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'support@bioping.com',
+        from: 'support@thebioping.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
@@ -2623,16 +2657,16 @@ Timestamp: ${new Date().toLocaleString()}
         console.log('📧 Attempting to send email...');
         
         // Use the same transporter configuration as the main email setup
-        const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
+        const isCustomDomain = true;
         
         const transporter = isCustomDomain ? 
           nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'y3o.c8f.mytemp.website',
-            port: process.env.SMTP_PORT || 465,
-            secure: process.env.SMTP_SECURE === 'true' || true,
+            host: 'mail.thebioping.com',
+            port: 465,
+            secure: true,
             auth: {
-              user: process.env.EMAIL_USER || 'info@thebioping.com',
-              pass: process.env.EMAIL_PASS
+              user: 'support@thebioping.com',
+              pass: 'Shivam1984!!'
             },
             tls: {
               rejectUnauthorized: false

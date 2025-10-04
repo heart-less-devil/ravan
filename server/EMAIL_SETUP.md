@@ -2,17 +2,15 @@
 
 ## 🚀 **Real Email OTP Configuration**
 
-### **Step 1: Bioping Email Setup**
+### **Step 1: cPanel Email Setup**
 
-1. **Set up support@bioping.com email account**:
-   - Create email account with your hosting provider
-   - Configure SMTP settings for the domain
-   - Enable email forwarding if needed
-
-2. **Alternative: Gmail Setup (if using Gmail for support@bioping.com)**:
-   - Go to your Google Account Settings
-   - Security → 2-Step Verification → Turn on
-   - Generate App Password for Mail
+1. **Set up support@thebioping.com email account**:
+   - Create email account in cPanel
+   - Use the following SMTP settings from cPanel:
+     - **Host**: mail.thebioping.com
+     - **Port**: 465 (SSL/TLS)
+     - **Username**: support@thebioping.com
+     - **Password**: [Your email account password]
 
 ### **Step 2: Update .env File**
 
@@ -20,12 +18,17 @@ Edit `server/.env` file:
 
 ```env
 # Server Configuration
-PORT=3001
+PORT=3005
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 
-# Email Configuration (Bioping Email)
-EMAIL_USER=support@bioping.com
-EMAIL_PASS=your-email-password-or-app-password
+# Email Configuration (cPanel Mail Settings)
+EMAIL_USER=support@thebioping.com
+EMAIL_PASS=your-email-password
+
+# cPanel SMTP Settings
+SMTP_HOST=mail.thebioping.com
+SMTP_PORT=465
+SMTP_SECURE=true
 ```
 
 ### **Step 3: Test Email Configuration**
@@ -60,11 +63,11 @@ The system uses beautiful HTML email templates:
 
 ## 📧 **Email Features**
 
-- ✅ Real Gmail SMTP
+- ✅ Real cPanel SMTP (mail.thebioping.com)
 - ✅ HTML email templates
 - ✅ Error handling
 - ✅ Debug mode for development
-- ✅ AWS deployment ready
+- ✅ Production deployment ready
 
 ## 🧪 **Testing**
 
@@ -82,10 +85,13 @@ The system uses beautiful HTML email templates:
 ## 📝 **Example .env**
 
 ```env
-PORT=3001
+PORT=3005
 JWT_SECRET=my-super-secret-jwt-key-2024
-EMAIL_USER=support@bioping.com
+EMAIL_USER=support@thebioping.com
 EMAIL_PASS=your-bioping-email-password
+SMTP_HOST=mail.thebioping.com
+SMTP_PORT=465
+SMTP_SECURE=true
 ```
 
-**Note**: Replace with your actual Bioping email credentials! 
+**Note**: Replace with your actual thebioping.com email credentials from cPanel! 

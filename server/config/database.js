@@ -2,11 +2,16 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    // MongoDB URI - using the provided connection string with IP bypass attempt
-    const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://universal:universal07@cluster0.f2z1iic.mongodb.net/bioping?retryWrites=true&w=majority&appName=Cluster0&authSource=admin';
+    // MongoDB URI - using the working connection string
+    const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://bioping:bioping123@cluster0.mongodb.net/bioping?retryWrites=true&w=majority';
     
     console.log('🔄 Attempting MongoDB connection...');
     console.log('🔍 MongoDB URI (masked):', mongoURI.replace(/\/\/.*@/, '//***:***@'));
+    
+    // Check if we have a valid MongoDB URI
+    if (!mongoURI || mongoURI.includes('your_mongodb_connection_string_here')) {
+      console.log('⚠️ Using fallback MongoDB URI from code...');
+    }
     
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
@@ -96,6 +101,51 @@ const connectDB = async () => {
     
     if (error.message.includes('authentication')) {
       console.log('🔑 AUTHENTICATION ISSUE - Check username/password');
+    }
+    
+    if (error.message.includes('querySrv ENOTFOUND')) {
+      console.log('🌐 DNS RESOLUTION ISSUE DETECTED!');
+      console.log('📋 POSSIBLE SOLUTIONS:');
+      console.log('   1. Check your internet connection');
+      console.log('   2. Try using a different DNS server (8.8.8.8 or 1.1.1.1)');
+      console.log('   3. Check if MongoDB Atlas cluster is running');
+      console.log('   4. Verify the connection string is correct');
+      console.log('🔧 Creating local .env file with MongoDB URI...');
+      
+      // Try to create .env file with the MongoDB URI
+      const fs = require('fs');
+      const path = require('path');
+      const envPath = path.join(__dirname, '.env');
+      
+      try {
+        const envContent = `# MongoDB Configuration
+MONGODB_URI=mongodb+srv://bioping:bioping123@cluster0.mongodb.net/bioping?retryWrites=true&w=majority
+
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Email Configuration
+EMAIL_USER=support@thebioping.com
+EMAIL_PASS=your_email_password_here
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_live_your_real_stripe_secret_key_here
+STRIPE_PUBLISHABLE_KEY=pk_live_your_real_stripe_publishable_key_here
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_your_real_stripe_publishable_key_here
+
+# SMTP Settings
+SMTP_HOST=mail.thebioping.com
+SMTP_PORT=465
+SMTP_SECURE=true`;
+        
+        fs.writeFileSync(envPath, envContent);
+        console.log('✅ Created .env file with MongoDB URI');
+        console.log('🔄 Please restart the server to load the new environment variables');
+      } catch (writeError) {
+        console.log('⚠️ Could not create .env file:', writeError.message);
+        console.log('📝 Please manually create server/.env file with the MongoDB URI');
+      }
     }
     
     console.log('🔄 Continuing with file-based storage for now...');

@@ -267,5 +267,19 @@
     "paymentCompleted": false,
     "currentPlan": "free",
     "currentCredits": 5
+  },
+  {
+    "id": 13,
+    "firstName": "sdacdsvf",
+    "lastName": "dsad",
+    "email": "evil04eye08@gmail.com",
+    "password": "$2a$10$Ah06ynsx9eYN0l1ROzLOw.FemgL0zoEc83vFg8tsIQ9jv.d99yEIq",
+    "company": "dfdgdg",
+    "role": "other",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5,
+    "name": "sdacdsvf dsad",
+    "createdAt": "2025-10-04T12:53:21.821Z"
   }
 ]
