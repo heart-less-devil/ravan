@@ -1268,39 +1268,22 @@ try {
     tls: {
       rejectUnauthorized: false
     },
-    // Optimize for faster email delivery
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 5000,    // 5 seconds
-    socketTimeout: 10000,     // 10 seconds
+    // Optimize for live deployment (longer timeouts)
+    connectionTimeout: 30000, // 30 seconds for live
+    greetingTimeout: 15000,   // 15 seconds
+    socketTimeout: 30000,     // 30 seconds
     pool: true,               // Use connection pooling
-    maxConnections: 5,        // Max concurrent connections
-    maxMessages: 100,         // Max messages per connection
-    rateLimit: 14             // Max 14 emails per second
+    maxConnections: 3,        // Fewer connections for live
+    maxMessages: 50,          // Fewer messages per connection
+    rateLimit: 5              // Slower rate for live
   });
   
   // Test connection to hosting server
   transporter.verify((error, success) => {
     if (error) {
       console.log('❌ Hosting server SMTP failed:', error.message);
-      console.log('🔄 Falling back to Gmail SMTP...');
-      
-      // Fallback to Gmail SMTP
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: 'universalx0242@gmail.com',
-          pass: 'bioping123456'
-        }
-      });
-      
-      transporter.verify((fallbackError, fallbackSuccess) => {
-        if (fallbackError) {
-          console.log('❌ Gmail SMTP also failed:', fallbackError.message);
-          transporter = null;
-        } else {
-          console.log('✅ Gmail SMTP fallback successful');
-        }
-      });
+      console.log('🔧 Email service disabled - hosting server not accessible');
+      transporter = null;
     } else {
       console.log('✅ Hosting server SMTP connection successful');
     }
