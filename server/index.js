@@ -1252,36 +1252,29 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 // Email configuration with custom SMTP setup
 let transporter = null;
 
-// Email configuration - Use working Gmail SMTP
+// Email configuration - Use environment variables for security
 try {
   console.log('📧 Initializing email service...');
-  console.log('🔧 Environment check:');
-  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
-  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
-  console.log('  - Using fallback credentials for live deployment');
   
-  // Use Gmail SMTP with Render-optimized configuration
+  // Use Gmail App Password for authentication
+  const emailUser = 'universalx0242@gmail.com';
+  const emailPass = 'nxyh whmt krdk ayqb'; // Gmail App Password
+  
+  // Use Gmail App Password for email configuration
   transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use STARTTLS
+    service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER || 'support@thebioping.com',
-      pass: process.env.EMAIL_PASS || 'Shivam1984!!'
+      user: emailUser,
+      pass: emailPass
     },
-    tls: {
-      rejectUnauthorized: false,
-      ciphers: 'SSLv3'
-    },
-    // Render-optimized configuration
-    connectionTimeout: 30000, // 30 seconds for Render
-    greetingTimeout: 15000,   // 15 seconds
-    socketTimeout: 30000,     // 30 seconds
-    pool: false,              // No connection pooling
-    maxConnections: 1,        // Single connection
-    maxMessages: 1,           // One message per connection
-    rateLimit: 1              // Send immediately
-  });
+      connectionTimeout: 20000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
+      pool: false,
+      maxConnections: 1,
+      maxMessages: 1,
+      rateLimit: 1
+    });
   
   // Test connection
   transporter.verify((error, success) => {
@@ -1610,8 +1603,8 @@ app.get('/api/test-email', async (req, res) => {
         port: 465,
         secure: true,
         auth: {
-          user: 'support@thebioping.com',
-          pass: 'Shivam1984!!'
+          user: 'universalx0242@gmail.com',
+          pass: 'nxyh whmt krdk ayqb' // Gmail App Password
         },
         tls: {
           rejectUnauthorized: false
@@ -1706,20 +1699,14 @@ app.post('/api/auth/send-verification', [
 
       // Always create a fresh transporter for each email to ensure delivery
       const emailTransporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 587,
-        secure: false, // Use STARTTLS
+        service: 'gmail',
         auth: {
-          user: process.env.EMAIL_USER || 'support@thebioping.com',
-          pass: process.env.EMAIL_PASS || 'Shivam1984!!'
+          user: 'universalx0242@gmail.com',
+          pass: 'nxyh whmt krdk ayqb' // Gmail App Password
         },
-        tls: {
-          rejectUnauthorized: false,
-          ciphers: 'SSLv3'
-        },
-        connectionTimeout: 30000,
-        greetingTimeout: 15000,
-        socketTimeout: 30000,
+        connectionTimeout: 20000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
         pool: false,
         maxConnections: 1,
         maxMessages: 1,
@@ -1727,16 +1714,16 @@ app.post('/api/auth/send-verification', [
       });
 
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'support@thebioping.com',
+        from: 'universalx0242@gmail.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
       };
 
-      // Send email with longer timeout for Render
+      // Send email with timeout
       const emailPromise = emailTransporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 45000)
+        setTimeout(() => reject(new Error('Email timeout')), 30000)
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
