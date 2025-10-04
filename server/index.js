@@ -1256,13 +1256,13 @@ let transporter = null;
 try {
   console.log('📧 Initializing email service...');
   console.log('🔧 Environment Variables Debug:');
-  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
-  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'universalx0242@gmail.com');
+  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'nxyh whmt krdk ayqb');
   console.log('  - NODE_ENV:', process.env.NODE_ENV);
   
-  // Use Gmail App Password for authentication
-  const emailUser = process.env.EMAIL_USER || 'universalx0242@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'; // Gmail App Password
+  // Use Gmail App Password for authentication - Force hardcoded values for live
+  const emailUser = 'universalx0242@gmail.com';
+  const emailPass = 'nxyh whmt krdk ayqb'; // Gmail App Password
   
   console.log('📧 Final Email Config:');
   console.log('  - emailUser:', emailUser);
@@ -1613,8 +1613,8 @@ app.get('/api/test-email', async (req, res) => {
       const fallbackTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-          pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb' // Gmail App Password
+          user: 'universalx0242@gmail.com',
+          pass: 'nxyh whmt krdk ayqb' // Gmail App Password
         },
         connectionTimeout: 20000,
         greetingTimeout: 10000,
@@ -1711,8 +1711,8 @@ app.post('/api/auth/send-verification', [
       const emailTransporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-          pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb' // Gmail App Password
+          user: 'universalx0242@gmail.com',
+          pass: 'nxyh whmt krdk ayqb' // Gmail App Password
         },
         connectionTimeout: 20000,
         greetingTimeout: 10000,
