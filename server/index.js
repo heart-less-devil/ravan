@@ -1467,7 +1467,9 @@ app.get('/api/health', (req, res) => {
       server: 'BioPing Backend',
       port: PORT,
       mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-      email: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
+      email: transporter ? 'Configured' : 'Not configured',
+      emailUser: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+      emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set'
     });
   } catch (error) {
     res.json({ 
@@ -1476,7 +1478,9 @@ app.get('/api/health', (req, res) => {
       server: 'BioPing Backend',
       port: PORT,
       mongodb: 'Error',
-      email: process.env.EMAIL_USER ? 'Configured' : 'Not configured'
+      email: transporter ? 'Configured' : 'Not configured',
+      emailUser: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+      emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set'
     });
   }
 });
