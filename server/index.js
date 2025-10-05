@@ -521,7 +521,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         if (customerEmail) {
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+            from: process.env.EMAIL_USER || 'support@thebioping.com',
             to: customerEmail,
             subject: 'BioPing - Payment Confirmation',
             html: `
@@ -643,7 +643,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           
           // Send notification email
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+            from: process.env.EMAIL_USER || 'support@thebioping.com',
             to: email,
             subject: 'Payment Issue - Action Required',
             html: `
@@ -828,7 +828,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             // Send renewal confirmation email
             try {
               const mailOptions = {
-                from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+                from: process.env.EMAIL_USER || 'support@thebioping.com',
                 to: customer.email,
                 subject: '🔄 Subscription Renewed - BioPing',
                 html: `
@@ -1245,13 +1245,13 @@ let transporter = null;
 try {
   console.log('📧 Initializing email service...');
   console.log('🔧 Environment Variables Debug:');
-  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'gauravvij1980@gmail.com');
-  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'keux xtjd bzat vnzj');
+  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'support@thebioping.com');
+  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Wildboy07@');
   console.log('  - NODE_ENV:', process.env.NODE_ENV);
   
-  // Use Gmail App Password for authentication - Force hardcoded values for live
-  const emailUser = 'gauravvij1980@gmail.com';
-  const emailPass = 'keux xtjd bzat vnzj'; // Gmail App Password
+  // Use cPanel email for authentication - Force hardcoded values for live
+  const emailUser = 'support@thebioping.com';
+  const emailPass = 'Wildboy07@'; // cPanel email password
   
   console.log('📧 Final Email Config:');
   console.log('  - emailUser:', emailUser);
@@ -1465,10 +1465,10 @@ app.get('/api/test-user', authenticateToken, (req, res) => {
 app.get('/api/test-email-config', (req, res) => {
   try {
     const emailConfig = {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true' || false,
-      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      host: process.env.SMTP_HOST || 'mail.thebioping.com',
+      port: parseInt(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE === 'true' || true,
+      user: process.env.EMAIL_USER || 'support@thebioping.com',
       passSet: !!process.env.EMAIL_PASS,
       environment: process.env.NODE_ENV || 'development'
     };
@@ -1634,12 +1634,14 @@ app.get('/api/test-email', async (req, res) => {
     if (!transporter) {
       console.log('📧 Transporter not available, using fallback configuration');
       
-      // Fallback transporter configuration using Gmail
+      // Fallback transporter configuration using cPanel
       const fallbackTransporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'mail.thebioping.com',
+        port: 465,
+        secure: true,
         auth: {
-          user: 'gauravvij1980@gmail.com',
-          pass: 'keux xtjd bzat vnzj' // Gmail App Password
+          user: 'support@thebioping.com',
+          pass: 'Wildboy07@' // cPanel email password
         },
         connectionTimeout: 20000,
         greetingTimeout: 10000,
@@ -1647,7 +1649,7 @@ app.get('/api/test-email', async (req, res) => {
       });
       
       const testMailOptions = {
-        from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+        from: process.env.EMAIL_USER || 'support@thebioping.com',
         to: req.query.email || 'test@example.com',
         subject: 'Test Email - BioPing',
         html: emailTemplates.verification('123456')
@@ -2549,7 +2551,7 @@ app.post('/api/create-subscription', async (req, res) => {
       // Send confirmation email
       try {
         const mailOptions = {
-          from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+          from: process.env.EMAIL_USER || 'support@thebioping.com',
           to: customerEmail,
           subject: '🎉 Subscription Activated - BioPing',
           html: `
@@ -2694,10 +2696,12 @@ Timestamp: ${new Date().toLocaleString()}
         const isCustomDomain = true;
         
         const transporter = nodemailer.createTransport({
-          service: 'gmail',
+          host: 'mail.thebioping.com',
+          port: 465,
+          secure: true,
           auth: {
-            user: 'gauravvij1980@gmail.com',
-            pass: 'keux xtjd bzat vnzj'
+            user: 'support@thebioping.com',
+            pass: 'Wildboy07@'
           },
           connectionTimeout: 10000,
           greetingTimeout: 5000,
@@ -2705,7 +2709,7 @@ Timestamp: ${new Date().toLocaleString()}
         });
 
         const mailOptions = {
-          from: 'gauravvij1980@gmail.com',
+          from: 'support@thebioping.com',
           to: 'gauravvij1980@gmail.com',
           subject: 'New Contact Form Submission - BioPing',
           text: emailContent,
@@ -5749,7 +5753,7 @@ app.post('/api/auth/forgot-password', [
     // Send email with verification code
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+        from: process.env.EMAIL_USER || 'support@thebioping.com',
         to: email,
         subject: 'BioPing - Password Reset Code',
         html: `
