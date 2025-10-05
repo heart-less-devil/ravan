@@ -1257,30 +1257,35 @@ try {
   console.log('  - emailUser:', emailUser);
   console.log('  - emailPass:', emailPass ? 'Set' : 'Not set');
   
-  // Use Gmail App Password for email configuration
+  // Use cPanel SMTP for email configuration
   transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: process.env.SMTP_HOST || 'mail.thebioping.com',
+    port: parseInt(process.env.SMTP_PORT) || 465,
+    secure: process.env.SMTP_SECURE === 'true' || true, // Use SSL for port 465
     auth: {
       user: emailUser,
       pass: emailPass
     },
-      connectionTimeout: 20000,
-      greetingTimeout: 10000,
-      socketTimeout: 20000,
-      pool: false,
-      maxConnections: 1,
-      maxMessages: 1,
-      rateLimit: 1
-    });
+    connectionTimeout: 20000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+    pool: false,
+    maxConnections: 1,
+    maxMessages: 1,
+    rateLimit: 1,
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
   
   // Test connection (async but don't block)
   transporter.verify((error, success) => {
     if (error) {
-      console.log('❌ Gmail SMTP failed:', error.message);
-      console.log('🔧 Email service disabled - Gmail not accessible');
+      console.log('❌ cPanel SMTP failed:', error.message);
+      console.log('🔧 Email service disabled - cPanel SMTP not accessible');
       transporter = null;
     } else {
-      console.log('✅ Gmail SMTP connection successful');
+      console.log('✅ cPanel SMTP connection successful');
     }
   });
   
@@ -1492,7 +1497,7 @@ app.get('/api/health', (req, res) => {
       port: PORT,
       mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
       email: transporter ? 'Configured' : 'Not configured',
-      emailUser: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      emailUser: process.env.EMAIL_USER || 'support@thebioping.com',
       emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
       stripe: stripe ? 'Configured' : 'Not configured',
       cors: 'Enabled for thebioping.com'
@@ -1505,7 +1510,7 @@ app.get('/api/health', (req, res) => {
       port: PORT,
       mongodb: 'Error',
       email: transporter ? 'Configured' : 'Not configured',
-      emailUser: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      emailUser: process.env.EMAIL_USER || 'support@thebioping.com',
       emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
       stripe: 'Error',
       cors: 'Enabled for thebioping.com'
@@ -1713,14 +1718,14 @@ app.post('/api/auth/send-verification', [
 
     // Send email with verification code
     try {
-      // Create email transporter with optimized settings
+      // Create email transporter with cPanel SMTP settings
       const emailTransporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true' || false,
+        host: process.env.SMTP_HOST || 'mail.thebioping.com',
+        port: parseInt(process.env.SMTP_PORT) || 465,
+        secure: process.env.SMTP_SECURE === 'true' || true, // Use SSL for port 465
         auth: {
-          user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-          pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj' // Gmail App Password
+          user: process.env.EMAIL_USER || 'support@thebioping.com',
+          pass: process.env.EMAIL_PASS || 'Wildboy07@' // cPanel email password
         },
         connectionTimeout: 20000, // 20 seconds
         greetingTimeout: 10000,   // 10 seconds
@@ -1737,7 +1742,7 @@ app.post('/api/auth/send-verification', [
       console.log(`📧 Sending OTP to ${email}: ${verificationCode}`);
 
       const mailOptions = {
-        from: 'gauravvij1980@gmail.com',
+        from: 'support@thebioping.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
