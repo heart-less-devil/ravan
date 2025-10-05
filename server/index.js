@@ -1711,23 +1711,9 @@ app.post('/api/auth/send-verification', [
     // Save data to files
     saveDataToFiles('verification_code_sent');
 
-    // For now, skip email sending and return code directly due to email service issues
-    console.log(`📧 OTP Generated for ${email}: ${verificationCode}`);
-    console.log(`⚠️ Email service temporarily disabled, returning code directly`);
-    
-    res.json({
-      success: true,
-      message: 'Verification code generated successfully',
-      verificationCode: verificationCode,
-      code: verificationCode,
-      emailNote: 'Email service temporarily unavailable - code provided directly'
-    });
-    
-    // TODO: Re-enable email sending when SMTP issues are resolved
-    /*
     // Send email with verification code
     try {
-      // Always create a fresh transporter for each email to ensure delivery
+      // Create email transporter with optimized settings
       const emailTransporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT) || 587,
@@ -1736,9 +1722,9 @@ app.post('/api/auth/send-verification', [
           user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
           pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj' // Gmail App Password
         },
-        connectionTimeout: 30000, // Reduced timeout
-        greetingTimeout: 15000,   // Reduced timeout
-        socketTimeout: 30000,     // Reduced timeout
+        connectionTimeout: 20000, // 20 seconds
+        greetingTimeout: 10000,   // 10 seconds
+        socketTimeout: 20000,     // 20 seconds
         pool: false,
         maxConnections: 1,
         maxMessages: 1,
@@ -1760,7 +1746,7 @@ app.post('/api/auth/send-verification', [
       // Send email with timeout
       const emailPromise = emailTransporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 10000) // Reduced to 10 seconds
+        setTimeout(() => reject(new Error('Email timeout')), 15000) // 15 seconds
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
@@ -1772,56 +1758,19 @@ app.post('/api/auth/send-verification', [
 
       res.json({
         success: true,
-        message: 'Verification code sent successfully to your email',
-        code: verificationCode // Include code for debugging in development
+        message: 'Verification code sent successfully to your email'
       });
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
       console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
-      console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
       
-      // Try alternative email service or return code in response
-      try {
-        // Alternative: Use a different email service or send to admin
-        const adminEmail = 'gauravvij1980@gmail.com';
-        const adminTransporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: 'gauravvij1980@gmail.com',
-            pass: 'keux xtjd bzat vnzj'
-          },
-          connectionTimeout: 30000,
-          greetingTimeout: 15000,
-          socketTimeout: 30000
-        });
-
-        await adminTransporter.sendMail({
-          from: 'gauravvij1980@gmail.com',
-          to: adminEmail,
-          subject: `OTP Code for ${email}`,
-          html: `
-            <h2>OTP Code Request</h2>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Verification Code:</strong> ${verificationCode}</p>
-            <p><strong>Time:</strong> ${new Date().toISOString()}</p>
-          `
-        });
-        
-        console.log(`📧 OTP code sent to admin for ${email}: ${verificationCode}`);
-      } catch (adminError) {
-        console.error('❌ Admin email also failed:', adminError);
-      }
-      
-      // Return success with the code in response for development
-      res.json({
-        success: true,
-        message: 'Verification code generated (email failed to send)',
-        verificationCode: verificationCode, // Include code in response
-        emailError: 'Email service temporarily unavailable',
-        code: verificationCode // Also include in code field for consistency
+      // Return error response
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification email. Please try again.',
+        error: 'Email service temporarily unavailable'
       });
     }
-    */
 
     // Save data to files
     saveDataToFiles('verification_code_sent');

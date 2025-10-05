@@ -190,11 +190,8 @@ const Signup = () => {
         setShowVerificationModal(true);
         setCountdown(60);
         
-        // If email service is unavailable but code is provided, show it to user
-        if (data.emailNote && data.verificationCode) {
-          console.log('📧 Email service unavailable, verification code:', data.verificationCode);
-          alert(`Email service is temporarily unavailable. Your verification code is: ${data.verificationCode}`);
-        }
+        // OTP sent successfully via email
+        console.log('📧 Verification code sent to email successfully');
         
         // Start countdown
         const timer = setInterval(() => {
