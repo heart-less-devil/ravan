@@ -1284,7 +1284,7 @@ try {
       rateLimit: 1
     });
   
-  // Test connection
+  // Test connection (async but don't block)
   transporter.verify((error, success) => {
     if (error) {
       console.log('❌ Gmail SMTP failed:', error.message);
@@ -1296,6 +1296,7 @@ try {
   });
   
   console.log('✅ Email service configured successfully');
+  console.log('📧 Transporter status:', transporter ? 'Ready' : 'Not ready');
   
 } catch (error) {
   console.log('❌ Email configuration failed:', error.message);
@@ -1693,20 +1694,6 @@ app.post('/api/auth/send-verification', [
 
     // Send email with verification code
     try {
-      if (!transporter) {
-        console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
-        console.log(`📧 Email service not configured, but code is: ${verificationCode}`);
-        
-        // Return success with the code in response for development
-        res.json({
-          success: true,
-          message: 'Verification code generated (email service not configured)',
-          verificationCode: verificationCode, // Include code in response
-          emailError: 'Email service not configured'
-        });
-        return;
-      }
-
       // Always create a fresh transporter for each email to ensure delivery
       const emailTransporter = nodemailer.createTransport({
         service: 'gmail',
@@ -1722,6 +1709,8 @@ app.post('/api/auth/send-verification', [
         maxMessages: 1,
         rateLimit: 1
       });
+
+      console.log(`📧 Sending OTP to ${email}: ${verificationCode}`);
 
       const mailOptions = {
         from: 'gauravvij1980@gmail.com',
