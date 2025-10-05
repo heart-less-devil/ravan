@@ -1711,6 +1711,20 @@ app.post('/api/auth/send-verification', [
     // Save data to files
     saveDataToFiles('verification_code_sent');
 
+    // For now, skip email sending and return code directly due to email service issues
+    console.log(`📧 OTP Generated for ${email}: ${verificationCode}`);
+    console.log(`⚠️ Email service temporarily disabled, returning code directly`);
+    
+    res.json({
+      success: true,
+      message: 'Verification code generated successfully',
+      verificationCode: verificationCode,
+      code: verificationCode,
+      emailNote: 'Email service temporarily unavailable - code provided directly'
+    });
+    
+    // TODO: Re-enable email sending when SMTP issues are resolved
+    /*
     // Send email with verification code
     try {
       // Always create a fresh transporter for each email to ensure delivery

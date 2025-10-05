@@ -190,9 +190,9 @@ const Signup = () => {
         setShowVerificationModal(true);
         setCountdown(60);
         
-        // If email failed but code is provided, show it to user
-        if (data.emailError && data.verificationCode) {
-          console.log('📧 Email failed, but verification code:', data.verificationCode);
+        // If email service is unavailable but code is provided, show it to user
+        if (data.emailNote && data.verificationCode) {
+          console.log('📧 Email service unavailable, verification code:', data.verificationCode);
           alert(`Email service is temporarily unavailable. Your verification code is: ${data.verificationCode}`);
         }
         
