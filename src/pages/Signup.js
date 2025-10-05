@@ -137,7 +137,7 @@ const Signup = () => {
       
       // Call real API to send verification code
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout for email sending
       
               const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
         method: 'POST',
@@ -208,7 +208,7 @@ const Signup = () => {
       console.error('Error sending verification code:', error);
       
       if (error.name === 'AbortError') {
-        setErrors(prev => ({ ...prev, email: 'Request timeout. Please check your connection and try again.' }));
+        setErrors(prev => ({ ...prev, email: 'Request timeout. Email service may be slow. Please try again or contact support.' }));
       } else if (error.message.includes('Failed to fetch')) {
         setErrors(prev => ({ ...prev, email: 'Cannot connect to server. Please make sure the server is running.' }));
       } else {

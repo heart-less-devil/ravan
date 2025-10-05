@@ -1042,18 +1042,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    server: 'BioPing Backend',
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    mongoDB: 'Connected',
-    pdfFiles: 'Available'
-  });
-});
+// Health check endpoint - REMOVED DUPLICATE
 
 // Test PDF endpoint
 app.get('/api/test-pdf', (req, res) => {
@@ -1467,7 +1456,33 @@ app.get('/api/test-user', authenticateToken, (req, res) => {
   });
 });
 
-// Health check route
+// Test email configuration endpoint
+app.get('/api/test-email-config', (req, res) => {
+  try {
+    const emailConfig = {
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true' || false,
+      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      passSet: !!process.env.EMAIL_PASS,
+      environment: process.env.NODE_ENV || 'development'
+    };
+    
+    res.json({
+      success: true,
+      config: emailConfig,
+      message: 'Email configuration loaded successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to load email configuration'
+    });
+  }
+});
+
+// Health check route - MAIN ENDPOINT
 app.get('/api/health', (req, res) => {
   try {
     res.json({ 
@@ -1478,7 +1493,9 @@ app.get('/api/health', (req, res) => {
       mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
       email: transporter ? 'Configured' : 'Not configured',
       emailUser: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-      emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set'
+      emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
+      stripe: stripe ? 'Configured' : 'Not configured',
+      cors: 'Enabled for thebioping.com'
     });
   } catch (error) {
     res.json({ 
@@ -1489,7 +1506,9 @@ app.get('/api/health', (req, res) => {
       mongodb: 'Error',
       email: transporter ? 'Configured' : 'Not configured',
       emailUser: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-      emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set'
+      emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
+      stripe: 'Error',
+      cors: 'Enabled for thebioping.com'
     });
   }
 });
@@ -1696,19 +1715,20 @@ app.post('/api/auth/send-verification', [
     try {
       // Always create a fresh transporter for each email to ensure delivery
       const emailTransporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true' || false,
         auth: {
-          user: 'gauravvij1980@gmail.com',
-          pass: 'keux xtjd bzat vnzj' // Gmail App Password
+          user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+          pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj' // Gmail App Password
         },
-        connectionTimeout: 60000, // Increased timeout
-        greetingTimeout: 30000,   // Increased timeout
-        socketTimeout: 60000,     // Increased timeout
+        connectionTimeout: 30000, // Reduced timeout
+        greetingTimeout: 15000,   // Reduced timeout
+        socketTimeout: 30000,     // Reduced timeout
         pool: false,
         maxConnections: 1,
         maxMessages: 1,
-        rateLimit: 5, // Reduced rate limit
-        secure: true,
+        rateLimit: 5,
         tls: {
           rejectUnauthorized: false
         }
@@ -1726,7 +1746,7 @@ app.post('/api/auth/send-verification', [
       // Send email with timeout
       const emailPromise = emailTransporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 30000)
+        setTimeout(() => reject(new Error('Email timeout')), 15000) // Reduced to 15 seconds
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
@@ -1738,7 +1758,8 @@ app.post('/api/auth/send-verification', [
 
       res.json({
         success: true,
-        message: 'Verification code sent successfully to your email'
+        message: 'Verification code sent successfully to your email',
+        code: verificationCode // Include code for debugging in development
       });
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);

@@ -17,6 +17,20 @@ services:
         value: bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string
       - key: REACT_APP_API_BASE_URL
         value: https://bioping-backend.onrender.com
+      - key: STRIPE_SECRET_KEY
+        value: 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
+      - key: STRIPE_PUBLISHABLE_KEY
+        value: pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
+      - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
+        value: pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
+      - key: MONGODB_URI
+        value: mongodb+srv://gauravvij1980:gauravvij1980@cluster0.8jf4q.mongodb.net/biotech?retryWrites=true&w=majority
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SECURE
+        value: false
     healthCheckPath: /api/health
     autoDeploy: true
     headers:
