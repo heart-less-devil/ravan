@@ -1238,35 +1238,12 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Email configuration - Multiple providers for reliability
+// Email configuration - Disabled due to Render SMTP issues
 let transporter = null;
 
-try {
-  console.log('📧 Initializing email service with multiple providers...');
-  
-  // Try Gmail first, fallback to other providers
-  transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: 'gauravvij1980@gmail.com',
-      pass: 'keux xtjd bzat vnzj'
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-  
-  // Skip verification - just configure and use
-  console.log('✅ Email service configured (no verification timeout)');
-  console.log('📧 Transporter status:', transporter ? 'Ready' : 'Not ready');
-  
-} catch (error) {
-  console.log('❌ Email configuration failed:', error.message);
-  console.log('🔧 Email functionality will be disabled');
-  transporter = null; // Disable email functionality
-}
+console.log('📧 Email service disabled - using OTP response fallback');
+console.log('🔧 All OTP codes will be returned in API response');
+console.log('📧 Transporter status: Disabled (using fallback)');
 
 // Email templates
 const emailTemplates = {
@@ -1688,47 +1665,17 @@ app.post('/api/auth/send-verification', [
     // Save data to files
     saveDataToFiles('verification_code_sent');
 
-    // Send email with verification code using simple Gmail
-    try {
-      console.log(`📧 Sending OTP to ${email}: ${verificationCode}`);
-
-      const mailOptions = {
-        from: 'gauravvij1980@gmail.com',
-        to: email,
-        subject: emailTemplates.verification(verificationCode).subject,
-        html: emailTemplates.verification(verificationCode).html
-      };
-
-      // Use the global transporter for simple sending with retry logic
-      if (transporter) {
-        try {
-          // Send email without timeout
-          await transporter.sendMail(mailOptions);
-          console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
-          
-          res.json({
-            success: true,
-            message: 'Verification code sent successfully to your email'
-          });
-        } catch (emailSendError) {
-          console.log(`⚠️ Email sending failed, but continuing with fallback: ${emailSendError.message}`);
-          throw emailSendError; // This will trigger the fallback below
-        }
-      } else {
-        throw new Error('Email transporter not available');
-      }
-    } catch (emailError) {
-      console.error('❌ Email sending error:', emailError);
-      console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
-      
-      // Return success with code in response as fallback
-      res.json({
-        success: true,
-        message: 'Verification code generated (email service slow)',
-        verificationCode: verificationCode,
-        note: 'Please check your email. If not received, use this code: ' + verificationCode
-      });
-    }
+    // Return OTP directly in response (email disabled due to Render SMTP issues)
+    console.log(`📧 OTP Generated for ${email}: ${verificationCode}`);
+    console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
+    
+    // Always return OTP in response
+    res.json({
+      success: true,
+      message: 'Verification code generated successfully',
+      verificationCode: verificationCode,
+      note: 'Email service temporarily disabled. Use this code: ' + verificationCode
+    });
 
     // Save data to files
     saveDataToFiles('verification_code_sent');
@@ -5700,64 +5647,17 @@ app.post('/api/auth/forgot-password', [
     // Save data to files
     saveDataToFiles();
 
-    // Send email with verification code using simple Gmail
-    try {
-      const mailOptions = {
-        from: 'gauravvij1980@gmail.com',
-        to: email,
-        subject: 'BioPing - Password Reset Code',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
-              <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset</p>
-            </div>
-            <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
-              <h2 style="color: #333; margin-bottom: 20px;">Your Password Reset Code</h2>
-              <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-                You requested a password reset for your BioPing account. Please use the verification code below to reset your password:
-              </p>
-              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-                <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${verificationCode}</span>
-              </div>
-              <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                This code will expire in 10 minutes. If you didn't request this password reset, please ignore this email.
-              </p>
-              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-                <p style="color: #999; font-size: 12px;">
-                  Best regards,<br>
-                  The BioPing Team
-                </p>
-              </div>
-            </div>
-          </div>
-        `
-      };
-
-      if (transporter) {
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ Password reset email sent to ${email} with code: ${verificationCode}`);
-        
-        res.json({
-          success: true,
-          message: 'Password reset code sent successfully to your email'
-        });
-      } else {
-        throw new Error('Email transporter not available');
-      }
-    } catch (emailError) {
-      console.error('❌ Email sending error:', emailError);
-      console.log(`🔑 PASSWORD RESET CODE FOR ${email}: ${verificationCode}`);
-      console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
-      
-      // Return success with the code in response for development
-      res.json({
-        success: true,
-        message: 'Password reset code generated (email failed to send)',
-        verificationCode: verificationCode, // Include code in response
-        emailError: 'Email service temporarily unavailable'
-      });
-    }
+    // Return password reset OTP directly in response
+    console.log(`📧 Password Reset OTP Generated for ${email}: ${verificationCode}`);
+    console.log(`🔑 PASSWORD RESET CODE FOR ${email}: ${verificationCode}`);
+    
+    // Always return OTP in response
+    res.json({
+      success: true,
+      message: 'Password reset code generated successfully',
+      verificationCode: verificationCode,
+      note: 'Email service temporarily disabled. Use this code: ' + verificationCode
+    });
 
   } catch (error) {
     console.error('Forgot password error:', error);
