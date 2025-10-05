@@ -1238,7 +1238,7 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Simple Gmail Function with Real Credentials
+// Real Gmail Function - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
@@ -1249,22 +1249,30 @@ const sendEmail = async (to, subject, html) => {
     const gmailUser = 'gauravvij1980@gmail.com';
     const gmailPass = 'keux xtjd bzat vnzj';
     
-    // Simple Gmail sending without SMTP
-    const emailData = {
-      to: to,
-      from: gmailUser,
-      subject: subject,
-      html: html,
-      credentials: {
+    // Create real transporter for actual email sending
+    const emailTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
         user: gmailUser,
         pass: gmailPass
       }
+    });
+    
+    const mailOptions = {
+      from: gmailUser,
+      to: to,
+      subject: subject,
+      html: html
     };
     
-    // Log email data and return success
-    console.log('✅ Email data prepared with credentials:', emailData);
-    console.log('📧 Email would be sent via Gmail with app password');
-    return { success: true, message: 'Email sent successfully' };
+    // Actually send the email
+    const result = await emailTransporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', result.messageId);
+    
+    // Close transporter
+    emailTransporter.close();
+    
+    return { success: true, message: 'Email sent successfully', messageId: result.messageId };
     
   } catch (error) {
     console.log('❌ Email sending error:', error.message);
@@ -1272,7 +1280,7 @@ const sendEmail = async (to, subject, html) => {
   }
 };
 
-console.log('📧 Simple Gmail function ready - No SMTP');
+console.log('📧 Real Gmail function ready - Actually sends emails');
 
 // Email templates
 const emailTemplates = {
