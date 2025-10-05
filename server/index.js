@@ -1266,9 +1266,9 @@ try {
       user: emailUser,
       pass: emailPass
     },
-    connectionTimeout: 20000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,
+    connectionTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000,   // 30 seconds
+    socketTimeout: 60000,     // 60 seconds
     pool: false,
     maxConnections: 1,
     maxMessages: 1,
@@ -1729,9 +1729,9 @@ app.post('/api/auth/send-verification', [
           user: process.env.EMAIL_USER || 'support@thebioping.com',
           pass: process.env.EMAIL_PASS || 'Wildboy07@' // cPanel email password
         },
-        connectionTimeout: 20000, // 20 seconds
-        greetingTimeout: 10000,   // 10 seconds
-        socketTimeout: 20000,     // 20 seconds
+        connectionTimeout: 60000, // 60 seconds
+        greetingTimeout: 30000,   // 30 seconds
+        socketTimeout: 60000,     // 60 seconds
         pool: false,
         maxConnections: 1,
         maxMessages: 1,
@@ -1753,7 +1753,7 @@ app.post('/api/auth/send-verification', [
       // Send email with timeout
       const emailPromise = emailTransporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 15000) // 15 seconds
+        setTimeout(() => reject(new Error('Email timeout')), 90000) // 90 seconds
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
@@ -2703,9 +2703,9 @@ Timestamp: ${new Date().toLocaleString()}
             user: 'support@thebioping.com',
             pass: 'Wildboy07@'
           },
-          connectionTimeout: 10000,
-          greetingTimeout: 5000,
-          socketTimeout: 10000
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000
         });
 
         const mailOptions = {
