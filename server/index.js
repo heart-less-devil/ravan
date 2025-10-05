@@ -1701,13 +1701,17 @@ app.post('/api/auth/send-verification', [
           user: 'gauravvij1980@gmail.com',
           pass: 'keux xtjd bzat vnzj' // Gmail App Password
         },
-        connectionTimeout: 20000,
-        greetingTimeout: 10000,
-        socketTimeout: 20000,
+        connectionTimeout: 60000, // Increased timeout
+        greetingTimeout: 30000,   // Increased timeout
+        socketTimeout: 60000,     // Increased timeout
         pool: false,
         maxConnections: 1,
         maxMessages: 1,
-        rateLimit: 1
+        rateLimit: 5, // Reduced rate limit
+        secure: true,
+        tls: {
+          rejectUnauthorized: false
+        }
       });
 
       console.log(`📧 Sending OTP to ${email}: ${verificationCode}`);
@@ -1740,6 +1744,38 @@ app.post('/api/auth/send-verification', [
       console.error('❌ Email sending error:', emailError);
       console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
       console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+      
+      // Try alternative email service or return code in response
+      try {
+        // Alternative: Use a different email service or send to admin
+        const adminEmail = 'gauravvij1980@gmail.com';
+        const adminTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: 'gauravvij1980@gmail.com',
+            pass: 'keux xtjd bzat vnzj'
+          },
+          connectionTimeout: 30000,
+          greetingTimeout: 15000,
+          socketTimeout: 30000
+        });
+
+        await adminTransporter.sendMail({
+          from: 'gauravvij1980@gmail.com',
+          to: adminEmail,
+          subject: `OTP Code for ${email}`,
+          html: `
+            <h2>OTP Code Request</h2>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Verification Code:</strong> ${verificationCode}</p>
+            <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+          `
+        });
+        
+        console.log(`📧 OTP code sent to admin for ${email}: ${verificationCode}`);
+      } catch (adminError) {
+        console.error('❌ Admin email also failed:', adminError);
+      }
       
       // Return success with the code in response for development
       res.json({
