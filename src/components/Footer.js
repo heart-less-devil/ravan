@@ -19,22 +19,11 @@ const Footer = () => {
 
   const footerLinks = {
     product: [
-      { name: 'Features', href: '/product', icon: Zap },
+      { name: 'Product', href: '/product', icon: Zap },
+      { name: 'Value', href: '/our-value', icon: Award },
+      { name: 'Company', href: '/about', icon: Users },
       { name: 'Pricing', href: '/pricing', icon: Star },
-      { name: 'Request Demo', href: '/request-demo', icon: Send },
-      { name: 'How it Works', href: '/product', icon: Sparkles },
-    ],
-    company: [
-      { name: 'About', href: '/about', icon: Users },
-      { name: 'Our Value', href: '/our-value', icon: Award },
-      { name: 'Contact Sales', href: '/contact-sales', icon: Phone },
-      { name: 'Careers', href: '/about', icon: Globe },
-    ],
-    resources: [
-      { name: 'Free Resources', href: '/resources', icon: Sparkles },
-      { name: 'Blog', href: '/resources', icon: Send },
-      { name: 'Help Center', href: '/contact-us', icon: Users },
-      { name: 'API Documentation', href: '/product', icon: Zap },
+      { name: 'Resources', href: '/resources', icon: Sparkles },
     ],
   };
 
@@ -80,10 +69,10 @@ const Footer = () => {
                 />
               </div>
             </div>
-            <p className="text-black mb-8 leading-relaxed">
-              Built to empower emerging biotechs with smarter BD solutions. 
-              Connect with the right partners and accelerate your growth.
-            </p>
+            <div className="text-black mb-8 leading-relaxed">
+              <p className="font-semibold mb-2">Your Trusted BD Partner</p>
+              <p>Partner Discovery | BD Tracking | Deal Insights</p>
+            </div>
           </div>
 
           {/* Newsletter Signup - Middle */}
@@ -200,9 +189,14 @@ const Footer = () => {
       <div className="border-t border-gray-300 bg-gray-50">
         <div className="container-custom py-6">
           <div className="flex flex-col items-center space-y-4">
-            <p className="text-black text-sm text-center">
-              Built to empower emerging biotechs with smarter BD solutions.
-            </p>
+            <div className="text-center">
+              <p className="text-black text-sm font-semibold mb-2">
+                Your Trusted BD Partner
+              </p>
+              <p className="text-black text-sm">
+                Partner Discovery | BD Tracking | Deal Insights
+              </p>
+            </div>
             <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 w-full">
               <div className="text-black text-sm">
                 © {currentYear} BioPing. All Rights Reserved

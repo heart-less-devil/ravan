@@ -12,12 +12,12 @@ const OurValue = () => {
   ];
 
   const ourApproach = [
-    "Leverage digital tools to keep costs low and pricing affordable",
-    "Provide free resources to paid members: BD conference budgets, deal comps, pitch decks, BD process tips etc. ",
-    "Make business development simple and accessible",
-    
-    "Reduce your BD and conference spend dramatically",
-    "For 1:1 BD help, reach out directly to BioPing teams"
+    "Keep costs low – highest-quality, low-cost BD solution",
+    "Use budgets wisely – save money for what drives value: drug development & clinical trials",
+    "Guide your strategy – clear frameworks for an efficient, focused BD process",
+    "Simplify BD – make partner search and outreach straightforward and accessible",
+    "Add value – provide addtl' resources to members: deal comps, pitch deck & BD process tips, conference guides, and VC contacts",
+    "Go deeper – for 1:1 BD support, connect directly with the BioPing team"
   ];
 
   return (
@@ -35,8 +35,7 @@ const OurValue = () => {
               Our <span className="gradient-text">Value</span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              We deliver exceptional value through our comprehensive platform, 
-              industry expertise, and proven track record of successful partnerships.
+              BioPing helps you find the right partner, faster – with strategy, contacts, and insights that close deals.
             </p>
           </motion.div>
         </div>
@@ -57,10 +56,10 @@ const OurValue = () => {
                 <span className="text-white text-3xl font-bold">!</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Problem: Biotech companies often have promising drugs—but lack the time, strategy, and resources for effective pharma dealmaking.
+                The Problem Biotech's often have promising drugs—but lack the time, strategy, budget, and resources for effective dealmaking.
               </h2>
               <p className="text-gray-700 leading-relaxed">
-                Without a dedicated BD team, clear outreach plan, or the right industry contacts, navigating licensing and partnerships can be slow and overwhelming.
+                Without a dedicated BD team, clear outreach plan, or the right industry contacts, navigating licensing and partnerships becomes slow, costly, and overwhelming.
               </p>
             </motion.div>
 
@@ -75,10 +74,10 @@ const OurValue = () => {
                 <span className="text-white text-3xl">💡</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                BioPing Solution: We help biotech CEOs and teams save time and energy with a simple, effective BD platform.
+                BioPing Solution: Your BD team—without the overhead.
               </h2>
               <p className="text-gray-700 leading-relaxed">
-                BioPing is an easy-to-use, web-based tool that guides your BD strategy and execution—without the overhead.
+                BioPing gives biotech CEOs and teams a simple, web-based BD platform that saves time, cuts costs, and provides clear strategy, execution tools, and verified contacts.
               </p>
             </motion.div>
           </div>

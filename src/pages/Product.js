@@ -19,7 +19,7 @@ const Product = () => {
               <span className="text-blue-900">BioPing</span> - "<span className="text-blue-900">Smarter</span> <span className="text-orange-400">Dealmaking</span><br /><span className="text-orange-400">for Life Science's</span> <span className="text-blue-900">Industry</span>"
             </h1>
             <p className="text-xl text-gray-600 max-w-1xl mx-auto">
-              It is your go-to platform for smart biotech and pharma dealmaking. Backed by 15+ years of experience and a strong personal network, we help you connect with the right partners and create focused strategies that get deals done.
+              Your go-to platform for biotech and pharma licensing. With 15+ years of BD experience and a trusted global network, BioPing helps you:
             </p>
           </motion.div>
         </div>
@@ -40,10 +40,9 @@ const Product = () => {
                   <div className="w-20 h-20 bg-orange-500 rounded-full mx-auto mb-6 flex items-center justify-center">
                     <Target className="w-10 h-10 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">What we do</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">What We Do</h3>
                   <p className="text-gray-700">
-                    Our algorithm delivers a tiered list of potential partners—plus a clear outreach plan showing who to contact, where, and how to start BD outreach process for your pipeline drug. Includes verified contact details
-
+                    Our platform delivers a prioritized list of potential partners—complete with a tailored outreach roadmap that shows who to contact, where to focus, and how to begin BD discussions for your pipeline. Every profile includes verified contact details to help you engage with the right decision-makers.
                   </p>
                 </div>
               </div>
@@ -59,15 +58,19 @@ const Product = () => {
                 <div className="space-y-6">
                   <div className="flex items-start space-x-4 pb-4 border-b border-black">
                     <CheckCircle className="w-8 h-8 text-orange-500 mt-1 flex-shrink-0" />
-                    <span className="text-lg text-gray-700">Contacts across all functions like; Business Development, R&D, Management, Clinical, Regulatory, CEO and Staff</span>
+                    <span className="text-lg text-gray-700">Shape strategy - identify the partners based on drug's profile e.g. therapeutic area</span>
                   </div>
                   <div className="flex items-start space-x-4 pb-4 border-b border-black">
                     <CheckCircle className="w-8 h-8 text-orange-500 mt-1 flex-shrink-0" />
-                    <span className="text-lg text-gray-700">Therapeutic level match with pipeline drug</span>
+                    <span className="text-lg text-gray-700">Connect directly - access verified contacts across BD, R&D, Clinical, Regulatory, Commercial, CEO & Staff</span>
                   </div>
                   <div className="flex items-start space-x-4 pb-4 border-b border-black">
                     <CheckCircle className="w-8 h-8 text-orange-500 mt-1 flex-shrink-0" />
-                    <span className="text-lg text-gray-700">Deal tips (from 1:1 interactions and public disclosures)</span>
+                    <span className="text-lg text-gray-700">Track & close deals faster - Track BD discussions & focus on the relationships that matter</span>
+                  </div>
+                  <div className="flex items-start space-x-4 pb-4 border-b border-black">
+                    <CheckCircle className="w-8 h-8 text-orange-500 mt-1 flex-shrink-0" />
+                    <span className="text-lg text-gray-700">Insider deal insights - distilled from 1:1 interactions and public disclosures</span>
                   </div>
                 </div>
               </div>

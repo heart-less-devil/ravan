@@ -11,20 +11,20 @@ const Home = () => {
   const stats = [
     {
       icon: Building2,
-      number: "500+",
+      number: "1500+",
       label: "Pharma & Biotech's",
-      description: "Leading biotech and pharma companies"
+      description: "Across all TA's and Modalities"
     },
     {
       icon: HeartHandshake,
       number: "5000+",
-      label: "BD and Other Contacts",
+      label: "CEO, CFO, BD & Other Contacts",
       description: "Validated contacts from 1:1 mtgs"
     },
     {
       icon: Heart,
-      number: "200+",
-      label: "Investors",
+      number: "320+",
+      label: "Investors, VCs, PE & Corporate Ventures",
       description: "Active investors in life sciences"
     }
   ];
@@ -53,11 +53,11 @@ const Home = () => {
   ];
 
   const benefits = [
-    "Detailed list of potential partners by tier",
-    "Clear plan on who and where to contact",
-    "Start business development outreach process",
-    "Connect with the right partners",
-    "Create focused strategies that get deals done"
+    "Create focused strategies that get deals done",
+    "See a detailed list of potential partners, ranked by tier",
+    "Get a clear plan on who and where to contact",
+    "Access validated contact details to start outreach",
+    "Connect with the right partners and move deals forward"
   ];
 
   const testimonials = [
@@ -212,8 +212,11 @@ const Home = () => {
               <h1 className="text-5xl md:text-6xl font-bold text-blue-900 mb-2 -mt-16">
                 Your <span className="text-orange-400">Trusted</span> BD Partner
               </h1>
+              <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed mb-4">
+                Partner Discovery | BD Tracking | Deal Insights
+              </p>
               <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed mb-12">
-                Empowering life sciences teams to connect smarter, partner better, and close deals faster—through verified BD and investor contacts that deliver real results.
+                BioPing is the all-in-one biotech business development platform — helping leaders find the right partners, track every outreach, and access curated insights to close smarter deals.
               </p>
             </motion.div>
             
@@ -298,7 +301,7 @@ const Home = () => {
                 Designed to Give Back.
               </h2>
                             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                With 15+ years in pharma and biotech, we know the challenges of breaking through. The BioPing platform offers more than just BD contacts — it's a mix of paid tools and free resources, built to support, guide, and empower emerging biotech's.
+                With 15+ years in business development across Amgen, Shire, Gilead, and leadership roles at biotech's, we know the real hurdles emerging companies face. That's why BioPing goes beyond a list of contacts. It starts with strategy — identifying the right pharma partners for your asset — then enables execution with verified emails and outreach tools and backs it all up with curated insights to help biotech's close smarter deals.
               </p>
               </div>
             </motion.div>

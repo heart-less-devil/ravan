@@ -51,30 +51,29 @@ const ContactUs = () => {
     
     setIsSubmitting(true);
     
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        setIsSubmitted(true);
-        setFormData({ name: '', email: '', company: '', message: '' });
-        setErrors({});
-      } else {
-        alert(result.message || 'Failed to send message. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error submitting contact form:', error);
-      alert('Failed to send message. Please try again.');
-    } finally {
+    // Send email to support@thebioping.com
+    const emailData = {
+      to: 'support@thebioping.com',
+      subject: 'Contact Form Submission from BioPing Website',
+      body: `
+        Contact Form Details:
+        Name: ${formData.name}
+        Email: ${formData.email}
+        Company: ${formData.company}
+        Message: ${formData.message}
+      `
+    };
+    
+    // Create mailto link
+    const mailtoLink = `mailto:${emailData.to}?subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(emailData.body)}`;
+    window.location.href = mailtoLink;
+    
+    setTimeout(() => {
       setIsSubmitting(false);
-    }
+      setIsSubmitted(true);
+      setFormData({ name: '', email: '', company: '', message: '' });
+      setErrors({});
+    }, 1000);
   };
 
   const contactInfo = [
@@ -90,12 +89,6 @@ const ContactUs = () => {
       value: "+1 650 455 5850",
       description: "Call during business hours (8 AM – 5 PM PST)"
     },
-    {
-      icon: MapPin,
-      title: "Office",
-      value: "San Francisco, CA",
-      description: "Visit us anytime"
-    }
   ];
 
   return (
@@ -107,7 +100,7 @@ const ContactUs = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-8"
+            className="text-center mb-4"
           >
             <h1 className="hero-title mb-6">
               Contact - <span className="gradient-text">BioPing</span>
@@ -355,20 +348,20 @@ const ContactUs = () => {
           <div className="max-w-4xl mx-auto space-y-6">
             {[
               {
-                question: "How quickly can you respond to inquiries?",
-                answer: "We typically respond to all inquiries within ~24 hrs during business days."
+                question: "How quickly do you respond to inquiries?",
+                answer: "We respond within 24 hours on business days."
               },
               {
                 question: "Do you offer free consultations?",
-                answer: "Yes, we offer a free initial consultation to understand your business needs and goals."
+                answer: "Yes. We provide a free initial consultation to understand your needs and goals."
               },
               {
                 question: "What industries do you specialize in?",
-                answer: "We are dedicated to life sciences sector which includes pharma and biotech."
+                answer: "We focus exclusively on the life sciences sector-pharma and biotech."
               },
               {
                 question: "How do you ensure data privacy and security?",
-                answer: "see our Privacy and Terms and Conditions section for details"
+                answer: "All data is protected. See our Privacy Policy and Terms for details."
               }
             ].map((faq, index) => (
               <motion.div

@@ -211,23 +211,23 @@ const Pricing = () => {
 
   const features = [
     {
-      title: "Advanced Search",
-      description: "Find companies, contacts, and investors with precision",
+      title: "Basic & Advanced Search",
+      description: "Build BD strategy and find potential partners, & contacts with precision",
       icon: Zap
     },
     {
       title: "Real-time Data",
-      description: "Access the most up-to-date information available",
+      description: "Monthly updates with the latest contacts and BD insights",
       icon: Target
     },
     {
-      title: "Export Options",
-      description: "Download your data in multiple formats",
+      title: "Execute & Track",
+      description: "Build your BD strategy, send outreach, and track progress-all in one platform",
       icon: Building2
     },
     {
-      title: "Team Collaboration",
-      description: "Share insights and collaborate with your team",
+      title: "BD Insights",
+      description: "Tools, tips, deal comps, VC contacts, and conference guides to power your dealmaking",
       icon: Users
     }
   ];
@@ -564,59 +564,6 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="section bg-gradient-to-br from-gray-50 to-primary-50/20 -mt-20">
-        <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <h2 className="section-title">
-              All Plans Include
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Every plan comes with our core features designed to help you find 
-              and connect with the right business opportunities.
-            </p>
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800 font-medium">
-                All plans: Pay by credit/debit card
-              </p>
-            </div>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {console.log('🔍 General features:', features)}
-            {features && features.length > 0 ? (
-              features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  className="text-center"
-                >
-                  <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-secondary-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <feature.icon className="w-8 h-8 text-primary-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600">
-                    {feature.description}
-                  </p>
-                </motion.div>
-              ))
-            ) : (
-              <div className="col-span-full text-center text-gray-500">
-                No general features available
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* FAQ Section */}
       <section className="section bg-white -mt-16">
@@ -699,6 +646,7 @@ const Pricing = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = '/signup'}
                 className="bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold text-lg shadow-soft hover:shadow-medium transition-all duration-300 flex items-center space-x-2"
               >
                 <span>Start Free Trial</span>
@@ -707,6 +655,7 @@ const Pricing = () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = '/contact-sales'}
                 className="border-2 border-white/30 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/10 transition-all duration-300"
               >
                 Contact Sales

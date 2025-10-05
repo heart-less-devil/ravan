@@ -8,11 +8,15 @@ const Resources = () => {
   const [selectedPDF, setSelectedPDF] = useState(null);
 
   const resources = [
-    "Deal Comps",
-    "Pitch Deck Templates", 
-    "What is Pharma Looking For?",
-    "BD Process and Tips",
-    "Contact Mr. Vik for 1:1 Consulting (Free 1 Hour)"
+    "Deal Comps – real-world licensing and M&A benchmarks",
+    "Pitch Deck Format – what to include in PC / Clinical pitch decks", 
+    "Pharma Playbook – what top pharma companies are looking for",
+    "BD Process & Tips – step-by-step guidance to streamline outreach",
+    "BD Conferences – priority lists and budget guides",
+    "VC/PE Investor List (320+) – validated contacts for investors and partners",
+    "Biopharma News & Resources – curated list of websites to get access to latest information",
+    "BD Tracker – Track outreach. Update progress. Report instantly",
+    "1:1 Consulting – free 1-hour session with BioPing experts"
   ];
 
   // Add all the PDFs
@@ -97,8 +101,11 @@ const Resources = () => {
             className="text-center mb-12"
           >
             <h1 className="text-4xl font-bold text-gray-900 mb-6">
-              Free Resources Available to <span className="text-orange-500">BioPing</span> Customers
+              BD Toolkit for <span className="text-orange-500">BioPing</span> Customers
             </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+              Practical tools, insights, and templates to help you connect with the right partners and close smarter deals
+            </p>
           </motion.div>
         </div>
       </section>
@@ -114,15 +121,15 @@ const Resources = () => {
               transition={{ duration: 0.6 }}
               className="relative max-w-4xl"
             >
-              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-16 shadow-lg border border-blue-200 mb-8">
+              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-8 shadow-lg border border-blue-200 mb-8">
                 <div className="text-center">
-                  <div className="w-48 h-48 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full mx-auto mb-8 flex items-center justify-center">
-                    <svg className="w-24 h-24 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-800 mb-3">Resources</h3>
-                  <p className="text-gray-600 text-xl">Access our comprehensive collection of BD resources and tools</p>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-3">Member Resources</h3>
+                  <p className="text-gray-600 text-lg">Go beyond contacts-access the full BD toolkit</p>
                 </div>
               </div>
               

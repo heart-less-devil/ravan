@@ -54,12 +54,30 @@ const RequestDemo = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
+    // Send email to support@thebioping.com
+    const emailData = {
+      to: 'support@thebioping.com',
+      subject: 'Demo Request from BioPing Website',
+      body: `
+        Demo Request Details:
+        Name: ${formData.firstName} ${formData.lastName}
+        Email: ${formData.email}
+        Company: ${formData.company}
+        Role: ${formData.role}
+        Phone: ${formData.phone}
+        Message: ${formData.message}
+      `
+    };
+    
+    // Create mailto link
+    const mailtoLink = `mailto:${emailData.to}?subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(emailData.body)}`;
+    window.location.href = mailtoLink;
+    
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
       setFormData({ firstName: '', lastName: '', email: '', company: '', role: '', phone: '', message: '' });
-    }, 2000);
+    }, 1000);
   };
 
   const demoBenefits = [
@@ -394,8 +412,7 @@ const RequestDemo = () => {
               Ready to See BioPing in Action?
             </h2>
             <p className="text-xl text-white/90 mb-8">
-              Join hundreds of companies that have transformed their business development 
-              with our comprehensive platform and expert guidance.
+              Start transforming your business development today with BioPing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <motion.button
@@ -406,15 +423,6 @@ const RequestDemo = () => {
                 Schedule Demo
                 <ArrowRight className="w-5 h-5 ml-2" />
               </motion.button>
-              <Link to="/contact-sales">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="btn btn-white"
-              >
-                Contact Sales
-              </motion.button>
-              </Link>
             </div>
           </motion.div>
         </div>

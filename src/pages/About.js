@@ -6,15 +6,15 @@ const About = () => {
   const businessModelHighlights = [
     {
       icon: CheckCircle,
-      title: "Deliver a low-cost, results-driven BD platform for strategy and deal execution"
+      title: "A low-cost, results-focused BD platform for strategy and deal execution"
     },
     {
       icon: CheckCircle,
-      title: "Support the biotech community with free resources like pitch decks, deal comps, and BD tips"
+      title: "Support the biotech community with free resources—pitch decks, deal comps, BD tips, and more"
     },
     {
       icon: CheckCircle,
-      title: "Continuously grow the platform – regular updates to contacts database and evolving BD landscape"
+      title: "Continuously expanding—with regular contact updates and evolving BD insights"
     }
   ];
 
@@ -33,8 +33,7 @@ const About = () => {
   ];
 
   const additionalBenefits = [
-    "Paid Members receive 1 hour of free BD consulting with Mr. Vik",
-    "Committed to giving back: In future, we plan to donate a portion of sales to biotech research through nonprofit partnerships and other collaborations"
+    "Committed to giving back: we aim to support biotech research through future nonprofit and collaborative initiatives"
   ];
 
   return (
@@ -49,98 +48,19 @@ const About = () => {
             className="text-center mb-16"
           >
             <h1 className="text-4xl font-bold mb-6" style={{color: '#3B82F6'}}>
-              FOUNDER'S MESSAGE
+              Founder's Message
             </h1>
             <p className="text-xl text-gray-700 max-w-4xl mx-auto leading-relaxed">
-              BioPing is part of <span className="text-orange-500 font-bold">CDS LifeSciences Group</span>, a boutique advisory firm specializing in licensing, divestitures, M&A, and fundraising for life sciences companies.
+              I created BioPing to make biotech dealmaking faster, smarter, and more affordable. With proven BD experience and a global network, we give you the strategy, contacts, and insights to focus budgets where they matter most—your science.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Business Model Highlights */}
-      <section className="section bg-white -mt-32">
-        <div className="container-custom">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-5xl font-bold mb-2" style={{color: '#2c3d69'}}>
-              Business Model Highlights
-            </h2>
-          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {businessModelHighlights.map((highlight, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-900 shadow-large rounded-2xl p-6 text-center"
-              >
-                <div className="w-12 h-12 bg-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <highlight.icon className="w-6 h-6 text-white" />
-                </div>
-                                 <p className="text-gray-700 font-medium text-base">{highlight.title}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Free Resources Section */}
-      <section className="section bg-white -mt-16">
-        <div className="container-custom">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            {/* Left Side - Free Resources */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="bg-white rounded-2xl p-8 shadow-large border-2 border-gray-200"
-            >
-              <h2 className="text-4xl font-bold mb-6" style={{color: '#2c3d69'}}>
-                Free Resources
-              </h2>
-              <div className="space-y-4">
-                {freeResources.map((resource, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="flex items-center space-x-3 p-3 bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg border border-orange-200"
-                  >
-                    <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
-                    <span className="text-gray-700 font-medium">{resource}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Right Side - Privacy Section */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white rounded-2xl p-8 shadow-large border-2 border-gray-200"
-            >
-              <h2 className="text-4xl font-bold mb-6" style={{color: '#2c3d69'}}>
-                Data Privacy & Security
-              </h2>
-              <p className="text-lg text-gray-700 leading-relaxed">
-                See our Privacy and Terms and Conditions section for details
-              </p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
 
       {/* Founder Section */}
-      <section className="section bg-gradient-to-br from-gray-50 to-blue-50 -mt-16">
+      <section className="section bg-gradient-to-br from-gray-50 to-blue-50 -mt-32">
         <div className="container-custom">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             {/* Left Side - Founder Info */}
@@ -186,7 +106,7 @@ const About = () => {
               className="flex flex-col justify-start h-full pt-8"
             >
               <div>
-                <h2 className="text-5xl font-bold mb-8" style={{color: '#2c3d69'}}>
+                <h2 className="text-4xl font-bold mb-8" style={{color: '#2c3d69'}}>
                    Founded by Gaurav Vij (Vik), a seasoned BD professional with:
                  </h2>
                 <div className="space-y-6">
@@ -209,10 +129,43 @@ const About = () => {
         </div>
       </section>
 
+      {/* Business Model Highlights */}
+      <section className="section bg-white -mt-16">
+        <div className="container-custom">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-8"
+          >
+            <h2 className="text-5xl font-bold mb-2" style={{color: '#2c3d69'}}>
+              Business Model Highlights
+            </h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {businessModelHighlights.map((highlight, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-900 shadow-large rounded-2xl p-6 text-center"
+              >
+                <div className="w-12 h-12 bg-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <highlight.icon className="w-6 h-6 text-white" />
+                </div>
+                                 <p className="text-gray-700 font-medium text-base">{highlight.title}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Additional Benefits */}
       <section className="section bg-white -mt-16">
         <div className="container-custom">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
             {additionalBenefits.map((benefit, index) => (
               <motion.div
                 key={index}
