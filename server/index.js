@@ -1821,6 +1821,7 @@ app.post('/api/auth/send-verification', [
         code: verificationCode // Also include in code field for consistency
       });
     }
+    */
 
     // Save data to files
     saveDataToFiles('verification_code_sent');
