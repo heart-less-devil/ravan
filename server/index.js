@@ -563,7 +563,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             `
           };
           
-          await transporter.sendMail(mailOptions);
+          await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
           console.log('✅ Payment confirmation email sent to:', customerEmail);
         }
       } catch (emailError) {
@@ -662,7 +662,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           };
           
           try { 
-            await transporter.sendMail(mailOptions); 
+            await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html); 
             console.log('✅ Payment failure notification sent to:', email);
           } catch (e) { 
             console.log('❌ Mail error:', e.message); 
@@ -867,7 +867,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                 `
               };
               
-              await transporter.sendMail(mailOptions);
+              await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
               console.log('✅ Auto-renewal confirmation email sent to:', customer.email);
             } catch (emailError) {
               console.error('❌ Email sending error:', emailError);
@@ -1472,7 +1472,7 @@ app.get('/api/health', (req, res) => {
       server: 'BioPing Backend',
       port: PORT,
       mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-      email: transporter ? 'Configured' : 'Not configured',
+      email: 'Simple Gmail function ready',
       emailUser: process.env.EMAIL_USER || 'support@thebioping.com',
       emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
       stripe: stripe ? 'Configured' : 'Not configured',
@@ -1485,7 +1485,7 @@ app.get('/api/health', (req, res) => {
       server: 'BioPing Backend',
       port: PORT,
       mongodb: 'Error',
-      email: transporter ? 'Configured' : 'Not configured',
+      email: 'Simple Gmail function ready',
       emailUser: process.env.EMAIL_USER || 'support@thebioping.com',
       emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
       stripe: 'Error',
@@ -1607,35 +1607,18 @@ app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
 app.get('/api/test-email', async (req, res) => {
   try {
     // Always try to send email with hardcoded configuration
-    if (!transporter) {
-      console.log('📧 Transporter not available, using fallback configuration');
+    // Simple email function is always available
+    console.log('📧 Using simple Gmail function for email sending...');
+      // Use simple email function instead
+      const testResult = await sendEmail(
+        req.query.email || 'test@example.com',
+        'Test Email - BioPing',
+        emailTemplates.verification('123456').html
+      );
       
-      // Fallback transporter configuration using cPanel
-      const fallbackTransporter = nodemailer.createTransport({
-        host: 'smtpout.secureserver.net',
-        port: 587,
-        secure: false,
-        auth: {
-          user: 'support@thebioping.com',
-          pass: 'Wildboy07@' // cPanel email password
-        },
-        connectionTimeout: 20000,
-        greetingTimeout: 10000,
-        socketTimeout: 20000
-      });
-      
-      const testMailOptions = {
-        from: process.env.EMAIL_USER || 'support@thebioping.com',
-        to: req.query.email || 'test@example.com',
-        subject: 'Test Email - BioPing',
-        html: emailTemplates.verification('123456')
-      };
-
-      const result = await fallbackTransporter.sendMail(testMailOptions);
       return res.json({
         success: true,
-        message: 'Test email sent successfully with fallback configuration',
-        messageId: result.messageId,
+        message: 'Test email sent successfully with simple Gmail function',
         to: req.query.email || 'test@example.com'
       });
     }
@@ -1647,11 +1630,10 @@ app.get('/api/test-email', async (req, res) => {
       html: emailTemplates.verification('123456')
     };
 
-    const result = await transporter.sendMail(testMailOptions);
+    const result = await sendEmail(testMailOptions.to, testMailOptions.subject, testMailOptions.html);
     res.json({
       success: true,
       message: 'Test email sent successfully',
-      messageId: result.messageId,
       to: req.query.email || 'test@example.com'
     });
   } catch (error) {
@@ -2530,7 +2512,7 @@ app.post('/api/create-subscription', async (req, res) => {
           `
         };
         
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
         console.log('✅ Subscription confirmation email sent to:', customerEmail);
       } catch (emailError) {
         console.error('❌ Email sending error:', emailError);
@@ -2635,18 +2617,7 @@ Timestamp: ${new Date().toLocaleString()}
         // Use the same transporter configuration as the main email setup
         const isCustomDomain = true;
         
-        const transporter = nodemailer.createTransport({
-          host: 'smtpout.secureserver.net',
-          port: 465,
-          secure: true,
-          auth: {
-            user: 'support@thebioping.com',
-            pass: 'Wildboy07@'
-          },
-        connectionTimeout: 60000,
-        greetingTimeout: 30000,
-        socketTimeout: 60000
-        });
+        // Use simple email function instead of SMTP
 
         const mailOptions = {
           from: 'support@thebioping.com',
@@ -2670,7 +2641,7 @@ Timestamp: ${new Date().toLocaleString()}
           subject: mailOptions.subject
         });
 
-        const result = await transporter.sendMail(mailOptions);
+        const result = await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
         console.log('✅ Email sent successfully to gauravvij1980@gmail.com');
         console.log('📧 Email result:', result.messageId);
       } catch (emailError) {
@@ -7906,7 +7877,7 @@ app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🌐 Server URL: http://localhost:${PORT}`);
-  console.log(`📧 Email server status: ${transporter ? 'Ready' : 'Not configured'}`);
+  console.log(`📧 Email server status: Simple Gmail function ready`);
   console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 MongoDB: Connected`);
