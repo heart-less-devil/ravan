@@ -1260,8 +1260,8 @@ try {
   // Use cPanel SMTP for email configuration
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'mail.thebioping.com',
-    port: parseInt(process.env.SMTP_PORT) || 465,
-    secure: process.env.SMTP_SECURE === 'true' || true, // Use SSL for port 465
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true' || false, // Use TLS for port 587
     auth: {
       user: emailUser,
       pass: emailPass
@@ -1466,7 +1466,7 @@ app.get('/api/test-email-config', (req, res) => {
   try {
     const emailConfig = {
       host: process.env.SMTP_HOST || 'mail.thebioping.com',
-      port: parseInt(process.env.SMTP_PORT) || 465,
+      port: parseInt(process.env.SMTP_PORT) || 587,
       secure: process.env.SMTP_SECURE === 'true' || true,
       user: process.env.EMAIL_USER || 'support@thebioping.com',
       passSet: !!process.env.EMAIL_PASS,
@@ -1636,9 +1636,9 @@ app.get('/api/test-email', async (req, res) => {
       
       // Fallback transporter configuration using cPanel
       const fallbackTransporter = nodemailer.createTransport({
-        host: 'mail.thebioping.com',
-        port: 465,
-        secure: true,
+        host: 'relay-hosting.secureserver.net',
+        port: 587,
+        secure: false,
         auth: {
           user: 'support@thebioping.com',
           pass: 'Wildboy07@' // cPanel email password
@@ -1722,9 +1722,9 @@ app.post('/api/auth/send-verification', [
     try {
       // Create email transporter with cPanel SMTP settings
       const emailTransporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'mail.thebioping.com',
-        port: parseInt(process.env.SMTP_PORT) || 465,
-        secure: process.env.SMTP_SECURE === 'true' || true, // Use SSL for port 465
+        host: process.env.SMTP_HOST || 'relay-hosting.secureserver.net',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true' || false, // Use TLS for port 587
         auth: {
           user: process.env.EMAIL_USER || 'support@thebioping.com',
           pass: process.env.EMAIL_PASS || 'Wildboy07@' // cPanel email password
