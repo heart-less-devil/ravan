@@ -1238,58 +1238,33 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Email configuration with custom SMTP setup
+// Simple Email configuration - Use Gmail for reliability
 let transporter = null;
 
-// Email configuration - Use environment variables for security
 try {
-  console.log('📧 Initializing email service...');
-  console.log('🔧 Environment Variables Debug:');
-  console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'support@thebioping.com');
-  console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Wildboy07@');
-  console.log('  - NODE_ENV:', process.env.NODE_ENV);
+  console.log('📧 Initializing simple Gmail email service...');
   
-  // Use cPanel email for authentication - Force hardcoded values for live
-  const emailUser = 'support@thebioping.com';
-  const emailPass = 'Wildboy07@'; // cPanel email password
-  
-  console.log('📧 Final Email Config:');
-  console.log('  - emailUser:', emailUser);
-  console.log('  - emailPass:', emailPass ? 'Set' : 'Not set');
-  
-  // Use cPanel SMTP for email configuration
+  // Use Gmail for simple, reliable email sending
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true' || false, // Use TLS for port 587
+    service: 'gmail',
     auth: {
-      user: emailUser,
-      pass: emailPass
-    },
-    connectionTimeout: 60000, // 60 seconds
-    greetingTimeout: 30000,   // 30 seconds
-    socketTimeout: 60000,     // 60 seconds
-    pool: false,
-    maxConnections: 1,
-    maxMessages: 1,
-    rateLimit: 1,
-    tls: {
-      rejectUnauthorized: false
+      user: 'gauravvij1980@gmail.com',
+      pass: 'keux xtjd bzat vnzj'
     }
   });
   
   // Test connection (async but don't block)
   transporter.verify((error, success) => {
     if (error) {
-      console.log('❌ cPanel SMTP failed:', error.message);
-      console.log('🔧 Email service disabled - cPanel SMTP not accessible');
+      console.log('❌ Gmail SMTP failed:', error.message);
+      console.log('🔧 Email service disabled - Gmail not accessible');
       transporter = null;
     } else {
-      console.log('✅ cPanel SMTP connection successful');
+      console.log('✅ Gmail SMTP connection successful');
     }
   });
   
-  console.log('✅ Email service configured successfully');
+  console.log('✅ Simple email service configured successfully');
   console.log('📧 Transporter status:', transporter ? 'Ready' : 'Not ready');
   
 } catch (error) {
@@ -1718,55 +1693,29 @@ app.post('/api/auth/send-verification', [
     // Save data to files
     saveDataToFiles('verification_code_sent');
 
-    // Send email with verification code
+    // Send email with verification code using simple Gmail
     try {
-      // Create email transporter with cPanel SMTP settings
-      const emailTransporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true' || false, // Use TLS for port 587
-        auth: {
-          user: process.env.EMAIL_USER || 'support@thebioping.com',
-          pass: process.env.EMAIL_PASS || 'Wildboy07@' // cPanel email password
-        },
-        connectionTimeout: 60000, // 60 seconds
-        greetingTimeout: 30000,   // 30 seconds
-        socketTimeout: 60000,     // 60 seconds
-        pool: false,
-        maxConnections: 1,
-        maxMessages: 1,
-        rateLimit: 5,
-        tls: {
-          rejectUnauthorized: false
-        }
-      });
-
       console.log(`📧 Sending OTP to ${email}: ${verificationCode}`);
 
       const mailOptions = {
-        from: 'support@thebioping.com',
+        from: 'gauravvij1980@gmail.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
       };
 
-      // Send email with timeout
-      const emailPromise = emailTransporter.sendMail(mailOptions);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 90000) // 90 seconds
-      );
-
-      await Promise.race([emailPromise, timeoutPromise]);
-      
-      // Close the transporter after sending
-      emailTransporter.close();
-      
-      console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
-
-      res.json({
-        success: true,
-        message: 'Verification code sent successfully to your email'
-      });
+      // Use the global transporter for simple sending
+      if (transporter) {
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
+        
+        res.json({
+          success: true,
+          message: 'Verification code sent successfully to your email'
+        });
+      } else {
+        throw new Error('Email transporter not available');
+      }
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
       console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
@@ -5750,10 +5699,10 @@ app.post('/api/auth/forgot-password', [
     // Save data to files
     saveDataToFiles();
 
-    // Send email with verification code
+    // Send email with verification code using simple Gmail
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'support@thebioping.com',
+        from: 'gauravvij1980@gmail.com',
         to: email,
         subject: 'BioPing - Password Reset Code',
         html: `
@@ -5784,13 +5733,17 @@ app.post('/api/auth/forgot-password', [
         `
       };
 
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Password reset email sent to ${email} with code: ${verificationCode}`);
-
-      res.json({
-        success: true,
-        message: 'Password reset code sent successfully to your email'
-      });
+      if (transporter) {
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Password reset email sent to ${email} with code: ${verificationCode}`);
+        
+        res.json({
+          success: true,
+          message: 'Password reset code sent successfully to your email'
+        });
+      } else {
+        throw new Error('Email transporter not available');
+      }
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
       console.log(`🔑 PASSWORD RESET CODE FOR ${email}: ${verificationCode}`);
