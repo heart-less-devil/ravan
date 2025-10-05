@@ -1253,36 +1253,13 @@ try {
       user: 'gauravvij1980@gmail.com',
       pass: 'keux xtjd bzat vnzj'
     },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
     tls: {
       rejectUnauthorized: false
     }
   });
   
-  // Test connection with timeout
-  const verifyPromise = new Promise((resolve) => {
-    transporter.verify((error, success) => {
-      if (error) {
-        console.log('❌ Gmail SMTP failed:', error.message);
-        console.log('🔧 Trying alternative email configuration...');
-        resolve(false);
-      } else {
-        console.log('✅ Gmail SMTP connection successful');
-        resolve(true);
-      }
-    });
-  });
-  
-  // Set a timeout for verification
-  setTimeout(() => {
-    if (transporter) {
-      console.log('⚠️ Email verification timeout - proceeding anyway');
-    }
-  }, 10000);
-  
-  console.log('✅ Email service configured (will work even if verification fails)');
+  // Skip verification - just configure and use
+  console.log('✅ Email service configured (no verification timeout)');
   console.log('📧 Transporter status:', transporter ? 'Ready' : 'Not ready');
   
 } catch (error) {
@@ -1725,13 +1702,8 @@ app.post('/api/auth/send-verification', [
       // Use the global transporter for simple sending with retry logic
       if (transporter) {
         try {
-          // Add timeout for email sending
-          const emailPromise = transporter.sendMail(mailOptions);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Email timeout')), 30000)
-          );
-          
-          await Promise.race([emailPromise, timeoutPromise]);
+          // Send email without timeout
+          await transporter.sendMail(mailOptions);
           console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
           
           res.json({
