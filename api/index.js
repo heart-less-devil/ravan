@@ -38,8 +38,8 @@ if (isCustomDomain) {
   transporter = nodemailer.createTransporter({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER || 'universalx0242@gmail.com',
-      pass: process.env.EMAIL_PASS || 'nxyh whmt krdk ayqb'
+      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
     }
   });
   console.log('📧 API using Gmail email:', process.env.EMAIL_USER);
