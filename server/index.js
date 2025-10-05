@@ -1724,7 +1724,7 @@ app.post('/api/auth/send-verification', [
       });
 
       const mailOptions = {
-        from: 'universalx0242@gmail.com',
+        from: 'gauravvij1980@gmail.com',
         to: email,
         subject: emailTemplates.verification(verificationCode).subject,
         html: emailTemplates.verification(verificationCode).html
@@ -2688,8 +2688,8 @@ Timestamp: ${new Date().toLocaleString()}
         });
 
         const mailOptions = {
-          from: 'support@thebioping.com',
-          to: 'info@bioping.com',
+          from: 'gauravvij1980@gmail.com',
+          to: 'gauravvij1980@gmail.com',
           subject: 'New Contact Form Submission - BioPing',
           text: emailContent,
           html: `
@@ -2710,7 +2710,7 @@ Timestamp: ${new Date().toLocaleString()}
         });
 
         const result = await transporter.sendMail(mailOptions);
-        console.log('✅ Email sent successfully to info@bioping.com');
+        console.log('✅ Email sent successfully to gauravvij1980@gmail.com');
         console.log('📧 Email result:', result.messageId);
       } catch (emailError) {
         console.error('❌ Error sending email:', emailError);
@@ -5732,7 +5732,7 @@ app.post('/api/auth/forgot-password', [
     // Send email with verification code
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'support@bioping.com',
+        from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
         to: email,
         subject: 'BioPing - Password Reset Code',
         html: `
