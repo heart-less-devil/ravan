@@ -126,8 +126,8 @@ PORT=5000
 NODE_ENV=development
 
 # Email Configuration
-EMAIL_USER=support@thebioping.com
-EMAIL_PASS=your_email_password_here
+EMAIL_USER=gauravvij1980@gmail.com
+EMAIL_PASS=keux xtjd bzat vnzj
 
 # Stripe Configuration
 STRIPE_SECRET_KEY=sk_live_your_real_stripe_secret_key_here

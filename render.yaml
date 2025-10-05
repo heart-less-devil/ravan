@@ -10,9 +10,9 @@ services:
       - key: PORT
         value: 10000
       - key: EMAIL_USER
-        value: universalx0242@gmail.com
+        value: gauravvij1980@gmail.com
       - key: EMAIL_PASS
-        value: nxyh whmt krdk ayqb
+        value: keux xtjd bzat vnzj
       - key: JWT_SECRET
         value: bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string
       - key: REACT_APP_API_BASE_URL
