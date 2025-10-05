@@ -1621,21 +1621,6 @@ app.get('/api/test-email', async (req, res) => {
         message: 'Test email sent successfully with simple Gmail function',
         to: req.query.email || 'test@example.com'
       });
-    }
-
-    const testMailOptions = {
-      from: 'support@thebioping.com',
-      to: req.query.email || 'test@example.com',
-      subject: 'Test Email - BioPing',
-      html: emailTemplates.verification('123456')
-    };
-
-    const result = await sendEmail(testMailOptions.to, testMailOptions.subject, testMailOptions.html);
-    res.json({
-      success: true,
-      message: 'Test email sent successfully',
-      to: req.query.email || 'test@example.com'
-    });
   } catch (error) {
     console.error('Test email error:', error);
     res.status(500).json({
