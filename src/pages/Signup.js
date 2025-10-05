@@ -193,6 +193,12 @@ const Signup = () => {
         // OTP sent successfully via email
         console.log('📧 Verification code sent to email successfully');
         
+        // If email service is slow, show note to user
+        if (data.note && data.verificationCode) {
+          console.log('📧 Email service slow, verification code:', data.verificationCode);
+          // Don't show alert, just log for debugging
+        }
+        
         // Start countdown
         const timer = setInterval(() => {
           setCountdown(prev => {
