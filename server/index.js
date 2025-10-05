@@ -1746,7 +1746,7 @@ app.post('/api/auth/send-verification', [
       // Send email with timeout
       const emailPromise = emailTransporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email timeout')), 15000) // Reduced to 15 seconds
+        setTimeout(() => reject(new Error('Email timeout')), 10000) // Reduced to 10 seconds
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
@@ -1803,7 +1803,8 @@ app.post('/api/auth/send-verification', [
         success: true,
         message: 'Verification code generated (email failed to send)',
         verificationCode: verificationCode, // Include code in response
-        emailError: 'Email service temporarily unavailable'
+        emailError: 'Email service temporarily unavailable',
+        code: verificationCode // Also include in code field for consistency
       });
     }
 
