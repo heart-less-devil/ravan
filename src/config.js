@@ -1,12 +1,9 @@
-// API Configuration with fallback URLs - FIXED FOR LIVE DEPLOYMENT
+// API Configuration for thebioping.com domain
 const getApiUrl = () => {
-  // Check if we're on the live website (GoDaddy) - use direct backend URL
+  // Check if we're on the live website (thebioping.com) - use direct backend URL
   if (typeof window !== 'undefined') {
     if (window.location.hostname.includes('thebioping.com')) {
       return 'https://bioping-backend.onrender.com'; // Direct API calls to backend
-    }
-    if (window.location.hostname.includes('netlify.app')) {
-      return 'https://bioping-backend.onrender.com';
     }
   }
   
@@ -15,7 +12,6 @@ const getApiUrl = () => {
     return process.env.REACT_APP_API_BASE_URL;
   }
   
-  // Always use live backend URL for production
   // Development fallback only if explicitly in development mode
   if (process.env.NODE_ENV === 'development' && window.location.hostname.includes('localhost')) {
     return 'http://localhost:3005';

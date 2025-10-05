@@ -12,10 +12,10 @@
   CI = "false" 
   NPM_FLAGS = "--legacy-peer-deps"
 
-# Handle API routes for backend
+# Handle API routes for backend - thebioping.com domain
 [[redirects]]
   from = "/api/*"
-  to = "https://bioping-backend.onrender.com/:splat"
+  to = "https://bioping-backend.onrender.com/api/:splat"
   status = 200
   force = true
 
