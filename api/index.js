@@ -21,18 +21,18 @@ const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com'
 if (isCustomDomain) {
   // Custom domain email configuration
   transporter = nodemailer.createTransporter({
-    host: process.env.SMTP_HOST || 'mail.bioping.com',
+    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: process.env.SMTP_PORT || 587,
     secure: process.env.SMTP_SECURE === 'true' || false,
     auth: {
-      user: process.env.EMAIL_USER || 'info@bioping.com',
-      pass: process.env.EMAIL_PASS
+      user: process.env.EMAIL_USER || 'support@thebioping.com',
+      pass: process.env.EMAIL_PASS || 'Wildboy07@'
     },
     tls: {
       rejectUnauthorized: false
     }
   });
-  console.log('📧 API using custom domain email:', process.env.EMAIL_USER);
+  console.log('📧 API using custom domain email:', process.env.EMAIL_USER || 'support@thebioping.com');
 } else {
   // Gmail configuration
   transporter = nodemailer.createTransporter({
@@ -85,11 +85,41 @@ const emailTemplates = {
         </div>
       </div>
     `
+  }),
+  verification: (code) => ({
+    subject: 'BioPing - Email Verification Code',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 28px;">BioPing</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Email Verification</p>
+        </div>
+        <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
+          <h2 style="color: #333; margin-bottom: 20px;">Your Verification Code</h2>
+          <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
+            Thank you for signing up with BioPing! Please use the verification code below to complete your registration:
+          </p>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${code}</span>
+          </div>
+          <p style="color: #666; font-size: 14px; margin-top: 20px;">
+            This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
+          </p>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <p style="color: #999; font-size: 12px;">
+              Best regards,<br>
+              The BioPing Team
+            </p>
+          </div>
+        </div>
+      </div>
+    `
   })
 };
 
 // In-memory storage (replace with database in production)
 let biotechData = [];
+let verificationCodes = [];
 let users = [
   {
     id: 1,
@@ -181,6 +211,107 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
   });
 });
 
+// Send verification code endpoint
+app.post('/api/auth/send-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide a valid email address' 
+      });
+    }
+
+    // Generate a 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store the verification code
+    verificationCodes.push({
+      email,
+      code: verificationCode,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+
+    console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
+    
+    // Send email with verification code
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL_USER || 'support@thebioping.com',
+        to: email,
+        ...emailTemplates.verification(verificationCode)
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
+
+      res.json({
+        success: true,
+        message: 'Verification code sent successfully to your email'
+      });
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+      
+      // Return success with the code in response for development
+      res.json({
+        success: true,
+        message: 'Verification code generated (email failed to send)',
+        verificationCode: verificationCode,
+        emailError: 'Email service temporarily unavailable'
+      });
+    }
+
+  } catch (error) {
+    console.error('Send verification error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Verify email code endpoint
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email and code are required' 
+      });
+    }
+
+    // Find the verification code
+    const verificationRecord = verificationCodes.find(
+      record => record.email === email && 
+                record.code === code && 
+                new Date() < record.expiresAt
+    );
+
+    if (!verificationRecord) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid or expired verification code' 
+      });
+    }
+
+    // Remove the used verification code
+    verificationCodes = verificationCodes.filter(
+      record => !(record.email === email && record.code === code)
+    );
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+
+  } catch (error) {
+    console.error('Verify email error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Admin endpoints
 app.post('/api/admin/upload-excel', authenticateToken, multer().single('file'), (req, res) => {
   try {
@@ -238,7 +369,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     // Send email with verification code
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'universalx0242@gmail.com',
+        from: process.env.EMAIL_USER || 'support@thebioping.com',
         to: email,
         ...emailTemplates.passwordReset(verificationCode)
       };
