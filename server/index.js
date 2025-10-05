@@ -1636,7 +1636,7 @@ app.get('/api/test-email', async (req, res) => {
       
       // Fallback transporter configuration using cPanel
       const fallbackTransporter = nodemailer.createTransport({
-        host: 'relay-hosting.secureserver.net',
+        host: 'smtpout.secureserver.net',
         port: 587,
         secure: false,
         auth: {
@@ -1722,7 +1722,7 @@ app.post('/api/auth/send-verification', [
     try {
       // Create email transporter with cPanel SMTP settings
       const emailTransporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'relay-hosting.secureserver.net',
+        host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
         port: parseInt(process.env.SMTP_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true' || false, // Use TLS for port 587
         auth: {
