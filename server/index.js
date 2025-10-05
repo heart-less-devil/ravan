@@ -1259,7 +1259,7 @@ try {
   
   // Use cPanel SMTP for email configuration
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'mail.thebioping.com',
+    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: parseInt(process.env.SMTP_PORT) || 587,
     secure: process.env.SMTP_SECURE === 'true' || false, // Use TLS for port 587
     auth: {
@@ -1465,7 +1465,7 @@ app.get('/api/test-user', authenticateToken, (req, res) => {
 app.get('/api/test-email-config', (req, res) => {
   try {
     const emailConfig = {
-      host: process.env.SMTP_HOST || 'mail.thebioping.com',
+      host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
       port: parseInt(process.env.SMTP_PORT) || 587,
       secure: process.env.SMTP_SECURE === 'true' || true,
       user: process.env.EMAIL_USER || 'support@thebioping.com',
@@ -2696,7 +2696,7 @@ Timestamp: ${new Date().toLocaleString()}
         const isCustomDomain = true;
         
         const transporter = nodemailer.createTransport({
-          host: 'mail.thebioping.com',
+          host: 'smtpout.secureserver.net',
           port: 465,
           secure: true,
           auth: {
