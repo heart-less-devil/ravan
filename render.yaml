@@ -13,6 +13,10 @@ services:
         value: gauravvij1980@gmail.com
       - key: EMAIL_PASS
         value: keux xtjd bzat vnzj
+      - key: GMAIL_USER
+        value: gauravvij1980@gmail.com
+      - key: GMAIL_PASS
+        value: keux xtjd bzat vnzj
       - key: JWT_SECRET
         value: bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string
       - key: REACT_APP_API_BASE_URL
