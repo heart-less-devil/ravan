@@ -2765,80 +2765,8 @@ Timestamp: ${new Date().toLocaleString()}
   }
 });
 
-// Old contact form code (commented out)
-/*
-        const mailOptions = {
-          from: 'support@thebioping.com',
-          to: 'gauravvij1980@gmail.com',
-          subject: 'New Contact Form Submission - BioPing',
-          text: emailContent,
-          html: `
-            <h2>New Contact Form Submission</h2>
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            <p><strong>Company:</strong> ${company || 'Not specified'}</p>
-            <p><strong>Message:</strong></p>
-            <p>${message}</p>
-            <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-          `
-        };
-
-        console.log('📧 Mail options prepared:', {
-          from: mailOptions.from,
-          to: mailOptions.to,
-          subject: mailOptions.subject
-        });
-
-        const result = await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
-        console.log('✅ Email sent successfully to gauravvij1980@gmail.com');
-        console.log('📧 Email result:', result.messageId);
-      } catch (emailError) {
-        console.error('❌ Error sending email:', emailError);
-        console.error('❌ Error details:', emailError.message);
-        // Don't fail the request if email fails
-      }
-    }
-
-    // Log the contact form submission
-    console.log('Contact form submission:', {
-      name,
-      email,
-      company,
-      message,
-      timestamp: new Date().toISOString()
-    });
-
-    // In a real application, you would send an email here
-    // For now, we'll just log it and return success
-    const contactData = {
-      id: Date.now().toString(),
-      name,
-      email,
-      company: company || 'Not specified',
-      message,
-      timestamp: new Date().toISOString(),
-      status: 'new'
-    };
-
-    // Store in memory (in production, save to database)
-    if (!global.contactSubmissions) {
-      global.contactSubmissions = [];
-    }
-    global.contactSubmissions.push(contactData);
-
-    res.json({
-      success: true,
-      message: 'Contact form submitted successfully. We will get back to you within 24 hours.',
-      data: contactData
-    });
-  } catch (error) {
-    console.error('Error processing contact form:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error. Please try again later.' 
-    });
-  }
-});
+// Contact form data storage (for admin panel)
+const contactSubmissions = [];
 
 // Get contact submissions (admin only)
 app.get('/api/admin/contact-submissions', authenticateAdmin, async (req, res) => {
@@ -10058,4 +9986,4 @@ cron.schedule('0 0 * * *', async () => {
   console.log('📊 Daily Subscription Summary Completed');
 });
 
-console.log('✅ Daily subscription system initialized');
+console.log('✅ Daily subscription system initialized')
