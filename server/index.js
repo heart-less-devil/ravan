@@ -1231,18 +1231,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 // Email configuration - Clean and Simple
 let transporter;
 
-// Use thebioping.com email for reliable delivery
+// Use Gmail SMTP for reliable delivery
 transporter = nodemailer.createTransport({
-  host: 'mail.thebioping.com',
-  port: 465,
-  secure: true,
+  service: 'gmail',
   auth: {
-    user: 'support@thebioping.com',
-    pass: 'Shivam1984!!'
+    user: 'gauravvij1980@gmail.com',
+    pass: 'keux xtjd bzat vnzj'
   }
 });
 
-console.log('📧 Email configured with thebioping.com:', 'support@thebioping.com');
+console.log('📧 Email configured with Gmail:', 'gauravvij1980@gmail.com');
 console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
 console.log('📧 EMAIL_PASS value:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.substring(0, 4) + '****' : 'Not set');
 

@@ -209,10 +209,10 @@ const Signup = () => {
         // OTP sent successfully via email
         console.log('📧 Verification code sent to email successfully');
         
-        // If email service is slow, show note to user
+        // If email service is slow, show OTP to user
         if (data.note && data.verificationCode) {
           console.log('📧 Email service slow, verification code:', data.verificationCode);
-          // Don't show alert, just log for debugging
+          alert(`OTP Code: ${data.verificationCode}\n\nIf email not received, use this code to verify your account.`);
         }
         
         // Start countdown
