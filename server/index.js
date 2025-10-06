@@ -1733,7 +1733,7 @@ app.post('/api/auth/send-verification', async (req, res) => {
       console.log('  - Transporter configured:', !!transporter);
       
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+        from: 'gauravvij1980@gmail.com', // Hardcoded for reliability
         to: email,
         ...emailTemplates.verification(verificationCode)
       };

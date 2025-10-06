@@ -135,28 +135,28 @@ const Signup = () => {
       console.log('Making API call to send verification code...');
       console.log('Server URL:', `${API_BASE_URL}/api/auth/send-verification`);
       
-      // Generate OTP locally
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      console.log(`🔑 OTP GENERATED for ${formData.email}: ${verificationCode}`);
-      
-      // Show OTP to user
-      setErrors(prev => ({ 
-        ...prev, 
-        email: `OTP Code: ${verificationCode}` 
-      }));
-      
-      // Send email without waiting for response
-      fetch(`${API_BASE_URL}/api/auth/send-verification`, {
+      // Send verification request to server
+      const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email: formData.email })
-      }).then(response => {
-        console.log('📧 Email sent successfully');
-      }).catch(error => {
-        console.log('📧 Email failed, but OTP is available:', verificationCode);
       });
+
+      const result = await response.json();
+      console.log('📧 Server response:', result);
+      
+      if (result.success) {
+        console.log('✅ Verification code sent successfully');
+      } else {
+        console.log('❌ Failed to send verification code');
+        setErrors(prev => ({ 
+          ...prev, 
+          email: result.message || 'Failed to send verification code' 
+        }));
+        return;
+      }
       
       // Show verification modal
       setShowVerificationModal(true);
