@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, RefreshCw, Users, Shield, BarChart3, X } from 'lucide-react';
 import VerificationModal from '../components/VerificationModal';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, tryApiCall } from '../config';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -135,11 +135,11 @@ const Signup = () => {
       console.log('Making API call to send verification code...');
       console.log('Server URL:', `${API_BASE_URL}/api/auth/send-verification`);
       
-      // Call real API to send verification code
+      // Call real API to send verification code with fallback
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for email sending
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for email sending
       
-              const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
+      const response = await tryApiCall('/api/auth/send-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,14 +237,14 @@ const Signup = () => {
     setIsVerifying(true);
     
     try {
-      // Call real API to verify code
-              const response = await fetch(`${API_BASE_URL}/api/auth/verify-email`, {
+      // Call real API to verify code with fallback
+      const response = await tryApiCall('/api/auth/verify-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          email: formData.email,
+          email: formData.email, 
           code: code 
         })
       });

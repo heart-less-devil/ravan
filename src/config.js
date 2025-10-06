@@ -21,8 +21,40 @@ const getApiUrl = () => {
   return 'https://bioping-backend.onrender.com';
 };
 
+// Fallback URLs for when primary server is down
+const FALLBACK_URLS = [
+  'https://bioping-backend.onrender.com',
+  'https://ravan-8n0h.onrender.com',
+  'https://ravan-backend.onrender.com'
+];
+
 export const API_BASE_URL = getApiUrl();
 export const ADMIN_API_BASE_URL = getApiUrl();
+
+// Function to try multiple API URLs
+export const tryApiCall = async (endpoint, options = {}) => {
+  const urls = [API_BASE_URL, ...FALLBACK_URLS.filter(url => url !== API_BASE_URL)];
+  
+  for (const baseUrl of urls) {
+    try {
+      console.log(`Trying API call to: ${baseUrl}${endpoint}`);
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        ...options,
+        signal: options.signal || new AbortController().signal
+      });
+      
+      if (response.ok) {
+        console.log(`✅ API call successful to: ${baseUrl}`);
+        return response;
+      }
+    } catch (error) {
+      console.log(`❌ API call failed to: ${baseUrl}`, error.message);
+      continue;
+    }
+  }
+  
+  throw new Error('All API endpoints failed');
+};
 
 // Fallback URLs for different deployment scenarios - UNIFIED CONFIG
 const getBackendURL = () => {
