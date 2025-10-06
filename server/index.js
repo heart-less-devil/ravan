@@ -1238,61 +1238,49 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// GoDaddy SMTP configuration (should work on Render)
-let transporter = null;
+// Email configuration (from old working code)
+let transporter;
 
-try {
-  transporter = nodemailer.createTransport({
-    host: 'smtpout.secureserver.net', // GoDaddy's SMTP server
-    port: 465, // SSL port
-    secure: true, // true for 465
+// Check if using custom domain email or Gmail
+const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
+
+if (isCustomDomain) {
+  // Custom domain email configuration
+  transporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
+    port: process.env.SMTP_PORT || 587,
+    secure: process.env.SMTP_SECURE === 'true' || false,
     auth: {
-      user: 'support@thebioping.com',
-      pass: 'Shivam1984!!'
+      user: process.env.EMAIL_USER || 'support@thebioping.com',
+      pass: process.env.EMAIL_PASS || 'Shivam1984!!'
     },
     tls: {
       rejectUnauthorized: false
     }
   });
-
-  // Verify transporter configuration
-  transporter.verify(function(error, success) {
-    if (error) {
-      console.log('❌ GoDaddy SMTP error:', error.message);
-      console.log('🔧 Trying alternative configuration...');
-      
-      // Try alternative GoDaddy SMTP
-      transporter = nodemailer.createTransport({
-        host: 'relay-hosting.secureserver.net',
-        port: 25,
-        secure: false,
-        auth: {
-          user: 'support@thebioping.com',
-          pass: 'Shivam1984!!'
-        },
-        tls: {
-          rejectUnauthorized: false
-        }
-      });
-      
-      transporter.verify(function(error2, success2) {
-        if (error2) {
-          console.log('❌ Alternative SMTP also failed:', error2.message);
-          console.log('🔧 Email functionality will be disabled');
-          transporter = null;
-        } else {
-          console.log('✅ Alternative GoDaddy SMTP is ready');
-        }
-      });
-    } else {
-      console.log('✅ GoDaddy SMTP is ready to send messages');
+  console.log('📧 Using custom domain email:', process.env.EMAIL_USER || 'support@thebioping.com');
+} else {
+  // Gmail configuration
+  transporter = nodemailer.createTransporter({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
     }
   });
-} catch (error) {
-  console.log('❌ GoDaddy SMTP configuration failed:', error.message);
-  console.log('🔧 Email functionality will be disabled');
-  transporter = null;
+  console.log('📧 Using Gmail email:', process.env.EMAIL_USER);
 }
+
+// Verify transporter configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log('❌ Email configuration error:', error.message);
+    console.log('🔧 Email functionality will be disabled');
+    transporter = null; // Disable email functionality
+  } else {
+    console.log('✅ Email server is ready to send messages');
+  }
+});
 
 // Simple Gmail Function - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
@@ -1769,30 +1757,33 @@ app.post('/api/auth/send-verification', [
     // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
     
-    // Send email asynchronously (don't wait for it)
-    sendEmail(
-      email,
-      emailTemplates.verification(verificationCode).subject,
-      emailTemplates.verification(verificationCode).html
-    ).then(emailResult => {
-      console.log(`📧 Email result:`, emailResult);
-      if (emailResult.success) {
-        console.log(`✅ OTP email sent successfully to ${email}`);
-      } else {
-        console.log(`❌ Failed to send OTP email to ${email}:`, emailResult.error);
-      }
-    }).catch(emailError => {
-      console.log(`❌ Email sending error:`, emailError.message);
-    });
-    
-    // Return OTP immediately without waiting for email
-    console.log(`✅ OTP generated for ${email}: ${verificationCode}`);
-    res.json({
-      success: true,
-      message: 'Verification code generated successfully',
-      verificationCode: verificationCode,
-      note: 'Use this code: ' + verificationCode
-    });
+    // Send email with verification code (from old working code)
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL_USER || 'support@thebioping.com',
+        to: email,
+        ...emailTemplates.verification(verificationCode)
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
+
+      res.json({
+        success: true,
+        message: 'Verification code sent successfully to your email'
+      });
+    } catch (emailError) {
+      console.error('❌ Email sending error:', emailError);
+      console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+      
+      // Return success with the code in response for development
+      res.json({
+        success: true,
+        message: 'Verification code generated (email failed to send)',
+        verificationCode: verificationCode,
+        emailError: 'Email service temporarily unavailable'
+      });
+    }
 
     // Save data to files
     saveDataToFiles('verification_code_sent');
