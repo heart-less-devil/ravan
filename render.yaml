@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ravan-backend
+    name: bioping-backend
     env: node
     buildCommand: npm install
     startCommand: npm start
@@ -22,11 +22,11 @@ services:
       - key: REACT_APP_API_BASE_URL
         value: https://bioping-backend.onrender.com
       - key: STRIPE_SECRET_KEY
-        value: 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
+        sync: false
       - key: STRIPE_PUBLISHABLE_KEY
-        value: pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
+        sync: false
       - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
-        value: pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT
+        sync: false
       - key: MONGODB_URI
         value: mongodb+srv://gauravvij1980:gauravvij1980@cluster0.8jf4q.mongodb.net/biotech?retryWrites=true&w=majority
       - key: SMTP_HOST
