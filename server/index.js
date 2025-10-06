@@ -1620,8 +1620,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Quick OTP test endpoint (no email sending)
-app.post('/api/auth/send-verification-quick', [
+// Test email endpoint - actually send email
+app.post('/api/test-email-send', [
   body('email').isEmail().normalizeEmail()
 ], async (req, res) => {
   try {
@@ -1632,33 +1632,30 @@ app.post('/api/auth/send-verification-quick', [
 
     const { email } = req.body;
     
-    // Generate a 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`📧 Testing email sending to: ${email}`);
     
-    // Store the verification code
-    mockDB.verificationCodes.push({
+    // Try to send actual email
+    const emailResult = await sendEmail(
       email,
-      code: verificationCode,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
-    });
-
-    // Save data to files
-    saveDataToFiles('verification_code_sent');
-
-    console.log(`📧 Quick OTP Generated for ${email}: ${verificationCode}`);
+      'BioPing - Test Email',
+      '<h1>Test Email</h1><p>This is a test email from BioPing live server.</p>'
+    );
     
-    // Return OTP immediately without email sending
+    console.log(`📧 Test email result:`, emailResult);
+    
     res.json({
-      success: true,
-      message: 'Verification code generated successfully',
-      verificationCode: verificationCode,
-      note: 'Use this code: ' + verificationCode
+      success: emailResult.success,
+      message: emailResult.success ? 'Test email sent successfully' : 'Test email failed',
+      emailResult: emailResult
     });
 
   } catch (error) {
-    console.error('Quick OTP error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Test email error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Test email error',
+      error: error.message 
+    });
   }
 });
 
