@@ -1238,32 +1238,60 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Email configuration with better Gmail setup (from aman.js)
+// GoDaddy SMTP configuration (should work on Render)
 let transporter = null;
 
 try {
   transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtpout.secureserver.net', // GoDaddy's SMTP server
+    port: 465, // SSL port
+    secure: true, // true for 465
     auth: {
-      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-      pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
+      user: 'support@thebioping.com',
+      pass: 'Shivam1984!!'
+    },
+    tls: {
+      rejectUnauthorized: false
     }
   });
 
   // Verify transporter configuration
   transporter.verify(function(error, success) {
     if (error) {
-      console.log('❌ Email configuration error:', error.message);
-      console.log('🔧 Email functionality will be disabled');
-      transporter = null; // Disable email functionality
+      console.log('❌ GoDaddy SMTP error:', error.message);
+      console.log('🔧 Trying alternative configuration...');
+      
+      // Try alternative GoDaddy SMTP
+      transporter = nodemailer.createTransport({
+        host: 'relay-hosting.secureserver.net',
+        port: 25,
+        secure: false,
+        auth: {
+          user: 'support@thebioping.com',
+          pass: 'Shivam1984!!'
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+      
+      transporter.verify(function(error2, success2) {
+        if (error2) {
+          console.log('❌ Alternative SMTP also failed:', error2.message);
+          console.log('🔧 Email functionality will be disabled');
+          transporter = null;
+        } else {
+          console.log('✅ Alternative GoDaddy SMTP is ready');
+        }
+      });
     } else {
-      console.log('✅ Email server is ready to send messages');
+      console.log('✅ GoDaddy SMTP is ready to send messages');
     }
   });
 } catch (error) {
-  console.log('❌ Email configuration failed:', error.message);
+  console.log('❌ GoDaddy SMTP configuration failed:', error.message);
   console.log('🔧 Email functionality will be disabled');
-  transporter = null; // Disable email functionality
+  transporter = null;
 }
 
 // Simple Gmail Function - Actually Send Emails
