@@ -1249,19 +1249,26 @@ const sendEmail = async (to, subject, html) => {
     const gmailUser = 'gauravvij1980@gmail.com';
     const gmailPass = 'keux xtjd bzat vnzj';
     
-    // Create real transporter for actual email sending
-    const emailTransporter = nodemailer.createTransport({
-      service: 'gmail',
+    // Create real transporter for actual email sending with better Gmail config
+    const emailTransporter = nodemailer.createTransporter({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
       auth: {
         user: gmailUser,
         pass: gmailPass
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3'
       },
-      connectionTimeout: 60000, // 60 seconds
-      greetingTimeout: 30000,   // 30 seconds
-      socketTimeout: 60000      // 60 seconds
+      connectionTimeout: 30000, // 30 seconds
+      greetingTimeout: 15000,   // 15 seconds
+      socketTimeout: 30000,     // 30 seconds
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 100,
+      rateLimit: 5 // max 5 emails per second
     });
     
     // Verify transporter configuration
@@ -1275,15 +1282,35 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // Actually send the email with shorter timeout
-    const emailPromise = emailTransporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timeout')), 10000) // Reduced to 10 seconds
-    );
+    // Actually send the email with retry mechanism
+    let result;
+    let attempts = 0;
+    const maxAttempts = 3;
     
-    const result = await Promise.race([emailPromise, timeoutPromise]);
-    console.log('✅ Email sent successfully:', result.messageId);
-    console.log('✅ Email response:', result.response);
+    while (attempts < maxAttempts) {
+      try {
+        attempts++;
+        console.log(`📧 Email attempt ${attempts}/${maxAttempts}`);
+        
+        const emailPromise = emailTransporter.sendMail(mailOptions);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email sending timeout')), 20000) // 20 seconds per attempt
+        );
+        
+        result = await Promise.race([emailPromise, timeoutPromise]);
+        console.log('✅ Email sent successfully:', result.messageId);
+        console.log('✅ Email response:', result.response);
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        console.log(`❌ Email attempt ${attempts} failed:`, error.message);
+        if (attempts >= maxAttempts) {
+          throw error; // Final attempt failed
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
     
     // Close transporter
     emailTransporter.close();
@@ -2674,18 +2701,72 @@ Timestamp: ${new Date().toLocaleString()}
     console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
     console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
     
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log('❌ Email credentials not configured. Skipping email send.');
-      console.log('To enable email sending, set EMAIL_USER and EMAIL_PASS environment variables.');
-    } else {
+    // Always try to send email with hardcoded Gmail credentials
+    console.log('📧 Using hardcoded Gmail credentials for email sending...');
+    if (true) { // Always send email
       try {
         console.log('📧 Attempting to send email...');
         
         // Use the same transporter configuration as the main email setup
         const isCustomDomain = true;
         
-        // Use simple email function instead of SMTP
+        // Use simple Gmail function for reliable email sending
+        const emailResult = await sendEmail(
+          'universalx0242@gmail.com',
+          'New Contact Form Submission - BioPing',
+          `
+          <h2>New Contact Form Submission</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Message:</strong> ${message}</p>
+          <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+          `
+        );
+        
+        if (emailResult.success) {
+          console.log('✅ Contact form email sent successfully');
+        } else {
+          console.log('❌ Contact form email failed:', emailResult.error);
+        }
+        
+        // Also send to customer
+        const customerEmailResult = await sendEmail(
+          email,
+          'Thank you for contacting BioPing',
+          `
+          <h2>Thank you for contacting BioPing!</h2>
+          <p>Hi ${name},</p>
+          <p>We have received your message and will get back to you soon.</p>
+          <p><strong>Your message:</strong> ${message}</p>
+          <p>Best regards,<br>BioPing Team</p>
+          `
+        );
+        
+        if (customerEmailResult.success) {
+          console.log('✅ Customer confirmation email sent');
+        } else {
+          console.log('❌ Customer confirmation email failed:', customerEmailResult.error);
+        }
+        
+        res.json({ success: true, message: 'Message sent successfully' });
+        return;
+      } catch (emailError) {
+        console.error('❌ Error sending contact form email:', emailError);
+        res.status(500).json({ success: false, message: 'Error sending message' });
+        return;
+      }
+    }
+    
+    // Fallback - this should not be reached
+    res.json({ success: true, message: 'Message received (email sending disabled)' });
+  } catch (error) {
+    console.error('Contact form error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
+// Old contact form code (commented out)
+/*
         const mailOptions = {
           from: 'support@thebioping.com',
           to: 'gauravvij1980@gmail.com',
