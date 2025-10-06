@@ -1275,10 +1275,10 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // Actually send the email with timeout
+    // Actually send the email with shorter timeout
     const emailPromise = emailTransporter.sendMail(mailOptions);
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timeout')), 30000)
+      setTimeout(() => reject(new Error('Email sending timeout')), 10000) // Reduced to 10 seconds
     );
     
     const result = await Promise.race([emailPromise, timeoutPromise]);
@@ -1635,6 +1635,48 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// Quick OTP test endpoint (no email sending)
+app.post('/api/auth/send-verification-quick', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
+    }
+
+    const { email } = req.body;
+    
+    // Generate a 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store the verification code
+    mockDB.verificationCodes.push({
+      email,
+      code: verificationCode,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+    });
+
+    // Save data to files
+    saveDataToFiles('verification_code_sent');
+
+    console.log(`📧 Quick OTP Generated for ${email}: ${verificationCode}`);
+    
+    // Return OTP immediately without email sending
+    res.json({
+      success: true,
+      message: 'Verification code generated successfully',
+      verificationCode: verificationCode,
+      note: 'Use this code: ' + verificationCode
+    });
+
+  } catch (error) {
+    console.error('Quick OTP error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // Test email configuration
