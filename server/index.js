@@ -1722,13 +1722,25 @@ app.post('/api/auth/send-verification', [
     
     // Send email with verification code
     try {
+      console.log('📧 Email configuration check:');
+      console.log('  - EMAIL_USER:', process.env.EMAIL_USER || 'gauravvij1980@gmail.com');
+      console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+      console.log('  - Transporter configured:', !!transporter);
+      
       const mailOptions = {
         from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
         to: email,
         ...emailTemplates.verification(verificationCode)
       };
 
-      await transporter.sendMail(mailOptions);
+      console.log('📧 Sending email with options:', {
+        from: mailOptions.from,
+        to: mailOptions.to,
+        subject: mailOptions.subject
+      });
+
+      const emailResult = await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully:', emailResult.messageId);
       console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
 
       res.json({
@@ -1738,13 +1750,18 @@ app.post('/api/auth/send-verification', [
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
       console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+      console.log('📧 Error details:', {
+        name: emailError.name,
+        message: emailError.message,
+        code: emailError.code
+      });
       
       // Return success with the code in response for development
       res.json({
         success: true,
         message: 'Verification code generated (email failed to send)',
         verificationCode: verificationCode,
-        emailError: 'Email service temporarily unavailable'
+        emailError: emailError.message
       });
     }
 

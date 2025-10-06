@@ -43,9 +43,14 @@ export const tryApiCall = async (endpoint, options = {}) => {
         signal: options.signal || new AbortController().signal
       });
       
-      if (response.ok) {
+      console.log(`Response status: ${response.status} from ${baseUrl}`);
+      
+      // Return response regardless of status, let the calling code handle it
+      if (response.status >= 200 && response.status < 500) {
         console.log(`✅ API call successful to: ${baseUrl}`);
         return response;
+      } else {
+        console.log(`❌ API call failed with status ${response.status} from: ${baseUrl}`);
       }
     } catch (error) {
       console.log(`❌ API call failed to: ${baseUrl}`, error.message);
