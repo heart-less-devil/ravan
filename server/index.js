@@ -1741,33 +1741,33 @@ app.post('/api/auth/send-verification', [
     console.log(`📧 OTP Generated for ${email}: ${verificationCode}`);
     console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
     
-    // Try to send email using simple function
+    // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
-    const emailResult = await sendEmail(
+    
+    // Send email in background without waiting
+    sendEmail(
       email,
       emailTemplates.verification(verificationCode).subject,
       emailTemplates.verification(verificationCode).html
-    );
+    ).then(emailResult => {
+      console.log(`📧 Email result:`, emailResult);
+      if (emailResult.success) {
+        console.log(`✅ OTP email sent successfully to ${email}`);
+      } else {
+        console.log(`❌ Failed to send OTP email to ${email}:`, emailResult.error);
+      }
+    }).catch(error => {
+      console.log(`❌ Email sending error:`, error);
+    });
     
-    console.log(`📧 Email result:`, emailResult);
-    
-    if (emailResult.success) {
-      console.log(`✅ OTP email sent successfully to ${email}`);
-      res.json({
-        success: true,
-        message: 'Verification code sent successfully to your email'
-      });
-    } else {
-      console.log(`❌ Failed to send OTP email to ${email}:`, emailResult.error);
-      // Return OTP in response as fallback
-      res.json({
-        success: true,
-        message: 'Verification code generated successfully',
-        verificationCode: verificationCode,
-        note: 'Use this code: ' + verificationCode,
-        emailError: emailResult.error
-      });
-    }
+    // Return OTP immediately without waiting for email
+    console.log(`✅ OTP generated for ${email}: ${verificationCode}`);
+    res.json({
+      success: true,
+      message: 'Verification code generated successfully',
+      verificationCode: verificationCode,
+      note: 'Use this code: ' + verificationCode
+    });
 
     // Save data to files
     saveDataToFiles('verification_code_sent');
