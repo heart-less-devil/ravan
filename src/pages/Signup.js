@@ -144,11 +144,25 @@ const Signup = () => {
         body: JSON.stringify({ email: formData.email })
       });
 
+      console.log('📧 Response status:', response.status);
+      
+      if (!response.ok) {
+        console.log('❌ API call failed with status:', response.status);
+        setErrors(prev => ({ 
+          ...prev, 
+          email: `Server error: ${response.status}` 
+        }));
+        return;
+      }
+
       const result = await response.json();
       console.log('📧 Server response:', result);
       
       if (result.success) {
         console.log('✅ Verification code sent successfully');
+        // Show verification modal
+        setShowVerificationModal(true);
+        setCountdown(60);
       } else {
         console.log('❌ Failed to send verification code');
         setErrors(prev => ({ 
@@ -157,10 +171,6 @@ const Signup = () => {
         }));
         return;
       }
-      
-      // Show verification modal
-      setShowVerificationModal(true);
-      setCountdown(60);
       
       // Start countdown
       const timer = setInterval(() => {
@@ -175,13 +185,18 @@ const Signup = () => {
       
     } catch (error) {
       console.error('Error sending verification code:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       
       if (error.name === 'AbortError') {
-        setErrors(prev => ({ ...prev, email: 'Request timeout. Email service may be slow. Please try again or contact support.' }));
+        setErrors(prev => ({ ...prev, email: 'Request timeout. Please try again.' }));
       } else if (error.message.includes('Failed to fetch')) {
-        setErrors(prev => ({ ...prev, email: 'Cannot connect to server. Please make sure the server is running.' }));
+        setErrors(prev => ({ ...prev, email: 'Cannot connect to server. Please check your internet connection.' }));
       } else {
-        setErrors(prev => ({ ...prev, email: `Network error: ${error.message}` }));
+        setErrors(prev => ({ ...prev, email: `Error: ${error.message}` }));
       }
     } finally {
       setIsLoading(false);
