@@ -1238,35 +1238,53 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Simple Gmail Function - Actually Send Emails
+// Gmail Function with Environment Variables - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
-    console.log(`📧 From: gauravvij1980@gmail.com`);
     
-    // Gmail credentials - using hardcoded values for reliability
-    const gmailUser = 'gauravvij1980@gmail.com';
-    const gmailPass = 'keux xtjd bzat vnzj';
+    // Use environment variables from render.yaml
+    const emailUser = process.env.EMAIL_USER || 'gauravvij1980@gmail.com';
+    const emailPass = process.env.EMAIL_PASS || 'keux xtjd bzat vnzj';
+    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
+    const smtpSecure = process.env.SMTP_SECURE === 'true';
     
-    // Simple Gmail configuration that works
+    console.log(`📧 From: ${emailUser}`);
+    console.log(`📧 SMTP: ${smtpHost}:${smtpPort} (secure: ${smtpSecure})`);
+    
+    // Gmail configuration using environment variables
     const emailTransporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure, // true for 465, false for other ports
       auth: {
-        user: gmailUser,
-        pass: gmailPass
-      }
+        user: emailUser,
+        pass: emailPass
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000,   // 30 seconds
+      socketTimeout: 60000      // 60 seconds
     });
     
     const mailOptions = {
-      from: gmailUser,
+      from: emailUser,
       to: to,
       subject: subject,
       html: html
     };
     
-    // Send email with simple timeout
-    const result = await emailTransporter.sendMail(mailOptions);
+    // Send email with timeout
+    const emailPromise = emailTransporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email sending timeout')), 30000)
+    );
+    
+    const result = await Promise.race([emailPromise, timeoutPromise]);
     console.log('✅ Email sent successfully:', result.messageId);
     
     // Close transporter
@@ -1276,6 +1294,7 @@ const sendEmail = async (to, subject, html) => {
     
   } catch (error) {
     console.log('❌ Email sending error:', error.message);
+    console.log('❌ Full error:', error);
     return { success: false, error: error.message };
   }
 };
