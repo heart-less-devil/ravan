@@ -1238,60 +1238,35 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Email configuration (from old working code)
+// Email configuration - Clean and Simple
 let transporter;
 
-// Check if using custom domain email or Gmail
-const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com');
+// Always use Gmail for reliable email delivery
+transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+    pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
+  }
+});
 
-if (isCustomDomain) {
-  // Custom domain email configuration
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
-    port: process.env.SMTP_PORT || 587,
-    secure: process.env.SMTP_SECURE === 'true' || false,
-    auth: {
-      user: process.env.EMAIL_USER || 'support@thebioping.com',
-      pass: process.env.EMAIL_PASS || 'Shivam1984!!'
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-  console.log('📧 Using custom domain email:', process.env.EMAIL_USER || 'support@thebioping.com');
-} else {
-  // Gmail configuration
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-      pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
-    }
-  });
-  console.log('📧 Using Gmail email:', process.env.EMAIL_USER);
-}
+console.log('📧 Email configured with Gmail:', process.env.EMAIL_USER || 'gauravvij1980@gmail.com');
 
-// Verify transporter configuration with better error handling
+// Verify transporter configuration
 transporter.verify(function(error, success) {
   if (error) {
     console.log('❌ Email configuration error:', error.message);
-    console.log('🔧 Attempting to continue with email functionality...');
-    // Don't disable transporter - let it try to send emails anyway
+    console.log('🔧 Email service may not work properly');
   } else {
     console.log('✅ Email server is ready to send messages');
   }
 });
 
-// Simple Gmail Function - Actually Send Emails
+// Simple and Reliable Email Function
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
-    
-    if (!transporter) {
-      console.log('❌ Email service not configured');
-      return { success: false, error: 'Email service not configured' };
-    }
     
     const mailOptions = {
       from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
@@ -1300,7 +1275,6 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // Send email using transporter
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', result.messageId);
     
@@ -1308,7 +1282,6 @@ const sendEmail = async (to, subject, html) => {
     
   } catch (error) {
     console.log('❌ Email sending error:', error.message);
-    console.log('❌ Full error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -1757,10 +1730,10 @@ app.post('/api/auth/send-verification', [
     // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
     
-    // Send email with verification code (from old working code)
+    // Send email with verification code
     try {
       const mailOptions = {
-        from: process.env.EMAIL_USER || 'support@thebioping.com',
+        from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
         to: email,
         ...emailTemplates.verification(verificationCode)
       };

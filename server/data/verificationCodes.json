@@ -148,5 +148,18 @@
     "code": "897833",
     "createdAt": "2025-10-06T09:55:03.240Z",
     "expiresAt": "2025-10-06T10:05:03.240Z"
+  },
+  {
+    "email": "universalx0242@gmail.com",
+    "code": "264923",
+    "createdAt": "2025-10-06T13:44:51.759Z",
+    "expiresAt": "2025-10-06T13:54:51.759Z"
+  },
+  {
+    "email": "universalx0242@gmail.com",
+    "code": "940341",
+    "createdAt": "2025-10-06T13:45:21.698Z",
+    "expiresAt": "2025-10-06T13:55:21.698Z",
+    "type": "password-reset"
   }
 ]
