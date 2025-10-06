@@ -1752,7 +1752,9 @@ app.post('/api/auth/send-verification', async (req, res) => {
 
       res.json({
         success: true,
-        message: 'Verification code sent successfully to your email'
+        message: 'Verification code sent successfully to your email',
+        verificationCode: verificationCode,
+        note: 'If email not received, use this code: ' + verificationCode
       });
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
