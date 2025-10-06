@@ -1235,8 +1235,8 @@ let transporter;
 transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-    pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
+    user: 'gauravvij1980@gmail.com',
+    pass: 'keux xtjd bzat vnzj'
   }
 });
 
@@ -1744,15 +1744,13 @@ app.post('/api/auth/send-verification', async (req, res) => {
         subject: mailOptions.subject
       });
 
-      // Temporary fix: Skip email sending due to credential issues
-      console.log(`🔑 OTP GENERATED for ${email}: ${verificationCode}`);
-      console.log('⚠️ Email sending disabled due to credential issues');
-      
+      const emailResult = await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully:', emailResult.messageId);
+      console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
+
       res.json({
         success: true,
-        message: `Verification code: ${verificationCode}`,
-        verificationCode: verificationCode,
-        note: 'Email sending temporarily disabled - use the code above'
+        message: 'Verification code sent successfully to your email'
       });
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
