@@ -1238,7 +1238,7 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Real Gmail Function - Actually Send Emails
+// Simple Gmail Function - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
@@ -1249,68 +1249,25 @@ const sendEmail = async (to, subject, html) => {
     const gmailUser = 'gauravvij1980@gmail.com';
     const gmailPass = 'keux xtjd bzat vnzj';
     
-    // Create real transporter for actual email sending with better Gmail config
+    // Simple Gmail configuration that works
     const emailTransporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
+      service: 'gmail',
       auth: {
         user: gmailUser,
         pass: gmailPass
-      },
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: 'SSLv3'
-      },
-      connectionTimeout: 30000, // 30 seconds
-      greetingTimeout: 15000,   // 15 seconds
-      socketTimeout: 30000,     // 30 seconds
-      pool: true,
-      maxConnections: 1,
-      maxMessages: 100,
-      rateLimit: 5 // max 5 emails per second
+      }
     });
     
-    // Verify transporter configuration
-    await emailTransporter.verify();
-    console.log('✅ Email transporter verified successfully');
-    
     const mailOptions = {
-      from: `"BioPing" <${gmailUser}>`,
+      from: gmailUser,
       to: to,
       subject: subject,
       html: html
     };
     
-    // Actually send the email with retry mechanism
-    let result;
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-      try {
-        attempts++;
-        console.log(`📧 Email attempt ${attempts}/${maxAttempts}`);
-        
-        const emailPromise = emailTransporter.sendMail(mailOptions);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email sending timeout')), 20000) // 20 seconds per attempt
-        );
-        
-        result = await Promise.race([emailPromise, timeoutPromise]);
-        console.log('✅ Email sent successfully:', result.messageId);
-        console.log('✅ Email response:', result.response);
-        break; // Success, exit retry loop
-        
-      } catch (error) {
-        console.log(`❌ Email attempt ${attempts} failed:`, error.message);
-        if (attempts >= maxAttempts) {
-          throw error; // Final attempt failed
-        }
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
+    // Send email with simple timeout
+    const result = await emailTransporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', result.messageId);
     
     // Close transporter
     emailTransporter.close();
@@ -1319,7 +1276,6 @@ const sendEmail = async (to, subject, html) => {
     
   } catch (error) {
     console.log('❌ Email sending error:', error.message);
-    console.log('❌ Full error:', error);
     return { success: false, error: error.message };
   }
 };
