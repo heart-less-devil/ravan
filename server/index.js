@@ -1238,45 +1238,55 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
+// Email configuration with better Gmail setup (from aman.js)
+let transporter = null;
+
+try {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
+    }
+  });
+
+  // Verify transporter configuration
+  transporter.verify(function(error, success) {
+    if (error) {
+      console.log('❌ Email configuration error:', error.message);
+      console.log('🔧 Email functionality will be disabled');
+      transporter = null; // Disable email functionality
+    } else {
+      console.log('✅ Email server is ready to send messages');
+    }
+  });
+} catch (error) {
+  console.log('❌ Email configuration failed:', error.message);
+  console.log('🔧 Email functionality will be disabled');
+  transporter = null; // Disable email functionality
+}
+
 // Simple Gmail Function - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
     
-    // Gmail credentials - using hardcoded values for reliability
-    const gmailUser = 'gauravvij1980@gmail.com';
-    const gmailPass = 'keux xtjd bzat vnzj';
-    
-    console.log(`📧 From: ${gmailUser}`);
-    
-    // Gmail configuration with different ports
-    const emailTransporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587, // Try port 587 instead of 465
-      secure: false, // false for 587
-      auth: {
-        user: gmailUser,
-        pass: gmailPass
-      },
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
+    if (!transporter) {
+      console.log('❌ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
     
     const mailOptions = {
-      from: gmailUser,
+      from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
       to: to,
       subject: subject,
       html: html
     };
     
-    // Send email without timeout - let it try naturally
-    const result = await emailTransporter.sendMail(mailOptions);
+    // Send email using transporter
+    const result = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', result.messageId);
-    
-    // Close transporter
-    emailTransporter.close();
     
     return { success: true, message: 'Email sent successfully', messageId: result.messageId };
     
