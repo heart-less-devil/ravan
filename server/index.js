@@ -7954,10 +7954,10 @@ app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => 
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Server URL: http://localhost:${PORT}`);
-  console.log(`📧 Email server status: Simple Gmail function ready`);
+  console.log(`🌐 Server URL: http://0.0.0.0:${PORT}`);
+  console.log(`📧 Email server status: GoDaddy SMTP configured`);
   console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 MongoDB: Connected`);
