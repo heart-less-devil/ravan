@@ -1246,8 +1246,8 @@ const sendEmail = async (to, subject, html) => {
     
     // GoDaddy SMTP configuration
     const emailUser = 'support@thebioping.com';
-    const emailPass = process.env.GODADDY_EMAIL_PASS || 'your_godaddy_email_password';
-    const smtpHost = 'mail.thebioping.com';
+    const emailPass = process.env.GODADDY_EMAIL_PASS || 'Shivam1984!!';
+    const smtpHost = 'smtpout.secureserver.net'; // GoDaddy's SMTP server
     const smtpPort = 465; // SSL port
     const smtpSecure = true;
     
