@@ -26,7 +26,7 @@ if (isCustomDomain) {
     secure: process.env.SMTP_SECURE === 'true' || false,
     auth: {
       user: process.env.EMAIL_USER || 'support@thebioping.com',
-      pass: process.env.EMAIL_PASS || 'Wildboy07@'
+      pass: process.env.EMAIL_PASS || 'Shivam1984!!'
     },
     tls: {
       rejectUnauthorized: false
