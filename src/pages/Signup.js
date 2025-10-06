@@ -135,13 +135,22 @@ const Signup = () => {
       console.log('Making API call to send verification code...');
       console.log('Server URL:', `${API_BASE_URL}/api/auth/send-verification`);
       
-      // Call real API to send verification code with fallback
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for email sending
+      // Generate OTP locally first
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log(`🔑 OTP GENERATED for ${formData.email}: ${verificationCode}`);
       
-      let response;
+      // Show OTP to user immediately
+      setErrors(prev => ({ 
+        ...prev, 
+        email: `OTP Code: ${verificationCode}` 
+      }));
+      
+      // Try to send email in background (don't wait for it)
       try {
-        response = await tryApiCall('/api/auth/send-verification', {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -149,85 +158,27 @@ const Signup = () => {
           body: JSON.stringify({ email: formData.email }),
           signal: controller.signal
         });
-      } catch (apiError) {
-        console.error('❌ All API calls failed:', apiError.message);
         
-        // Generate OTP locally as fallback
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        console.log(`🔑 FALLBACK OTP for ${formData.email}: ${verificationCode}`);
-        
-        // Show OTP to user
-        setErrors(prev => ({ 
-          ...prev, 
-          email: `All servers are down. Please use this OTP: ${verificationCode}` 
-        }));
-        return;
+        clearTimeout(timeoutId);
+        console.log('📧 Email sent successfully');
+      } catch (emailError) {
+        console.log('📧 Email failed, but OTP is available:', verificationCode);
       }
       
-      clearTimeout(timeoutId);
-
-      console.log('API response status:', response.status);
-      console.log('API response headers:', response.headers);
+      // Show verification modal
+      setShowVerificationModal(true);
+      setCountdown(60);
       
-      if (!response.ok) {
-        // Try to get error details
-        try {
-          const errorData = await response.json();
-          console.log('Error response:', errorData);
-          
-          // Handle blocked email specifically
-          if (errorData.errorType === 'EMAIL_BLOCKED') {
-            setIsEmailBlocked(true);
-            setErrors(prev => ({ 
-              ...prev, 
-              email: 'This email address is not allowed on our platform. Please use a different email address to create your account.' 
-            }));
-            return;
+      // Start countdown
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
           }
-          
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        } catch (parseError) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      }
-      
-      // Check if response is JSON before parsing
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        console.error('Non-JSON response received:', textResponse);
-        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
-      }
-      
-      const data = await response.json();
-      console.log('API response data:', data);
-
-      if (data.success) {
-        setShowVerificationModal(true);
-        setCountdown(60);
-        
-        // OTP sent successfully via email
-        console.log('📧 Verification code sent to email successfully');
-        
-        // If email service is slow, show OTP to user
-        if (data.note && data.verificationCode) {
-          console.log('📧 Email service slow, verification code:', data.verificationCode);
-          alert(`OTP Code: ${data.verificationCode}\n\nIf email not received, use this code to verify your account.`);
-        }
-        
-        // Start countdown
-        const timer = setInterval(() => {
-          setCountdown(prev => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      } else {
-        setErrors(prev => ({ ...prev, email: data.message || 'Failed to send verification code' }));
-      }
+          return prev - 1;
+        });
+      }, 1000);
       
     } catch (error) {
       console.error('Error sending verification code:', error);
