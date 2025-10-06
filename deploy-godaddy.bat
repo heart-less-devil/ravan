@@ -1,47 +1,34 @@
 @echo off
-echo ========================================
-echo 🚀 GoDaddy Deployment Script
-echo ========================================
+echo 🚀 Deploying to GoDaddy thebioping.com...
 echo.
-echo Current Status:
-echo ✅ Frontend built and ready
-echo ✅ Backend fixed on Render
-echo ❌ GoDaddy needs frontend update
+
+echo 📦 Building React app...
+call npm run build
+if %errorlevel% neq 0 (
+    echo ❌ Build failed!
+    pause
+    exit /b 1
+)
+
 echo.
-echo ========================================
-echo 📁 Build Files Ready:
-echo ========================================
+echo 📁 Copying files to public directory...
+xcopy build\* public\ /E /Y
+if %errorlevel% neq 0 (
+    echo ❌ File copy failed!
+    pause
+    exit /b 1
+)
+
 echo.
-echo The following files are ready for upload:
+echo ✅ Build completed successfully!
+echo 📂 Files are ready in public/ directory
+echo 🌐 Upload these files to GoDaddy File Manager
 echo.
-echo 📄 build/index.html
-echo 📁 build/static/ (CSS, JS files)
-echo 📁 build/pdf/ (PDF resources)
-echo 📄 build/.htaccess (Server config)
+echo 📋 Next steps:
+echo 1. Go to GoDaddy File Manager
+echo 2. Navigate to public_html folder
+echo 3. Upload all files from public/ directory
+echo 4. Make sure index.html is in the root of public_html
 echo.
-echo ========================================
-echo 🎯 Next Steps:
-echo ========================================
-echo.
-echo 1. Go to GoDaddy Hosting Control Panel
-echo 2. Open File Manager
-echo 3. Navigate to public_html folder
-echo 4. Upload build/ folder contents
-echo 5. Replace existing files
-echo.
-echo ========================================
-echo 🔍 Test After Deploy:
-echo ========================================
-echo.
-echo URL: https://thebioping.com/dashboard/resources/bd-insights
-echo Login: universalx0242@gmail.com
-echo Expected: 5 PDF resources visible
-echo.
-echo ========================================
-echo 📚 Deployment Guide:
-echo ========================================
-echo.
-echo See: GODADDY_DEPLOYMENT_GUIDE.md
-echo.
-echo ========================================
-pause 
+echo 🎉 Deployment ready for GoDaddy!
+pause

@@ -278,16 +278,9 @@ app.use(cors({
     'http://localhost:3002',
     'http://localhost:3005',
     'http://localhost:3001',
-    'https://687dc02000e0ca0008eb4b09--deft-paprenjak-1f5e98.netlify.app',
-    'https://deft-paprenjak-1f5e98.netlify.app',
-    'https://biopingweb.netlify.app',
     'null', // Allow file:// protocol for local testing
-    'https://*.netlify.app',
     'https://thebioping.com',
     'https://www.thebioping.com',
-    'https://biopingweb.netlify.app',
-    'https://ravan.netlify.app',
-    'https://*.netlify.app',
     'https://*.render.com',
     'https://*.onrender.com'
   ],
@@ -306,14 +299,11 @@ app.use((req, res, next) => {
     'http://localhost:3005',
     'https://thebioping.com',
     'https://www.thebioping.com',
-    'https://biopingweb.netlify.app',
-    'https://ravan.netlify.app',
-    'https://*.netlify.app',
     'https://*.render.com',
     'https://*.onrender.com'
   ];
   
-  if (allowedOrigins.includes(origin) || origin?.includes('netlify.app') || origin?.includes('render.com') || origin?.includes('onrender.com')) {
+  if (allowedOrigins.includes(origin) || origin?.includes('render.com') || origin?.includes('onrender.com')) {
     res.header('Access-Control-Allow-Origin', origin);
   }
   

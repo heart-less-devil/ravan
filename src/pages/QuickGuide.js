@@ -27,8 +27,8 @@ const QuickGuide = () => {
     } else if (currentDomain.includes('localhost') || currentDomain.includes('127.0.0.1')) {
       // Local development
       initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
-    } else if (currentDomain.includes('netlify.app') || currentDomain.includes('vercel.app')) {
-      // Netlify/Vercel hosting
+    } else {
+      // Default hosting
       initialUrl = '/pdf/BioPing Training Manual.pdf#toolbar=0&navpanes=0&scrollbar=0';
     }
     

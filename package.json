@@ -41,7 +41,6 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "build:production": "REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT REACT_APP_API_BASE_URL=https://bioping-backend.onrender.com react-scripts build",
-    "build:netlify": "set CI=false && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server/index.js",
