@@ -1250,7 +1250,7 @@ const sendEmail = async (to, subject, html) => {
     const gmailPass = 'keux xtjd bzat vnzj';
     
     // Create real transporter for actual email sending with better Gmail config
-    const emailTransporter = nodemailer.createTransporter({
+    const emailTransporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
       secure: false, // true for 465, false for other ports
