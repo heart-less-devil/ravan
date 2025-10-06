@@ -1238,27 +1238,27 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Gmail Function with Environment Variables - Actually Send Emails
+// GoDaddy SMTP Function - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
     
-    // Use environment variables from render.yaml
-    const emailUser = process.env.EMAIL_USER || 'gauravvij1980@gmail.com';
-    const emailPass = process.env.EMAIL_PASS || 'keux xtjd bzat vnzj';
-    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
-    const smtpSecure = process.env.SMTP_SECURE === 'true';
+    // GoDaddy SMTP configuration
+    const emailUser = 'support@thebioping.com';
+    const emailPass = process.env.GODADDY_EMAIL_PASS || 'your_godaddy_email_password';
+    const smtpHost = 'mail.thebioping.com';
+    const smtpPort = 465; // SSL port
+    const smtpSecure = true;
     
     console.log(`📧 From: ${emailUser}`);
     console.log(`📧 SMTP: ${smtpHost}:${smtpPort} (secure: ${smtpSecure})`);
     
-    // Gmail configuration using environment variables
+    // GoDaddy SMTP configuration
     const emailTransporter = nodemailer.createTransport({
       host: smtpHost,
       port: smtpPort,
-      secure: smtpSecure, // true for 465, false for other ports
+      secure: smtpSecure, // true for 465
       auth: {
         user: emailUser,
         pass: emailPass
