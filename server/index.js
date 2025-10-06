@@ -1724,7 +1724,7 @@ app.post('/api/auth/send-verification', [
     try {
       console.log('📧 Email configuration check:');
       console.log('  - EMAIL_USER:', process.env.EMAIL_USER || 'gauravvij1980@gmail.com');
-      console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+      console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS || 'keux xtjd bzat vnzj');
       console.log('  - Transporter configured:', !!transporter);
       
       const mailOptions = {
