@@ -139,14 +139,30 @@ const Signup = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for email sending
       
-      const response = await tryApiCall('/api/auth/send-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formData.email }),
-        signal: controller.signal
-      });
+      let response;
+      try {
+        response = await tryApiCall('/api/auth/send-verification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: formData.email }),
+          signal: controller.signal
+        });
+      } catch (apiError) {
+        console.error('❌ All API calls failed:', apiError.message);
+        
+        // Generate OTP locally as fallback
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log(`🔑 FALLBACK OTP for ${formData.email}: ${verificationCode}`);
+        
+        // Show OTP to user
+        setErrors(prev => ({ 
+          ...prev, 
+          email: `All servers are down. Please use this OTP: ${verificationCode}` 
+        }));
+        return;
+      }
       
       clearTimeout(timeoutId);
 
