@@ -1727,21 +1727,29 @@ app.post('/api/auth/send-verification', [
     // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
     
-    // Send email in background without waiting
-    sendEmail(
-      email,
-      emailTemplates.verification(verificationCode).subject,
-      emailTemplates.verification(verificationCode).html
-    ).then(emailResult => {
+    // Try to send email synchronously with timeout
+    try {
+      console.log(`📧 Attempting to send OTP email to: ${email}`);
+      const emailResult = await Promise.race([
+        sendEmail(
+          email,
+          emailTemplates.verification(verificationCode).subject,
+          emailTemplates.verification(verificationCode).html
+        ),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email timeout')), 10000)
+        )
+      ]);
+      
       console.log(`📧 Email result:`, emailResult);
       if (emailResult.success) {
         console.log(`✅ OTP email sent successfully to ${email}`);
       } else {
         console.log(`❌ Failed to send OTP email to ${email}:`, emailResult.error);
       }
-    }).catch(error => {
-      console.log(`❌ Email sending error:`, error);
-    });
+    } catch (emailError) {
+      console.log(`❌ Email sending error:`, emailError.message);
+    }
     
     // Return OTP immediately without waiting for email
     console.log(`✅ OTP generated for ${email}: ${verificationCode}`);
