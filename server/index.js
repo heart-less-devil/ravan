@@ -7927,13 +7927,13 @@ app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => 
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Server URL: http://0.0.0.0:${PORT}`);
-  console.log(`📧 Email server status: GoDaddy SMTP configured`);
+  console.log(`🌐 Server URL: https://bioping-backend.onrender.com`);
+  console.log(`📧 Email server status: Gmail SMTP configured`);
   console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 MongoDB: Connected`);
-  console.log(`✅ Health check available at: http://0.0.0.0:${PORT}/api/health`);
-  console.log(`🔄 Sync old payments: http://0.0.0.0:${PORT}/api/admin/sync-old-payments`);
+  console.log(`✅ Health check available at: https://bioping-backend.onrender.com/api/health`);
+  console.log(`🔄 Sync old payments: https://bioping-backend.onrender.com/api/admin/sync-old-payments`);
 }).on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   process.exit(1);
