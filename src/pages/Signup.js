@@ -135,35 +135,28 @@ const Signup = () => {
       console.log('Making API call to send verification code...');
       console.log('Server URL:', `${API_BASE_URL}/api/auth/send-verification`);
       
-      // Generate OTP locally first
+      // Generate OTP locally
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       console.log(`🔑 OTP GENERATED for ${formData.email}: ${verificationCode}`);
       
-      // Show OTP to user immediately
+      // Show OTP to user
       setErrors(prev => ({ 
         ...prev, 
         email: `OTP Code: ${verificationCode}` 
       }));
       
-      // Try to send email in background (don't wait for it)
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        const response = await fetch(`${API_BASE_URL}/api/auth/send-verification`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email: formData.email }),
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
+      // Send email without waiting for response
+      fetch(`${API_BASE_URL}/api/auth/send-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: formData.email })
+      }).then(response => {
         console.log('📧 Email sent successfully');
-      } catch (emailError) {
+      }).catch(error => {
         console.log('📧 Email failed, but OTP is available:', verificationCode);
-      }
+      });
       
       // Show verification modal
       setShowVerificationModal(true);
