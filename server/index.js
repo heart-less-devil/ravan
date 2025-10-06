@@ -1245,7 +1245,7 @@ const sendEmail = async (to, subject, html) => {
     console.log(`📧 Subject: ${subject}`);
     console.log(`📧 From: gauravvij1980@gmail.com`);
     
-    // Gmail credentials
+    // Gmail credentials - using hardcoded values for reliability
     const gmailUser = 'gauravvij1980@gmail.com';
     const gmailPass = 'keux xtjd bzat vnzj';
     
@@ -1255,11 +1255,18 @@ const sendEmail = async (to, subject, html) => {
       auth: {
         user: gmailUser,
         pass: gmailPass
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
     
+    // Verify transporter configuration
+    await emailTransporter.verify();
+    console.log('✅ Email transporter verified successfully');
+    
     const mailOptions = {
-      from: gmailUser,
+      from: `"BioPing" <${gmailUser}>`,
       to: to,
       subject: subject,
       html: html
@@ -1268,6 +1275,7 @@ const sendEmail = async (to, subject, html) => {
     // Actually send the email
     const result = await emailTransporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', result.messageId);
+    console.log('✅ Email response:', result.response);
     
     // Close transporter
     emailTransporter.close();
@@ -1276,6 +1284,7 @@ const sendEmail = async (to, subject, html) => {
     
   } catch (error) {
     console.log('❌ Email sending error:', error.message);
+    console.log('❌ Full error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -1674,24 +1683,30 @@ app.post('/api/auth/send-verification', [
     console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
     
     // Try to send email using simple function
+    console.log(`📧 Attempting to send OTP email to: ${email}`);
     const emailResult = await sendEmail(
       email,
       emailTemplates.verification(verificationCode).subject,
       emailTemplates.verification(verificationCode).html
     );
     
+    console.log(`📧 Email result:`, emailResult);
+    
     if (emailResult.success) {
+      console.log(`✅ OTP email sent successfully to ${email}`);
       res.json({
         success: true,
         message: 'Verification code sent successfully to your email'
       });
     } else {
+      console.log(`❌ Failed to send OTP email to ${email}:`, emailResult.error);
       // Return OTP in response as fallback
       res.json({
         success: true,
         message: 'Verification code generated successfully',
         verificationCode: verificationCode,
-        note: 'Use this code: ' + verificationCode
+        note: 'Use this code: ' + verificationCode,
+        emailError: emailResult.error
       });
     }
 
@@ -5686,24 +5701,30 @@ app.post('/api/auth/forgot-password', [
     `;
     
     // Try to send email using simple function
+    console.log(`📧 Attempting to send password reset OTP email to: ${email}`);
     const emailResult = await sendEmail(
       email,
       'BioPing - Password Reset Code',
       passwordResetHtml
     );
     
+    console.log(`📧 Password reset email result:`, emailResult);
+    
     if (emailResult.success) {
+      console.log(`✅ Password reset OTP email sent successfully to ${email}`);
       res.json({
         success: true,
         message: 'Password reset code sent successfully to your email'
       });
     } else {
+      console.log(`❌ Failed to send password reset OTP email to ${email}:`, emailResult.error);
       // Return OTP in response as fallback
       res.json({
         success: true,
         message: 'Password reset code generated successfully',
         verificationCode: verificationCode,
-        note: 'Use this code: ' + verificationCode
+        note: 'Use this code: ' + verificationCode,
+        emailError: emailResult.error
       });
     }
 
