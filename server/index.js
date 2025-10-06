@@ -1246,7 +1246,7 @@ const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com'
 
 if (isCustomDomain) {
   // Custom domain email configuration
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: process.env.SMTP_PORT || 587,
     secure: process.env.SMTP_SECURE === 'true' || false,
@@ -1261,7 +1261,7 @@ if (isCustomDomain) {
   console.log('📧 Using custom domain email:', process.env.EMAIL_USER || 'support@thebioping.com');
 } else {
   // Gmail configuration
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
@@ -1271,12 +1271,12 @@ if (isCustomDomain) {
   console.log('📧 Using Gmail email:', process.env.EMAIL_USER);
 }
 
-// Verify transporter configuration
+// Verify transporter configuration with better error handling
 transporter.verify(function(error, success) {
   if (error) {
     console.log('❌ Email configuration error:', error.message);
-    console.log('🔧 Email functionality will be disabled');
-    transporter = null; // Disable email functionality
+    console.log('🔧 Attempting to continue with email functionality...');
+    // Don't disable transporter - let it try to send emails anyway
   } else {
     console.log('✅ Email server is ready to send messages');
   }
