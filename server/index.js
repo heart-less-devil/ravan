@@ -1258,7 +1258,10 @@ const sendEmail = async (to, subject, html) => {
       },
       tls: {
         rejectUnauthorized: false
-      }
+      },
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000,   // 30 seconds
+      socketTimeout: 60000      // 60 seconds
     });
     
     // Verify transporter configuration
@@ -1272,8 +1275,13 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // Actually send the email
-    const result = await emailTransporter.sendMail(mailOptions);
+    // Actually send the email with timeout
+    const emailPromise = emailTransporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email sending timeout')), 30000)
+    );
+    
+    const result = await Promise.race([emailPromise, timeoutPromise]);
     console.log('✅ Email sent successfully:', result.messageId);
     console.log('✅ Email response:', result.response);
     
@@ -1618,6 +1626,15 @@ app.get('/api/secure-pdf-stream/:filename', authenticateToken, (req, res) => {
     console.error('Error serving PDF stream:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
 });
 
 // Test email configuration
