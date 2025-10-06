@@ -1238,53 +1238,41 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// GoDaddy SMTP Function - Actually Send Emails
+// Simple Gmail Function - Actually Send Emails
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
     
-    // GoDaddy SMTP configuration
-    const emailUser = 'support@thebioping.com';
-    const emailPass = process.env.GODADDY_EMAIL_PASS || 'Shivam1984!!';
-    const smtpHost = 'smtpout.secureserver.net'; // GoDaddy's SMTP server
-    const smtpPort = 465; // SSL port
-    const smtpSecure = true;
+    // Gmail credentials - using hardcoded values for reliability
+    const gmailUser = 'gauravvij1980@gmail.com';
+    const gmailPass = 'keux xtjd bzat vnzj';
     
-    console.log(`📧 From: ${emailUser}`);
-    console.log(`📧 SMTP: ${smtpHost}:${smtpPort} (secure: ${smtpSecure})`);
+    console.log(`📧 From: ${gmailUser}`);
     
-    // GoDaddy SMTP configuration
+    // Gmail configuration with different ports
     const emailTransporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpSecure, // true for 465
+      host: 'smtp.gmail.com',
+      port: 587, // Try port 587 instead of 465
+      secure: false, // false for 587
       auth: {
-        user: emailUser,
-        pass: emailPass
+        user: gmailUser,
+        pass: gmailPass
       },
       tls: {
         rejectUnauthorized: false
-      },
-      connectionTimeout: 60000, // 60 seconds
-      greetingTimeout: 30000,   // 30 seconds
-      socketTimeout: 60000      // 60 seconds
+      }
     });
     
     const mailOptions = {
-      from: emailUser,
+      from: gmailUser,
       to: to,
       subject: subject,
       html: html
     };
     
-    // Send email with timeout
-    const emailPromise = emailTransporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timeout')), 30000)
-    );
-    
-    const result = await Promise.race([emailPromise, timeoutPromise]);
+    // Send email without timeout - let it try naturally
+    const result = await emailTransporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully:', result.messageId);
     
     // Close transporter
@@ -1743,29 +1731,21 @@ app.post('/api/auth/send-verification', [
     // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
     
-    // Try to send email synchronously with timeout
-    try {
-      console.log(`📧 Attempting to send OTP email to: ${email}`);
-      const emailResult = await Promise.race([
-        sendEmail(
-          email,
-          emailTemplates.verification(verificationCode).subject,
-          emailTemplates.verification(verificationCode).html
-        ),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Email timeout')), 10000)
-        )
-      ]);
-      
+    // Send email asynchronously (don't wait for it)
+    sendEmail(
+      email,
+      emailTemplates.verification(verificationCode).subject,
+      emailTemplates.verification(verificationCode).html
+    ).then(emailResult => {
       console.log(`📧 Email result:`, emailResult);
       if (emailResult.success) {
         console.log(`✅ OTP email sent successfully to ${email}`);
       } else {
         console.log(`❌ Failed to send OTP email to ${email}:`, emailResult.error);
       }
-    } catch (emailError) {
+    }).catch(emailError => {
       console.log(`❌ Email sending error:`, emailError.message);
-    }
+    });
     
     // Return OTP immediately without waiting for email
     console.log(`✅ OTP generated for ${email}: ${verificationCode}`);
