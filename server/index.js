@@ -1688,16 +1688,16 @@ app.get('/api/test-email', async (req, res) => {
 });
 
 // Send verification code endpoint
-app.post('/api/auth/send-verification', [
-  body('email').isEmail().normalizeEmail()
-], async (req, res) => {
+app.post('/api/auth/send-verification', async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ message: 'Invalid input', errors: errors.array() });
-    }
-
+    console.log('📧 Send verification request received:', req.body);
+    
     const { email } = req.body;
+    
+    // Basic email validation
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ message: 'Valid email required' });
+    }
     
     // Generate a 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
