@@ -25,7 +25,7 @@ const isMongoConnected = () => {
 };
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 10000;
 
 // Connect to MongoDB
 connectDB();
@@ -7961,8 +7961,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 MongoDB: Connected`);
-  console.log(`✅ Health check available at: http://localhost:${PORT}/api/health`);
-  console.log(`🔄 Sync old payments: http://localhost:${PORT}/api/admin/sync-old-payments`);
+  console.log(`✅ Health check available at: http://0.0.0.0:${PORT}/api/health`);
+  console.log(`🔄 Sync old payments: http://0.0.0.0:${PORT}/api/admin/sync-old-payments`);
 }).on('error', (err) => {
   console.error('❌ Server failed to start:', err);
   process.exit(1);
