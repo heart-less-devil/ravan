@@ -57,7 +57,7 @@ const getBackendURL = () => {
 
 // Stripe Configuration with better error handling
 const getStripeKey = () => {
-  const key = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
+  const key = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT';
   
   if (!key) {
     console.error('❌ REACT_APP_STRIPE_PUBLISHABLE_KEY is not set in environment variables');

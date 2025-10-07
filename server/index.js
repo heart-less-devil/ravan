@@ -31,12 +31,13 @@ const PORT = process.env.PORT || 10000;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_live_your_stripe_secret_key_here';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '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';
 
 let stripe = null;
 if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here') {
   stripe = require('stripe')(stripeSecretKey);
   console.log('✅ Stripe initialized successfully');
+  console.log('🔧 Using live Stripe key');
 } else {
   console.log('⚠️ Stripe not configured - payment features will be disabled');
 }
@@ -6072,6 +6073,8 @@ app.post('/api/create-payment-intent', async (req, res) => {
     // Validate Stripe is properly configured
     if (!stripe || !stripeSecretKey) {
       console.error('❌ Stripe not properly configured');
+      console.error('🔧 Stripe object:', !!stripe);
+      console.error('🔧 Stripe secret key:', !!stripeSecretKey);
       return res.status(500).json({ 
         error: 'Payment service not available', 
         details: 'Stripe configuration error' 
@@ -6091,6 +6094,10 @@ app.post('/api/create-payment-intent', async (req, res) => {
       'premium': {
         monthly: 'price_premium_monthly', // Replace with actual Stripe price ID
         annual: 'price_premium_annual'    // Replace with actual Stripe price ID
+      },
+      'budget-plan': {
+        monthly: 'price_budget_monthly', // Replace with actual Stripe price ID
+        annual: 'price_budget_annual'    // Replace with actual Stripe price ID
       }
     };
 
