@@ -6081,25 +6081,8 @@ app.post('/api/create-payment-intent', async (req, res) => {
       });
     }
 
-    // Define price IDs for different plans and billing cycles
-    const priceIds = {
-      'test': {
-        monthly: 'price_test_monthly', // Replace with actual Stripe price ID
-        annual: 'price_test_annual'    // Replace with actual Stripe price ID
-      },
-      'basic': {
-        monthly: 'price_basic_monthly', // Replace with actual Stripe price ID
-        annual: 'price_basic_annual'    // Replace with actual Stripe price ID
-      },
-      'premium': {
-        monthly: 'price_premium_monthly', // Replace with actual Stripe price ID
-        annual: 'price_premium_annual'    // Replace with actual Stripe price ID
-      },
-      'budget-plan': {
-        monthly: 'price_budget_monthly', // Replace with actual Stripe price ID
-        annual: 'price_budget_annual'    // Replace with actual Stripe price ID
-      }
-    };
+    // Create payment intent directly with amount (no price IDs needed)
+    console.log('Creating payment intent for amount:', amount * 100, 'cents');
 
     // Create or get customer for better tracking
     let customer = null;
@@ -6134,70 +6117,23 @@ app.post('/api/create-payment-intent', async (req, res) => {
     console.log('Customer:', customer ? customer.id : 'guest');
     console.log('Plan details:', { planId, isAnnual, amount: amount * 100 });
 
-    // For annual plans, we need to create a subscription instead of a one-time payment
-    if (isAnnual && (planId === 'basic' || planId === 'premium')) {
-      // Create subscription for annual plans
-      const yearlyPlanId = planId === 'basic' ? 'basic-yearly' : 'premium-yearly';
-      const monthlyAmount = planId === 'basic' ? 400 : 600; // $400 or $600 per month
-      
-      // Create price for monthly billing
-      const price = await stripe.prices.create({
-        unit_amount: monthlyAmount * 100, // Convert to cents
-        currency: 'usd',
-        recurring: { interval: 'month' },
-        product_data: {
-          name: `${planId === 'basic' ? 'Basic' : 'Premium'} Plan - Monthly Billing`
-        }
-      });
-
-      // Create subscription
-      const subscription = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [{ price: price.id }],
-        expand: ['latest_invoice.payment_intent'],
-        metadata: {
-          planId: yearlyPlanId,
-          isAnnual: 'true',
-          customerEmail: customerEmail
-        }
-      });
-
-      console.log('✅ Annual subscription created:', subscription.id);
-      
-      return res.json({
-        subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice.payment_intent.client_secret,
-        status: subscription.status,
-        requires_action: subscription.status === 'incomplete'
-      });
-    }
-
-    // Create payment intent for one-time payments
+    // Create simple payment intent for all plans
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount * 100, // Convert to cents
+      amount: Math.round(amount * 100), // Convert to cents and round
       currency: currency,
-      customer: customer ? customer.id : undefined, // Link to customer if available
+      customer: customer ? customer.id : undefined,
       metadata: {
         planId: planId,
         isAnnual: isAnnual ? 'true' : 'false',
-        customerType: customer ? 'registered' : 'guest',
         customerEmail: customerEmail || (customer ? customer.email : ''),
         integration_check: 'accept_a_payment'
       },
-      // Enhanced payment method types for better Indian card support
       payment_method_types: ['card'],
-      // Enable automatic payment methods for better card support
       automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'always' // Important for 3D Secure
+        enabled: true
       },
-      // Don't confirm immediately - let frontend handle confirmation
-      confirm: false,
-      // Enable 3D Secure for better security and Indian card support
       confirmation_method: 'manual',
-      // Add statement descriptor for better recognition
       statement_descriptor: 'THE BIOPING',
-      // Enable capture method for better control
       capture_method: 'automatic'
     });
 
