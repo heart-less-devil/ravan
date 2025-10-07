@@ -9,7 +9,8 @@
     "role": "user",
     "createdAt": "2025-07-23T13:13:54.493Z",
     "paymentCompleted": false,
-    "currentPlan": "free"
+    "currentPlan": "free",
+    "currentCredits": 0
   },
   {
     "id": 2,

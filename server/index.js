@@ -1243,24 +1243,34 @@ console.log('📧 RESEND_API_KEY set:', process.env.RESEND_API_KEY ? 'Yes' : 'No
 console.log('📧 RESEND_API_KEY value:', process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 4) + '****' : 'Not set');
 
 // RESEND EMAIL FUNCTION - HTTP API (NO SMTP)
-const sendEmail = async (to, subject, html) => {
+const sendEmail = async (to, subject, html, replyTo = null) => {
   try {
     console.log(`📧 RESEND EMAIL: Sending to ${to}`);
-    console.log(`📧 RESEND EMAIL: From: BioPing <@thebioping.com>`);
+    console.log(`📧 RESEND EMAIL: From: BioPing <support@thebioping.com>`);
+    if (replyTo) {
+      console.log(`📧 RESEND EMAIL: Reply-To: ${replyTo}`);
+    }
     
     // Use Resend HTTP API instead of SMTP
+    const emailBody = {
+      from: 'BioPing <support@thebioping.com>',
+      to: [to],
+      subject: subject,
+      html: html
+    };
+
+    // Add reply-to header if provided
+    if (replyTo) {
+      emailBody.reply_to = replyTo;
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: 'BioPing <support@thebioping.com>',
-        to: [to],
-        subject: subject,
-        html: html
-      })
+      body: JSON.stringify(emailBody)
     });
     
     const result = await response.json();
@@ -2692,13 +2702,13 @@ Message: ${message}
 Timestamp: ${new Date().toLocaleString()}
     `;
 
-    // Send real email to universalx0242@gmail.com
-    console.log('🔧 Email Configuration Check:');
-    console.log('  - EMAIL_USER:', process.env.EMAIL_USER ? 'Set' : 'Not set');
-    console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
+    // Send real email to universalx0242@gmail.com using Resend
+    console.log('🔧 Contact Form Email Configuration Check:');
+    console.log('  - RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'Set' : 'Not set');
+    console.log('  - Using Resend with verified domain: thebioping.com');
     
-    // Always try to send email with hardcoded Gmail credentials
-    console.log('📧 Using hardcoded Gmail credentials for email sending...');
+    // Always try to send email using Resend system
+    console.log('📧 Using Resend system for contact form email sending...');
     if (true) { // Always send email
       try {
         console.log('📧 Attempting to send email...');
@@ -2716,13 +2726,16 @@ Timestamp: ${new Date().toLocaleString()}
           <p><strong>Email:</strong> ${email}</p>
           <p><strong>Message:</strong> ${message}</p>
           <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-          `
+          `,
+          email // Set Reply-To to user's email
         );
         
         if (emailResult.success) {
-          console.log('✅ Contact form email sent successfully');
+          console.log('✅ Contact form email sent successfully to universalx0242@gmail.com');
+          console.log('📧 Email ID:', emailResult.messageId);
         } else {
           console.log('❌ Contact form email failed:', emailResult.error);
+          console.log('📧 Full email result:', emailResult);
         }
         
         // Also send to customer
