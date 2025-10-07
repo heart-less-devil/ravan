@@ -1230,26 +1230,28 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// SIMPLE EMAIL SYSTEM - LIKE 18-19 SEPTEMBER
+// SENDGRID EMAIL SYSTEM - RENDER COMPATIBLE
 let transporter;
 
-// Simple Gmail configuration - NO COMPLEX SETTINGS
+// SendGrid configuration for Render (HTTP-based, not SMTP)
 transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.sendgrid.net',
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-    pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
+    user: 'apikey',
+    pass: process.env.SENDGRID_API_KEY || 'SG.your_sendgrid_api_key_here'
   }
 });
 
-console.log('📧 Email configured with Gmail SMTP:', 'gauravvij1980@gmail.com');
-console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
-console.log('📧 EMAIL_PASS value:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.substring(0, 4) + '****' : 'Not set');
+console.log('📧 Email configured with SendGrid SMTP (Render Compatible)');
+console.log('📧 SENDGRID_API_KEY set:', process.env.SENDGRID_API_KEY ? 'Yes' : 'No');
+console.log('📧 SENDGRID_API_KEY value:', process.env.SENDGRID_API_KEY ? process.env.SENDGRID_API_KEY.substring(0, 4) + '****' : 'Not set');
 
-// SIMPLE EMAIL FUNCTION - LIKE 18-19 SEPTEMBER
+// SENDGRID EMAIL FUNCTION - RENDER COMPATIBLE
 const sendEmail = async (to, subject, html) => {
   try {
-    console.log(`📧 SIMPLE EMAIL: Sending to ${to}`);
+    console.log(`📧 SENDGRID EMAIL: Sending to ${to}`);
     
     const mailOptions = {
       from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
@@ -1258,9 +1260,9 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // SIMPLE EMAIL SENDING - NO TIMEOUT WRAPPER
+    // SENDGRID EMAIL SENDING - RENDER COMPATIBLE
     const result = await transporter.sendMail(mailOptions);
-    console.log('✅ SIMPLE EMAIL: Sent successfully:', result.messageId);
+    console.log('✅ SENDGRID EMAIL: Sent successfully:', result.messageId);
     
     return { 
       success: true, 
@@ -1268,7 +1270,7 @@ const sendEmail = async (to, subject, html) => {
     };
     
   } catch (error) {
-    console.error('❌ SIMPLE EMAIL ERROR:', error.message);
+    console.error('❌ SENDGRID EMAIL ERROR:', error.message);
     return { 
       success: false, 
       error: error.message
