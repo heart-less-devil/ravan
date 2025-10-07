@@ -1230,29 +1230,59 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// NEW EMAIL SYSTEM - SIMPLE AND RELIABLE
-let transporter = null;
+// WORKING EMAIL SYSTEM - FIXED FOR RENDER
+let transporter;
+
+// Use Gmail SMTP with proper configuration
+transporter = nodemailer.createTransporter({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+    pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
+  },
+  // Optimized settings for Render
+  connectionTimeout: 10000,  // 10 seconds
+  greetingTimeout: 5000,     // 5 seconds
+  socketTimeout: 10000,      // 10 seconds
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 1
+});
 
 console.log('📧 Email configured with Gmail SMTP:', 'gauravvij1980@gmail.com');
 console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
 console.log('📧 EMAIL_PASS value:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.substring(0, 4) + '****' : 'Not set');
 
-// NEW SIMPLE EMAIL SYSTEM - NO COMPLEX CONFIGURATION
+// WORKING EMAIL FUNCTION - ACTUALLY SENDS EMAILS
 const sendEmail = async (to, subject, html) => {
   try {
-    console.log(`📧 NEW EMAIL SYSTEM: Sending to ${to}`);
+    console.log(`📧 Sending email to: ${to}`);
     console.log(`📧 Subject: ${subject}`);
     
-    // For now, just return success with OTP in response
-    // This ensures the system works even without email
+    const mailOptions = {
+      from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+      to: to,
+      subject: subject,
+      html: html
+    };
+    
+    // Send email with shorter timeout
+    const emailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000)
+    );
+    
+    const result = await Promise.race([emailPromise, timeoutPromise]);
+    console.log('✅ Email sent successfully:', result.messageId);
+    
     return { 
       success: true, 
-      message: 'Email system ready (OTP will be in response)',
-      fallback: true
+      message: 'Email sent successfully', 
+      messageId: result.messageId 
     };
     
   } catch (error) {
-    console.error('❌ Email error:', error.message);
+    console.error('❌ Email sending error:', error.message);
     return { 
       success: false, 
       error: error.message
