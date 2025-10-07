@@ -1246,7 +1246,7 @@ console.log('📧 RESEND_API_KEY value:', process.env.RESEND_API_KEY ? process.e
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 RESEND EMAIL: Sending to ${to}`);
-    console.log(`📧 RESEND EMAIL: From: BioPing <noreply@thebioping.com>`);
+    console.log(`📧 RESEND EMAIL: From: BioPing <@thebioping.com>`);
     
     // Use Resend HTTP API instead of SMTP
     const response = await fetch('https://api.resend.com/emails', {
@@ -1256,7 +1256,7 @@ const sendEmail = async (to, subject, html) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'BioPing <noreply@thebioping.com>',
+        from: 'BioPing <support@thebioping.com>',
         to: [to],
         subject: subject,
         html: html
@@ -1732,12 +1732,11 @@ app.post('/api/auth/send-verification', async (req, res) => {
     // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
     
-    // Send email with verification code using improved sendEmail function
+    // Send email with verification code using Resend system
     try {
-      console.log('📧 Email configuration check:');
-      console.log('  - EMAIL_USER:', process.env.EMAIL_USER || 'gauravvij1980@gmail.com');
-      console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
-      console.log('  - Transporter configured:', !!transporter);
+      console.log('📧 Resend Email configuration check:');
+      console.log('  - RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'Set' : 'Not set');
+      console.log('  - Using Resend with verified domain: thebioping.com');
       
       const emailTemplate = emailTemplates.verification(verificationCode);
       console.log('📧 Sending verification email to:', email);
