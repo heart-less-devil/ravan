@@ -1234,7 +1234,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-ke
 let transporter;
 
 // Use Gmail SMTP with proper configuration
-transporter = nodemailer.createTransporter({
+transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',

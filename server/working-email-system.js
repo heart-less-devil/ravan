@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // WORKING EMAIL CONFIGURATION
-let transporter = nodemailer.createTransporter({
+let transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
