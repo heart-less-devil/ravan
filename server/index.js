@@ -513,7 +513,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         if (customerEmail) {
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'support@thebioping.com',
+            from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
             to: customerEmail,
             subject: 'BioPing - Payment Confirmation',
             html: `
@@ -635,7 +635,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           
           // Send notification email
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'support@thebioping.com',
+            from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
             to: email,
             subject: 'Payment Issue - Action Required',
             html: `
@@ -820,7 +820,7 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             // Send renewal confirmation email
             try {
               const mailOptions = {
-                from: process.env.EMAIL_USER || 'support@thebioping.com',
+                from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
                 to: customer.email,
                 subject: '🔄 Subscription Renewed - BioPing',
                 html: `
@@ -1240,18 +1240,13 @@ transporter = nodemailer.createTransport({
     user: 'gauravvij1980@gmail.com',
     pass: 'keux xtjd bzat vnzj'
   },
-  // Render-optimized settings
-  connectionTimeout: 60000, // 60 seconds for Render
-  greetingTimeout: 30000,   // 30 seconds
+  // Simple settings like before
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 30000,   // 30 seconds  
   socketTimeout: 60000,     // 60 seconds
-  pool: false, // Disable pooling on Render
-  maxConnections: 1, // Single connection
-  maxMessages: 1,    // One message per connection
-  rateDelta: 2000,   // 2 second delay between emails
-  rateLimit: 1       // 1 email per rate delta
 });
 
-console.log('📧 Email configured with Gmail SMTP (Render-optimized):', 'gauravvij1980@gmail.com');
+console.log('📧 Email configured with Gmail SMTP:', 'gauravvij1980@gmail.com');
 console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
 console.log('📧 EMAIL_PASS value:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.substring(0, 4) + '****' : 'Not set');
 
@@ -1467,7 +1462,7 @@ app.get('/api/test-email-config', (req, res) => {
       host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
       port: parseInt(process.env.SMTP_PORT) || 587,
       secure: process.env.SMTP_SECURE === 'true' || true,
-      user: process.env.EMAIL_USER || 'support@thebioping.com',
+      user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
       passSet: !!process.env.EMAIL_PASS,
       environment: process.env.NODE_ENV || 'development'
     };
@@ -1496,7 +1491,7 @@ app.get('/api/health', (req, res) => {
       port: PORT,
       mongodb: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
       email: 'Simple Gmail function ready',
-      emailUser: process.env.EMAIL_USER || 'support@thebioping.com',
+      emailUser: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
       emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
       stripe: stripe ? 'Configured' : 'Not configured',
       cors: 'Enabled for thebioping.com'
@@ -1509,7 +1504,7 @@ app.get('/api/health', (req, res) => {
       port: PORT,
       mongodb: 'Error',
       email: 'Simple Gmail function ready',
-      emailUser: process.env.EMAIL_USER || 'support@thebioping.com',
+      emailUser: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
       emailPass: process.env.EMAIL_PASS ? 'Set' : 'Not set',
       stripe: 'Error',
       cors: 'Enabled for thebioping.com'
@@ -5766,7 +5761,7 @@ app.post('/api/auth/forgot-password', [
       </div>
     `;
     
-    // Try to send email using simple function
+    // Try to send email using Gmail SMTP
     console.log(`📧 Attempting to send password reset OTP email to: ${email}`);
     const emailResult = await sendEmail(
       email,
