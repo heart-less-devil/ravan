@@ -175,5 +175,19 @@
     "createdAt": "2025-10-07T07:31:42.759Z",
     "expiresAt": "2025-10-07T07:41:42.759Z",
     "type": "password-reset"
+  },
+  {
+    "email": "audiostock9@gmail.com",
+    "code": "379401",
+    "createdAt": "2025-10-07T09:44:54.981Z",
+    "expiresAt": "2025-10-07T09:54:54.981Z",
+    "type": "password-reset"
+  },
+  {
+    "email": "universalx0242@gmail.com",
+    "code": "280485",
+    "createdAt": "2025-10-07T09:45:57.651Z",
+    "expiresAt": "2025-10-07T09:55:57.651Z",
+    "type": "password-reset"
   }
 ]
