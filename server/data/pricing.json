@@ -89,5 +89,30 @@
     "buttonStyle": "primary",
     "createdAt": "2025-10-03T21:35:20.176Z",
     "updatedAt": "2025-10-03T21:35:20.176Z"
+  },
+  {
+    "_id": "plan_1759527320176_new_plan",
+    "id": "budget-plan",
+    "name": "Budget Plan",
+    "description": "Affordable monthly access with BD Insights",
+    "monthlyPrice": 1,
+    "yearlyPrice": 6,
+    "annualPrice": 6,
+    "credits": "10",
+    "features": [
+      "1 Seat included",
+      "10 credits per month",
+      "Access to BD Insights",
+      "Monthly billing at $1",
+      "Annual billing at $6 (50% savings)",
+      "Pay by credit/debit card"
+    ],
+    "isPopular": false,
+    "popular": false,
+    "isActive": true,
+    "buttonText": "Choose plan",
+    "buttonStyle": "primary",
+    "createdAt": "2025-01-15T10:00:00.000Z",
+    "updatedAt": "2025-01-15T10:00:00.000Z"
   }
 ]
