@@ -1713,10 +1713,7 @@ app.post('/api/auth/send-verification', async (req, res) => {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     });
 
-    // Save data to files
-    saveDataToFiles('verification_code_sent');
-
-    // Send email using simple Gmail function
+    // Send email FIRST, then save data
     console.log(`📧 OTP Generated for ${email}: ${verificationCode}`);
     console.log(`🔑 VERIFICATION CODE FOR ${email}: ${verificationCode}`);
     
@@ -5722,10 +5719,7 @@ app.post('/api/auth/forgot-password', [
       type: 'password-reset' // Distinguish from email verification
     });
 
-    // Save data to files
-    saveDataToFiles();
-
-    // Send password reset email using simple Gmail function
+    // Send password reset email FIRST, then save data
     console.log(`📧 Password Reset OTP Generated for ${email}: ${verificationCode}`);
     console.log(`🔑 PASSWORD RESET CODE FOR ${email}: ${verificationCode}`);
     
@@ -5783,6 +5777,9 @@ app.post('/api/auth/forgot-password', [
         emailError: emailResult.error
       });
     }
+
+    // Save data to files AFTER email attempt
+    saveDataToFiles('password_reset_code_sent');
 
   } catch (error) {
     console.error('Forgot password error:', error);
