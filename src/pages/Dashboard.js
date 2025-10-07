@@ -4358,6 +4358,26 @@ const PricingPage = () => {
       popular: true,
       buttonText: "Choose plan",
       buttonStyle: "primary"
+    },
+    {
+      id: 'budget-plan',
+      name: "Budget Plan",
+      description: "Affordable monthly access with BD Insights",
+      credits: "10 credits/month",
+      monthlyPrice: 1,
+      annualPrice: 6,
+      features: [
+        "1 Seat included",
+        "10 credits per month",
+        "Access to BD Insights",
+        "Monthly billing at $1",
+        "Annual billing at $6 (50% savings)",
+        "Pay by credit/debit card"
+      ],
+      icon: CreditCard,
+      popular: false,
+      buttonText: "Choose plan",
+      buttonStyle: "primary"
     }
   ];
 
@@ -4384,7 +4404,8 @@ const PricingPage = () => {
     'basic': Users,
     'premium': Target,
     'pro': Target,
-    'enterprise': Building2
+    'enterprise': Building2,
+    'budget-plan': CreditCard
   };
 
   // Get the correct icon component
