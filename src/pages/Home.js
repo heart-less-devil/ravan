@@ -215,9 +215,13 @@ const Home = () => {
               <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed mb-4">
                 Partner Discovery | BD Tracking | Deal Insights
               </p>
-              <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed mb-12">
+              <p className="text-xl text-black max-w-4xl mx-auto leading-relaxed mb-4">
                 BioPing is the all-in-one biotech business development platform — helping leaders find the right partners, track every outreach, and access curated insights to close smarter deals.
               </p>
+              <p className="text-lg text-gray-700 max-w-4xl mx-auto leading-relaxed mb-4 font-semibold">
+                Our goal is simple: deliver the highest-quality biotech business development data at a fraction of the cost — so you save money for what truly matters, advancing your drug programs.
+              </p>
+              
             </motion.div>
             
             {/* CTA Buttons */}
@@ -315,9 +319,10 @@ const Home = () => {
             <h3 className="text-3xl font-bold mb-4" style={{color: 'rgb(30 58 138 / var(--tw-text-opacity, 1))'}}>
               The most comprehensive, reliable contact database for biotech, pharma - business development and fund-raising outreach.
                   </h3>
-            <p className="text-lg text-gray-900">
-              Validated through direct meetings and regularly updated for accuracy
-            </p>
+                  <p className="text-base font-bold text-gray-600 max-w-4xl mx-auto leading-relaxed mb-12">
+                Start with strategy — pinpoint the right partners for licensing, M&A, and collaborations — then execute with a validated database of decision-makers and contacts, updated regularly for accuracy through direct industry interactions.
+              </p>
+            
             </motion.div>
         </div>
       </section>
@@ -370,21 +375,21 @@ const Home = () => {
               <div className="bg-gradient-to-br from-primary-50 to-secondary-50 rounded-3xl p-8 shadow-soft">
                 <div className="space-y-6">
                   <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-accent-600 to-primary-600 rounded-xl flex items-center justify-center">
+                      <Award className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Deal Smarter</h3>
+                      <p className="text-gray-600">Expert BD tools, tips & strategy that work</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-secondary-600 rounded-xl flex items-center justify-center">
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Network Access</h3>
                       <p className="text-gray-600">Connect with verified BD, R&D and other contacts</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-accent-600 to-primary-600 rounded-xl flex items-center justify-center">
-                      <Award className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Deal Smarter</h3>
-                      <p className="text-gray-600">Expert BD Tools, Tips & Strategy That Actually Work</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">

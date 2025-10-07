@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Star, ArrowRight, Building2, Users, Target, Zap, CreditCard, Calendar, Globe, Gift } from 'lucide-react';
+import { Check, Star, ArrowRight, Building2, Users, Target, Zap, CreditCard, Calendar, Globe, Gift, Search, Lightbulb } from 'lucide-react';
 import StripePayment from '../components/StripePayment';
 import { API_BASE_URL } from '../config';
 
@@ -75,10 +75,9 @@ const Pricing = () => {
         "1 Seat included",
         "Get 5 free contacts",
         "Credits expire after 5 days",
-        "(including weekends)",
-        "no credit card needed",
         "No BD Insights Access",
-        "No BD TRACKER Access"
+        "No BD TRACKER Access",
+        "No credit card needed"
       ],
       icon: Gift,
       popular: false,
@@ -115,11 +114,12 @@ const Pricing = () => {
       planType: 'monthly',
       yearlyPlanType: 'yearly',
       features: [
+        "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
         "Access to BD Tracker",
         "Free Deal Comps & VC Contacts",
-        "2 hrs. of BD Consulting with Mr. Vik"
+        "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
@@ -629,7 +629,7 @@ const Pricing = () => {
                 What payment methods do you accept?
               </h3>
               <p className="text-gray-600">
-                We accept all major credit cards, debit cards, and bank transfers. All payments are processed securely.
+                We accept all major credit cards, debit cards. All payments are processed securely.
               </p>
             </motion.div>
 
@@ -643,7 +643,49 @@ const Pricing = () => {
                 How do free credits work?
               </h3>
               <p className="text-gray-600">
-                Free plan users get 5 credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan.
+                Free plan users get 5 credits that expire after 5 days . This gives you a chance to test our platform before upgrading to a paid plan.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                How often is the database updated?
+              </h3>
+              <p className="text-gray-600">
+                We update contacts and BD insights regularly-at least once a month to keep information current and relevant.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                How accurate are the contacts?
+              </h3>
+              <p className="text-gray-600">
+                All contacts are verified, and if any email doesn't work, we credit it back to your account.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Is my data secure?
+              </h3>
+              <p className="text-gray-600">
+                Yes. We use secure, encrypted systems to protect your information and never share your activity with third parties.
               </p>
             </motion.div>
           </div>
@@ -703,12 +745,95 @@ const Pricing = () => {
         </div>
       )}
 
-      {/* All Plans Section */}
-      <section className="section bg-white">
+      {/* Features Section */}
+      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="container-custom">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">All plans:</h2>
-            <p className="text-lg text-gray-600">Pay by credit/debit card</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              Why Choose <span className="text-orange-500">BioPing</span>?
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Everything you need to accelerate your biotech business development
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Feature 1 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="bg-white rounded-2xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 border border-gray-100"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
+                <Search className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Basic & Advanced Search
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Build BD strategy and find potential partners, & contacts with precision.
+              </p>
+            </motion.div>
+
+            {/* Feature 2 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="bg-white rounded-2xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 border border-gray-100"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-6">
+                <Target className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Real-time Data
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Monthly updates with the latest contacts and BD insights.
+              </p>
+            </motion.div>
+
+            {/* Feature 3 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="bg-white rounded-2xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 border border-gray-100"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-6">
+                <Zap className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Execute & Track
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Build your BD strategy, send outreach, and track progress-all in one platform.
+              </p>
+            </motion.div>
+
+            {/* Feature 4 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="bg-white rounded-2xl p-8 shadow-soft hover:shadow-medium transition-all duration-300 border border-gray-100"
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-6">
+                <Lightbulb className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                BD Insights
+              </h3>
+              <p className="text-gray-600 leading-relaxed">
+                Tools, tips, deal comps, VC contacts, and conference guides to power your dealmaking.
+              </p>
+            </motion.div>
           </div>
         </div>
       </section>

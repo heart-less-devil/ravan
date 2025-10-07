@@ -89,6 +89,12 @@ const ContactUs = () => {
       value: "+1 650 455 5850",
       description: "Call during business hours (8 AM – 5 PM PST)"
     },
+    {
+      icon: MapPin,
+      title: "Office",
+      value: "San Diego, CA",
+      description: "Our headquarters location"
+    },
   ];
 
   return (
@@ -113,7 +119,7 @@ const ContactUs = () => {
       </section>
 
       {/* Contact Form Section */}
-      <section className="section bg-gray-50">
+      <section className="py-12 bg-gray-50 -mt-8">
         <div className="container-custom">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Contact Form */}
@@ -122,7 +128,7 @@ const ContactUs = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h2 className="section-title mb-6 -mt-4">
+              <h2 className="section-title mb-6">
                 Get in Touch
               </h2>
               
@@ -295,34 +301,6 @@ const ContactUs = () => {
                 ))}
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="bg-gradient-to-br from-primary-600 to-secondary-500 rounded-2xl p-8 text-white"
-              >
-                <h3 className="text-2xl font-bold mb-4">
-                  Ready to Get Started?
-                </h3>
-                <p className="text-white/90 mb-6">
-                  Let's discuss how BioPing can help you find the right business 
-                  opportunities and create lasting partnerships.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-white/80" />
-                    <span>Free consultation</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-white/80" />
-                    <span>Custom solutions</span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-white/80" />
-                    <span>Ongoing support</span>
-                  </div>
-                </div>
-              </motion.div>
             </motion.div>
           </div>
         </div>

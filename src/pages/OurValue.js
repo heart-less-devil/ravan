@@ -56,7 +56,7 @@ const OurValue = () => {
                 <span className="text-white text-3xl font-bold">!</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                The Problem Biotech's often have promising drugs—but lack the time, strategy, budget, and resources for effective dealmaking.
+                The Problem : Biotech's often have promising drugs—but lack the time, strategy, budget, and resources for effective dealmaking.
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 Without a dedicated BD team, clear outreach plan, or the right industry contacts, navigating licensing and partnerships becomes slow, costly, and overwhelming.
@@ -156,12 +156,12 @@ const OurValue = () => {
               transition={{ duration: 0.6 }}
               className="flex justify-center"
             >
-              <div className="bg-white rounded-2xl p-6 shadow-large border-2 border-gray-200">
+              <div className="bg-white rounded-2xl p-6 shadow-large border-2 border-gray-200 h-full flex flex-col justify-center">
               <img 
                   src="/our-approach-image.png" 
                 alt="Our Approach" 
                   className="max-w-full h-auto rounded-lg shadow-medium"
-                style={{maxHeight: '400px'}}
+                style={{maxHeight: '500px'}}
                 onError={(e) => {
                   console.log('Image failed to load:', e.target.src);
                   e.target.style.display = 'none';

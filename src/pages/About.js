@@ -51,7 +51,7 @@ const About = () => {
               Founder's Message
             </h1>
             <p className="text-xl text-gray-700 max-w-4xl mx-auto leading-relaxed">
-              I created BioPing to make biotech dealmaking faster, smarter, and more affordable. With proven BD experience and a global network, we give you the strategy, contacts, and insights to focus budgets where they matter most—your science.
+              I created <span className="text-orange-500 font-semibold">BioPing</span> to make biotech dealmaking faster, smarter, and more affordable. With proven BD experience and a global network, we give you the strategy, contacts, and insights to focus budgets where they matter most—your science.
             </p>
           </motion.div>
         </div>

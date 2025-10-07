@@ -70,16 +70,18 @@ const Footer = () => {
               </div>
             </div>
             <div className="text-black mb-8 leading-relaxed">
-              <p className="font-semibold mb-2">Your Trusted BD Partner</p>
+              <p className="font-semibold mb-2 text-blue-900">
+                Your <span className="text-orange-400">Trusted</span> BD Partner
+              </p>
               <p>Partner Discovery | BD Tracking | Deal Insights</p>
             </div>
           </div>
 
           {/* Newsletter Signup - Middle */}
-          <div className="lg:col-span-1 flex justify-center">
+          <div className="lg:col-span-1 flex justify-end">
             <div>
-              <div className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-6 border border-gray-300">
-                <h3 className="text-lg font-semibold mb-3 flex items-center text-black">
+              <div className="bg-gradient-to-r from-gray-100 to-gray-200 rounded-2xl p-6 border border-gray-300 text-center">
+                <h3 className="text-lg font-semibold mb-3 flex items-center justify-center text-black">
                   <Sparkles className="w-5 h-5 mr-2 text-primary-400" />
                   Stay Updated
                 </h3>
@@ -126,12 +128,11 @@ const Footer = () => {
                 <h3 className="text-orange-400 font-semibold text-lg mb-4">Useful Links</h3>
                 <ul className="space-y-2">
                   <li><Link to="/" className="text-black hover:text-orange-400 transition-colors">Home</Link></li>
-                  <li><Link to="/about" className="text-black hover:text-orange-400 transition-colors">Company</Link></li>
                   <li><Link to="/product" className="text-black hover:text-orange-400 transition-colors">Product</Link></li>
-                  <li><Link to="/how-it-works" className="text-black hover:text-orange-400 transition-colors">How it works</Link></li>
-                  <li><Link to="/our-value" className="text-black hover:text-orange-400 transition-colors">Our Value</Link></li>
-                  <li><Link to="/privacy" className="text-black hover:text-orange-400 transition-colors">Privacy Policy</Link></li>
-                  <li><Link to="/terms" className="text-black hover:text-orange-400 transition-colors">Terms and Conditions</Link></li>
+                  <li><Link to="/our-value" className="text-black hover:text-orange-400 transition-colors">Value</Link></li>
+                  <li><Link to="/about" className="text-black hover:text-orange-400 transition-colors">Company</Link></li>
+                  <li><Link to="/pricing" className="text-black hover:text-orange-400 transition-colors">Pricing</Link></li>
+                  <li><Link to="/resources" className="text-black hover:text-orange-400 transition-colors">Resources</Link></li>
                 </ul>
               </div>
             </div>
@@ -190,8 +191,8 @@ const Footer = () => {
         <div className="container-custom py-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="text-center">
-              <p className="text-black text-sm font-semibold mb-2">
-                Your Trusted BD Partner
+              <p className="text-blue-900 text-sm font-semibold mb-2">
+                Your <span className="text-orange-400">Trusted</span> BD Partner
               </p>
               <p className="text-black text-sm">
                 Partner Discovery | BD Tracking | Deal Insights
@@ -204,13 +205,22 @@ const Footer = () => {
 
               {/* Legal Links */}
               <div className="flex items-center space-x-6 text-sm">
-                <Link to="/privacy" className="text-black hover:text-gray-700 transition-colors duration-200">
+                <Link 
+                  to="/privacy" 
+                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium"
+                >
                   Privacy Policy
                 </Link>
-                <Link to="/terms" className="text-black hover:text-gray-700 transition-colors duration-200">
+                <Link 
+                  to="/terms" 
+                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium"
+                >
                   Terms of Service
                 </Link>
-                <Link to="/cookie-policy" className="text-black hover:text-gray-700 transition-colors duration-200">
+                <Link 
+                  to="/cookie-policy" 
+                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium"
+                >
                   Cookie Policy
                 </Link>
               </div>

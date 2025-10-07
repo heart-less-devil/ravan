@@ -11,9 +11,9 @@
       "1 Seat included",
       "Get 5 free contacts",
       "Credits expire after 5 days",
-      "(including weekends)",
-      "No credit card needed",
-      "No BD Insights Access"
+      "No BD Insights Access",
+      "No BD TRACKER Access",
+      "No credit card needed"
     ],
     "popular": false,
     "buttonText": "Get started",
@@ -58,6 +58,7 @@
       "1 Seat included",
       "100 contacts per month",
       "Access to BD Tracker",
+      "Free Deal Comps & VC Contacts",
       "2 hrs. of BD Consulting with Mr. Vik",
       "Pay by credit/debit card "
     ],
@@ -67,28 +68,6 @@
     "isActive": true,
     "createdAt": "2025-09-18T09:00:08.081Z",
     "updatedAt": "2025-09-18T09:00:08.081Z"
-  },
-  {
-    "_id": "plan_1759527320176_jeo3pslsq",
-    "id": "aman",
-    "name": "aman",
-    "monthlyPrice": 1,
-    "yearlyPrice": 1,
-    "annualPrice": 1,
-    "credits": "40",
-    "features": [
-      "ertyui",
-      "fghjkl",
-      "vghjk"
-    ],
-    "description": "23456rty7u8io9p[",
-    "isPopular": true,
-    "popular": true,
-    "isActive": true,
-    "buttonText": "Choose plan",
-    "buttonStyle": "primary",
-    "createdAt": "2025-10-03T21:35:20.176Z",
-    "updatedAt": "2025-10-03T21:35:20.176Z"
   },
   {
     "_id": "plan_1759527320176_new_plan",

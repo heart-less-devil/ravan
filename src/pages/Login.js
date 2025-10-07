@@ -251,16 +251,6 @@ const Login = () => {
       icon: Shield,
       title: "Secure Access",
       description: "Enterprise-grade security for your business data"
-    },
-    {
-      icon: CheckCircle,
-      title: "Verified Contacts",
-      description: "Access to validated BD contacts and decision-makers"
-    },
-    {
-      icon: User,
-      title: "Personal Dashboard",
-      description: "Customized experience with your saved searches"
     }
   ];
 
@@ -502,9 +492,9 @@ const Login = () => {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="hidden lg:block"
+              className="hidden lg:block flex justify-end"
             >
-              <div className="max-w-md">
+              <div className="max-w-md mt-36">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -515,8 +505,7 @@ const Login = () => {
                     Unlock Your BD Potential
                   </h3>
                   <p className="text-black text-lg leading-relaxed">
-                    Access the most comprehensive database of biotech and pharma contacts. 
-                    Connect with decision-makers and accelerate your business development.
+                    Access a full BD platform — precise strategy, verified biotech/pharma contacts, and execution tools to accelerate deals
                   </p>
                 </motion.div>
 
@@ -549,16 +538,16 @@ const Login = () => {
                 >
                   <div className="grid grid-cols-3 gap-6 text-center">
                     <div>
-                      <div className="text-3xl font-bold text-black">500+</div>
+                      <div className="text-3xl font-bold text-black">1500+</div>
                       <div className="text-black text-sm">Pharma & Biotech's</div>
                     </div>
                     <div>
                       <div className="text-3xl font-bold text-black">5000+</div>
-                      <div className="text-black text-sm">BD and Other Contacts</div>
+                      <div className="text-black text-sm">CEO, CFO, BD & Other Contacts</div>
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-black">200+</div>
-                      <div className="text-black text-sm">Investors</div>
+                      <div className="text-3xl font-bold text-black">320+</div>
+                      <div className="text-black text-sm">Investors, VCs, PE & Corporate Ventures</div>
                     </div>
                   </div>
                 </motion.div>

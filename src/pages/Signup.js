@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, RefreshCw, Users, Shield, BarChart3, X } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
 import VerificationModal from '../components/VerificationModal';
 import { API_BASE_URL, tryApiCall } from '../config';
 
@@ -350,526 +350,429 @@ const Signup = () => {
       </div>
       
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Signup Form */}
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex justify-center lg:justify-end"
-            >
-              <div className="w-full max-w-xl">
-                {/* Enhanced Header */}
-                <div className="text-center mb-8">
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="flex items-center justify-center mb-8"
-                  >
-                    <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity duration-300">
-                      <img 
-                        src="/image.webp" 
-                        alt="BioPing Logo" 
-                        className="w-80 h-80 object-contain"
-                        onError={(e) => {
-                          console.log('Logo failed to load:', e.target.src);
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                    </Link>
-                    <div className="w-48 h-48 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden" style={{display: 'none'}}>
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
-                      <svg className="w-12 h-12 text-white relative z-10" viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="6" cy="6" r="2" />
-                        <circle cx="18" cy="6" r="2" />
-                        <circle cx="6" cy="18" r="2" />
-                        <circle cx="18" cy="18" r="2" />
-                        <line x1="6" y1="6" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
-                        <line x1="18" y1="6" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
-                        <line x1="6" y1="18" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
-                        <line x1="18" y1="18" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
-                      </svg>
-                    </div>
-                  </motion.div>
-                  <motion.h2 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                    className="text-4xl font-bold text-black mb-3"
-                  >
-                    {isVerificationSent ? 'Verify Your Email' : 'Join BioPing'}
-                  </motion.h2>
-                  <motion.p 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.4 }}
-                    className="text-black text-lg"
-                  >
-                    {isVerificationSent ? (
-                      <>
-                        We've sent a verification code to <span className="font-medium text-black">{formData.email}</span>
-                      </>
-                    ) : (
-                      <>
-                        Already have an account?{' '}
-                        <Link to="/login" className="font-medium text-black hover:text-gray-700 transition-colors duration-200">
-                          Sign in
-                        </Link>
-                      </>
-                    )}
-                  </motion.p>
-                </div>
-
-                {/* Enhanced Form */}
-                <motion.form
+        <div className="w-full max-w-2xl mx-auto">
+          {/* Centered Signup Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex justify-center"
+          >
+            <div className="w-full max-w-xl">
+              {/* Enhanced Header */}
+              <div className="text-center mb-8">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  className="flex items-center justify-center mb-8"
+                >
+                  <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity duration-300">
+                    <img 
+                      src="/image.webp" 
+                      alt="BioPing Logo" 
+                      className="w-80 h-80 object-contain"
+                      onError={(e) => {
+                        console.log('Logo failed to load:', e.target.src);
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  </Link>
+                  <div className="w-48 h-48 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden" style={{display: 'none'}}>
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
+                    <svg className="w-12 h-12 text-white relative z-10" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="6" cy="6" r="2" />
+                      <circle cx="18" cy="6" r="2" />
+                      <circle cx="6" cy="18" r="2" />
+                      <circle cx="18" cy="18" r="2" />
+                      <line x1="6" y1="6" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
+                      <line x1="18" y1="6" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
+                      <line x1="6" y1="18" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
+                      <line x1="18" y1="18" x2="12" y2="12" stroke="currentColor" strokeWidth="1" />
+                    </svg>
+                  </div>
+                </motion.div>
+                <motion.h2 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                  onSubmit={handleSubmit}
-                  className="bg-white/10 backdrop-blur-xl border border-black rounded-3xl p-12 shadow-2xl focus-within:border-purple-500 focus-within:shadow-purple-500/25 transition-all duration-300"
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="text-4xl font-bold text-black mb-3"
                 >
-                  {/* Enhanced Name Fields */}
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-black mb-3">
-                        First name <span className="text-red-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-black" />
-                        </div>
-                        <input
-                          id="firstName"
-                          name="firstName"
-                          type="text"
-                          required
-                          value={formData.firstName}
-                          onChange={handleChange}
-                          className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
-                            errors.firstName ? 'border-red-400 focus:ring-red-500' : ''
-                          }`}
-                          placeholder="First name"
-                        />
-                        {errors.firstName && (
-                          <div className="flex items-center mt-2 text-sm text-red-300">
-                            <AlertCircle className="w-4 h-4 mr-1" />
-                            {errors.firstName}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-black mb-3">
-                        Last name <span className="text-red-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                          <User className="h-5 w-5 text-black" />
-                        </div>
-                        <input
-                          id="lastName"
-                          name="lastName"
-                          type="text"
-                          required
-                          value={formData.lastName}
-                          onChange={handleChange}
-                          className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
-                            errors.lastName ? 'border-red-400 focus:ring-red-500' : ''
-                          }`}
-                          placeholder="Last name"
-                        />
-                        {errors.lastName && (
-                          <div className="flex items-center mt-2 text-sm text-red-300">
-                            <AlertCircle className="w-4 h-4 mr-1" />
-                            {errors.lastName}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Email Field */}
-                  <div className="mb-6">
-                    <label htmlFor="email" className="block text-sm font-medium text-black mb-3">
-                      Email <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-black" />
-                      </div>
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={handleChange}
-                        className={`w-full bg-white/10 border rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:shadow-lg transition-all duration-300 ${
-                          isEmailBlocked 
-                            ? 'border-red-500 bg-red-50/20 focus:ring-red-500 focus:border-red-500 focus:shadow-red-500/25' 
-                            : errors.email 
-                              ? 'border-red-400 focus:ring-red-500' 
-                              : 'border-black focus:ring-purple-500 focus:border-purple-500 focus:shadow-purple-500/25'
-                        }`}
-                        placeholder="Enter your email"
-                      />
-                      {errors.email && (
-                        <div className={`flex items-center mt-2 text-sm ${
-                          isEmailBlocked ? 'text-red-500' : 'text-red-300'
-                        }`}>
-                          {isEmailBlocked ? (
-                            <X className="w-4 h-4 mr-1" />
-                          ) : (
-                            <AlertCircle className="w-4 h-4 mr-1" />
-                          )}
-                          {errors.email}
-                        </div>
-                      )}
-                      
-                      {/* Blocked Email Warning */}
-                      {isEmailBlocked && (
-                        <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="flex items-start">
-                            <div className="flex-shrink-0">
-                              <X className="h-5 w-5 text-red-400" />
-                            </div>
-                            <div className="ml-3">
-                              <h3 className="text-sm font-medium text-red-800">
-                                Email Not Allowed
-                              </h3>
-                              <div className="mt-2 text-sm text-red-700">
-                                <p>This email address has been blocked from our platform. Please use a different email address to create your account.</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Enhanced Company Field */}
-                  <div className="mb-6">
-                    <label htmlFor="company" className="block text-sm font-medium text-black mb-3">
-                      Company Name <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Building2 className="h-5 w-5 text-black" />
-                      </div>
-                      <input
-                        id="company"
-                        name="company"
-                        type="text"
-                        required
-                        value={formData.company}
-                        onChange={handleChange}
-                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
-                          errors.company ? 'border-red-400 focus:ring-red-500' : ''
-                        }`}
-                        placeholder="Enter your company name"
-                      />
-                      {errors.company && (
-                        <div className="flex items-center mt-2 text-sm text-red-300">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.company}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Enhanced Password Field */}
-                  <div className="mb-6">
-                    <label htmlFor="password" className="block text-sm font-medium text-black mb-3">
-                      Password <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-black" />
-                      </div>
-                      <input
-                        id="password"
-                        name="password"
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        value={formData.password}
-                        onChange={handleChange}
-                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
-                          errors.password ? 'border-red-400 focus:ring-red-500' : ''
-                        }`}
-                        placeholder="Create a password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-black" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-black" />
-                        )}
-                      </button>
-                      {errors.password && (
-                        <div className="flex items-center mt-2 text-sm text-red-300">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.password}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Enhanced Password Strength */}
-                    {formData.password && (
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-black">Password strength:</span>
-                          <span className={`text-sm font-medium ${
-                            strength.color === 'red' ? 'text-red-400' :
-                            strength.color === 'yellow' ? 'text-yellow-400' :
-                            strength.color === 'green' ? 'text-green-400' :
-                            'text-black'
-                          }`}>
-                            {strength.text}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-700 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              strength.color === 'red' ? 'bg-red-500' :
-                              strength.color === 'yellow' ? 'bg-yellow-500' :
-                              strength.color === 'green' ? 'bg-green-500' :
-                              'bg-gray-500'
-                            }`}
-                            style={{ width: `${(strength.score / 4) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Enhanced Confirm Password Field */}
-                  <div className="mb-6">
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-black mb-3">
-                      Confirm Password <span className="text-red-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-black" />
-                      </div>
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        required
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
-                          errors.confirmPassword ? 'border-red-400 focus:ring-red-500' : ''
-                        }`}
-                        placeholder="Confirm your password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-5 w-5 text-black" />
-                        ) : (
-                          <Eye className="h-5 w-5 text-black" />
-                        )}
-                      </button>
-                      {errors.confirmPassword && (
-                        <div className="flex items-center mt-2 text-sm text-red-300">
-                          <AlertCircle className="w-4 h-4 mr-1" />
-                          {errors.confirmPassword}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Enhanced Terms Checkbox */}
-                  <div className="mb-6">
-                    <label className="flex items-start space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="agreeToTerms"
-                        checked={formData.agreeToTerms}
-                        onChange={(e) => {
-                          if (!formData.agreeToTerms) {
-                            // If checkbox is being checked, show the modal first
-                            e.preventDefault();
-                            setActiveTab('privacy');
-                            setShowTermsModal(true);
-                          } else {
-                            // If unchecking, allow it
-                            handleChange(e);
-                          }
-                        }}
-                        className="mt-1 w-4 h-4 text-purple-600 bg-white/10 border-black rounded focus:ring-purple-500 focus:ring-2"
-                      />
-                      <div className="text-sm text-black">
-                        I agree to the{' '}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveTab('terms');
-                            setShowTermsModal(true);
-                          }}
-                          className="text-black hover:text-gray-700 underline"
-                        >
-                          Terms of Service
-                        </button>{' '}
-                        and{' '}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveTab('privacy');
-                            setShowTermsModal(true);
-                          }}
-                          className="text-black hover:text-gray-700 underline"
-                        >
-                          Privacy Policy
-                        </button>
-                        <span className="text-red-400">*</span>
-                      </div>
-                    </label>
-                    {errors.agreeToTerms && (
-                      <div className="flex items-center mt-2 text-sm text-red-300">
-                        <AlertCircle className="w-4 h-4 mr-1" />
-                        {errors.agreeToTerms}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Enhanced Submit Button */}
-                  <motion.button
-                    type="submit"
-                    disabled={isLoading || isEmailBlocked}
-                    whileHover={{ scale: isEmailBlocked ? 1 : 1.02 }}
-                    whileTap={{ scale: isEmailBlocked ? 1 : 0.98 }}
-                    className={`w-full font-semibold py-4 px-6 rounded-xl flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                      isEmailBlocked 
-                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
-                    }`}
-                  >
-                    {isLoading ? (
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : isEmailBlocked ? (
-                      <>
-                        <span className="text-lg">Email Not Allowed</span>
-                        <X className="w-6 h-6" />
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-lg">Create Account</span>
-                        <ArrowRight className="w-6 h-6" />
-                      </>
-                    )}
-                  </motion.button>
-                </motion.form>
-              </div>
-            </motion.div>
-
-            {/* Enhanced Right Side - Benefits */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="hidden lg:block"
-            >
-              <div className="max-w-md">
-                <motion.div
+                  {isVerificationSent ? 'Verify Your Email' : 'Join BioPing'}
+                </motion.h2>
+                <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.4 }}
-                  className="mb-8"
+                  className="text-black text-lg"
                 >
-                  <h3 className="text-3xl font-bold text-black mb-6">
-                    Join the BioTech Revolution
-                  </h3>
-                  <p className="text-black text-lg leading-relaxed">
-                    Connect with the most innovative biotech companies and accelerate your business development with our comprehensive database.
-                  </p>
-                </motion.div>
+                  {isVerificationSent ? (
+                    <>
+                      We've sent a verification code to <span className="font-medium text-black">{formData.email}</span>
+                    </>
+                  ) : (
+                    <>
+                      Already have an account?{' '}
+                      <Link to="/login" className="font-medium text-black hover:text-gray-700 transition-colors duration-200">
+                        Sign in
+                      </Link>
+                    </>
+                  )}
+                </motion.p>
+              </div>
 
-                <div className="space-y-8">
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.5 }}
-                    className="flex items-start space-x-4 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10"
-                  >
-                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <Users className="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-black text-lg mb-2">Verified Contacts</h4>
-                      <p className="text-black leading-relaxed">Access to validated BD contacts and decision-makers from top biotech companies</p>
-                    </div>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.6 }}
-                    className="flex items-start space-x-4 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10"
-                  >
-                    <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <Shield className="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-black text-lg mb-2">Secure Platform</h4>
-                      <p className="text-black leading-relaxed">Enterprise-grade security for your business data and communications</p>
-                    </div>
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.7 }}
-                    className="flex items-start space-x-4 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10"
-                  >
-                    <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                      <BarChart3 className="w-7 h-7 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-black text-lg mb-2">Advanced Analytics</h4>
-                      <p className="text-black leading-relaxed">Get insights and analytics to optimize your BD strategy</p>
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* Enhanced Stats */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.8 }}
-                  className="mt-8 p-8 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-sm rounded-3xl border border-white/10"
-                >
-                  <div className="grid grid-cols-3 gap-6 text-center">
-                    <div>
-                      <div className="text-3xl font-bold text-black">500+</div>
-                      <div className="text-black text-sm">Pharma & Biotech's
+              {/* Enhanced Form */}
+              <motion.form
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+                onSubmit={handleSubmit}
+                className="bg-white/10 backdrop-blur-xl border border-black rounded-3xl p-12 shadow-2xl focus-within:border-purple-500 focus-within:shadow-purple-500/25 transition-all duration-300"
+              >
+                {/* Enhanced Name Fields */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-black mb-3">
+                      First name <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-black" />
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-black">5000+</div>
-                      <div className="text-black text-sm">BD and Other Contacts</div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold text-black">200+</div>
-                      <div className="text-black text-sm">Investors</div>
+                      <input
+                        id="firstName"
+                        name="firstName"
+                        type="text"
+                        required
+                        value={formData.firstName}
+                        onChange={handleChange}
+                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
+                          errors.firstName ? 'border-red-400 focus:ring-red-500' : ''
+                        }`}
+                        placeholder="First name"
+                      />
+                      {errors.firstName && (
+                        <div className="flex items-center mt-2 text-sm text-red-300">
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          {errors.firstName}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </motion.div>
-              </div>
-            </motion.div>
-          </div>
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-black mb-3">
+                      Last name <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-black" />
+                      </div>
+                      <input
+                        id="lastName"
+                        name="lastName"
+                        type="text"
+                        required
+                        value={formData.lastName}
+                        onChange={handleChange}
+                        className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
+                          errors.lastName ? 'border-red-400 focus:ring-red-500' : ''
+                        }`}
+                        placeholder="Last name"
+                      />
+                      {errors.lastName && (
+                        <div className="flex items-center mt-2 text-sm text-red-300">
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          {errors.lastName}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Email Field */}
+                <div className="mb-6">
+                  <label htmlFor="email" className="block text-sm font-medium text-black mb-3">
+                    Email <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-black" />
+                    </div>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`w-full bg-white/10 border rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:shadow-lg transition-all duration-300 ${
+                        isEmailBlocked 
+                          ? 'border-red-500 bg-red-50/20 focus:ring-red-500 focus:border-red-500 focus:shadow-red-500/25' 
+                          : errors.email 
+                            ? 'border-red-400 focus:ring-red-500' 
+                            : 'border-black focus:ring-purple-500 focus:border-purple-500 focus:shadow-purple-500/25'
+                      }`}
+                      placeholder="Enter your email"
+                    />
+                    {errors.email && (
+                      <div className={`flex items-center mt-2 text-sm ${
+                        isEmailBlocked ? 'text-red-500' : 'text-red-300'
+                      }`}>
+                        {isEmailBlocked ? (
+                          <X className="w-4 h-4 mr-1" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                        )}
+                        {errors.email}
+                      </div>
+                    )}
+                    
+                    {/* Blocked Email Warning */}
+                    {isEmailBlocked && (
+                      <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <X className="h-5 w-5 text-red-400" />
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="text-sm font-medium text-red-800">
+                              Email Not Allowed
+                            </h3>
+                            <div className="mt-2 text-sm text-red-700">
+                              <p>This email address has been blocked from our platform. Please use a different email address to create your account.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Enhanced Company Field */}
+                <div className="mb-6">
+                  <label htmlFor="company" className="block text-sm font-medium text-black mb-3">
+                    Company Name <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Building2 className="h-5 w-5 text-black" />
+                    </div>
+                    <input
+                      id="company"
+                      name="company"
+                      type="text"
+                      required
+                      value={formData.company}
+                      onChange={handleChange}
+                      className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
+                        errors.company ? 'border-red-400 focus:ring-red-500' : ''
+                      }`}
+                      placeholder="Enter your company name"
+                    />
+                    {errors.company && (
+                      <div className="flex items-center mt-2 text-sm text-red-300">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        {errors.company}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Enhanced Password Field */}
+                <div className="mb-6">
+                  <label htmlFor="password" className="block text-sm font-medium text-black mb-3">
+                    Password <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-black" />
+                    </div>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={handleChange}
+                      className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
+                        errors.password ? 'border-red-400 focus:ring-red-500' : ''
+                      }`}
+                      placeholder="Create a password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-black" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-black" />
+                      )}
+                    </button>
+                    {errors.password && (
+                      <div className="flex items-center mt-2 text-sm text-red-300">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        {errors.password}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Enhanced Password Strength */}
+                  {formData.password && (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-black">Password strength:</span>
+                        <span className={`text-sm font-medium ${
+                          strength.color === 'red' ? 'text-red-400' :
+                          strength.color === 'yellow' ? 'text-yellow-400' :
+                          strength.color === 'green' ? 'text-green-400' :
+                          'text-black'
+                        }`}>
+                          {strength.text}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            strength.color === 'red' ? 'bg-red-500' :
+                            strength.color === 'yellow' ? 'bg-yellow-500' :
+                            strength.color === 'green' ? 'bg-green-500' :
+                            'bg-gray-500'
+                          }`}
+                          style={{ width: `${(strength.score / 4) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Enhanced Confirm Password Field */}
+                <div className="mb-6">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-black mb-3">
+                    Confirm Password <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-black" />
+                    </div>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className={`w-full bg-white/10 border border-black rounded-xl px-4 py-5 pl-12 pr-12 text-black placeholder-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:shadow-lg focus:shadow-purple-500/25 transition-all duration-300 ${
+                        errors.confirmPassword ? 'border-red-400 focus:ring-red-500' : ''
+                      }`}
+                      placeholder="Confirm your password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center hover:text-black transition-colors duration-200"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5 text-black" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-black" />
+                      )}
+                    </button>
+                    {errors.confirmPassword && (
+                      <div className="flex items-center mt-2 text-sm text-red-300">
+                        <AlertCircle className="w-4 h-4 mr-1" />
+                        {errors.confirmPassword}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Enhanced Terms Checkbox */}
+                <div className="mb-6">
+                  <label className="flex items-start space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="agreeToTerms"
+                      checked={formData.agreeToTerms}
+                      onChange={(e) => {
+                        if (!formData.agreeToTerms) {
+                          // If checkbox is being checked, show the modal first
+                          e.preventDefault();
+                          setActiveTab('privacy');
+                          setShowTermsModal(true);
+                        } else {
+                          // If unchecking, allow it
+                          handleChange(e);
+                        }
+                      }}
+                      className="mt-1 w-4 h-4 text-purple-600 bg-white/10 border-black rounded focus:ring-purple-500 focus:ring-2"
+                    />
+                    <div className="text-sm text-black">
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('terms');
+                          setShowTermsModal(true);
+                        }}
+                        className="text-black hover:text-gray-700 underline"
+                      >
+                        Terms of Service
+                      </button>{' '}
+                      and{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('privacy');
+                          setShowTermsModal(true);
+                        }}
+                        className="text-black hover:text-gray-700 underline"
+                      >
+                        Privacy Policy
+                      </button>
+                      <span className="text-red-400">*</span>
+                    </div>
+                  </label>
+                  {errors.agreeToTerms && (
+                    <div className="flex items-center mt-2 text-sm text-red-300">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.agreeToTerms}
+                    </div>
+                  )}
+                </div>
+
+                {/* Enhanced Submit Button */}
+                <motion.button
+                  type="submit"
+                  disabled={isLoading || isEmailBlocked}
+                  whileHover={{ scale: isEmailBlocked ? 1 : 1.02 }}
+                  whileTap={{ scale: isEmailBlocked ? 1 : 0.98 }}
+                  className={`w-full font-semibold py-4 px-6 rounded-xl flex items-center justify-center space-x-3 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isEmailBlocked 
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white'
+                  }`}
+                >
+                  {isLoading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : isEmailBlocked ? (
+                    <>
+                      <span className="text-lg">Email Not Allowed</span>
+                      <X className="w-6 h-6" />
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg">Create Account</span>
+                      <ArrowRight className="w-6 h-6" />
+                    </>
+                  )}
+                </motion.button>
+              </motion.form>
+            </div>
+          </motion.div>
         </div>
       </div>
 
@@ -1039,4 +942,4 @@ const Signup = () => {
   );
 };
 
-export default Signup; 
+export default Signup;

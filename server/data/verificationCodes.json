@@ -189,5 +189,11 @@
     "createdAt": "2025-10-07T09:45:57.651Z",
     "expiresAt": "2025-10-07T09:55:57.651Z",
     "type": "password-reset"
+  },
+  {
+    "email": "amankk0007@gmail.com",
+    "code": "245967",
+    "createdAt": "2025-10-07T15:54:08.870Z",
+    "expiresAt": "2025-10-07T16:04:08.870Z"
   }
 ]

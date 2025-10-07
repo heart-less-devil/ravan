@@ -7,7 +7,7 @@ const Product = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="section bg-gradient-to-br from-blue-50 to-indigo-50 -mt-16">
+      <section className="pt-20 pb-0 bg-gradient-to-br from-blue-50 to-indigo-50 -mt-16">
         <div className="container-custom">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
