@@ -161,5 +161,19 @@
     "createdAt": "2025-10-06T13:45:21.698Z",
     "expiresAt": "2025-10-06T13:55:21.698Z",
     "type": "password-reset"
+  },
+  {
+    "email": "universalx0242@gmail.com",
+    "code": "783411",
+    "createdAt": "2025-10-07T07:19:37.940Z",
+    "expiresAt": "2025-10-07T07:29:37.940Z",
+    "type": "password-reset"
+  },
+  {
+    "email": "amankk0007@gmail.com",
+    "code": "740596",
+    "createdAt": "2025-10-07T07:31:42.759Z",
+    "expiresAt": "2025-10-07T07:41:42.759Z",
+    "type": "password-reset"
   }
 ]
