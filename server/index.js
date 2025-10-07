@@ -1240,18 +1240,18 @@ transporter = nodemailer.createTransport({
     user: 'gauravvij1980@gmail.com',
     pass: 'keux xtjd bzat vnzj'
   },
-  // Add timeout settings to prevent connection timeout
-  connectionTimeout: 60000, // 60 seconds
+  // Render-optimized settings
+  connectionTimeout: 60000, // 60 seconds for Render
   greetingTimeout: 30000,   // 30 seconds
   socketTimeout: 60000,     // 60 seconds
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  rateDelta: 1000,
-  rateLimit: 5
+  pool: false, // Disable pooling on Render
+  maxConnections: 1, // Single connection
+  maxMessages: 1,    // One message per connection
+  rateDelta: 2000,   // 2 second delay between emails
+  rateLimit: 1       // 1 email per rate delta
 });
 
-console.log('📧 Email configured with Gmail:', 'gauravvij1980@gmail.com');
+console.log('📧 Email configured with Gmail SMTP (Render-optimized):', 'gauravvij1980@gmail.com');
 console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
 console.log('📧 EMAIL_PASS value:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.substring(0, 4) + '****' : 'Not set');
 
@@ -1281,7 +1281,7 @@ const sendEmail = async (to, subject, html) => {
     // Add timeout wrapper for email sending
     const emailPromise = transporter.sendMail(mailOptions);
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timeout after 30 seconds')), 30000)
+      setTimeout(() => reject(new Error('Email sending timeout after 60 seconds')), 60000)
     );
     
     const result = await Promise.race([emailPromise, timeoutPromise]);
