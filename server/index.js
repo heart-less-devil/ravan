@@ -1230,34 +1230,26 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// WORKING EMAIL SYSTEM - FIXED FOR RENDER
+// SIMPLE EMAIL SYSTEM - LIKE 18-19 SEPTEMBER
 let transporter;
 
-// Use Gmail SMTP with proper configuration
+// Simple Gmail configuration - NO COMPLEX SETTINGS
 transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
     pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
-  },
-  // Optimized settings for Render
-  connectionTimeout: 10000,  // 10 seconds
-  greetingTimeout: 5000,     // 5 seconds
-  socketTimeout: 10000,      // 10 seconds
-  pool: true,
-  maxConnections: 1,
-  maxMessages: 1
+  }
 });
 
 console.log('📧 Email configured with Gmail SMTP:', 'gauravvij1980@gmail.com');
 console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
 console.log('📧 EMAIL_PASS value:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.substring(0, 4) + '****' : 'Not set');
 
-// WORKING EMAIL FUNCTION - ACTUALLY SENDS EMAILS
+// SIMPLE EMAIL FUNCTION - LIKE 18-19 SEPTEMBER
 const sendEmail = async (to, subject, html) => {
   try {
-    console.log(`📧 Sending email to: ${to}`);
-    console.log(`📧 Subject: ${subject}`);
+    console.log(`📧 SIMPLE EMAIL: Sending to ${to}`);
     
     const mailOptions = {
       from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
@@ -1266,23 +1258,17 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // Send email with shorter timeout
-    const emailPromise = transporter.sendMail(mailOptions);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timeout after 15 seconds')), 15000)
-    );
-    
-    const result = await Promise.race([emailPromise, timeoutPromise]);
-    console.log('✅ Email sent successfully:', result.messageId);
+    // SIMPLE EMAIL SENDING - NO TIMEOUT WRAPPER
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ SIMPLE EMAIL: Sent successfully:', result.messageId);
     
     return { 
       success: true, 
-      message: 'Email sent successfully', 
       messageId: result.messageId 
     };
     
   } catch (error) {
-    console.error('❌ Email sending error:', error.message);
+    console.error('❌ SIMPLE EMAIL ERROR:', error.message);
     return { 
       success: false, 
       error: error.message
