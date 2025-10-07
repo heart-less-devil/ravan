@@ -20,7 +20,7 @@ const isCustomDomain = (process.env.EMAIL_USER || '').includes('@thebioping.com'
 
 if (isCustomDomain) {
   // Custom domain email configuration
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: process.env.SMTP_PORT || 587,
     secure: process.env.SMTP_SECURE === 'true' || false,
@@ -35,7 +35,7 @@ if (isCustomDomain) {
   console.log('📧 API using custom domain email:', process.env.EMAIL_USER || 'support@thebioping.com');
 } else {
   // Gmail configuration
-  transporter = nodemailer.createTransporter({
+  transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
