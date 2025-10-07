@@ -1230,21 +1230,29 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// Email configuration - Clean and Simple
+// Email configuration - Robust and Production Ready
 let transporter;
 
-// Use Gmail SMTP for reliable delivery
-transporter = nodemailer.createTransport({
+// Use environment variables for email configuration
+const emailConfig = {
   service: 'gmail',
   auth: {
-    user: 'gauravvij1980@gmail.com',
-    pass: 'keux xtjd bzat vnzj'
+    user: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+    pass: process.env.EMAIL_PASS || 'keux xtjd bzat vnzj'
   },
-  // Simple settings like before
-  connectionTimeout: 60000, // 60 seconds
-  greetingTimeout: 30000,   // 30 seconds  
-  socketTimeout: 60000,     // 60 seconds
-});
+  // Optimized timeout settings for Render deployment
+  connectionTimeout: 30000,  // 30 seconds
+  greetingTimeout: 15000,   // 15 seconds  
+  socketTimeout: 30000,     // 30 seconds
+  // Additional reliability settings
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 3,
+  rateDelta: 20000,
+  rateLimit: 5
+};
+
+transporter = nodemailer.createTransport(emailConfig);
 
 console.log('📧 Email configured with Gmail SMTP:', 'gauravvij1980@gmail.com');
 console.log('📧 EMAIL_PASS set:', process.env.EMAIL_PASS ? 'Yes' : 'No');
@@ -1260,7 +1268,7 @@ transporter.verify(function(error, success) {
   }
 });
 
-// Simple and Reliable Email Function with timeout handling
+// Enhanced Email Function with robust error handling and timeout management
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
@@ -1273,10 +1281,10 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    // Add timeout wrapper for email sending
+    // Enhanced timeout handling with shorter timeout for Render
     const emailPromise = transporter.sendMail(mailOptions);
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timeout after 60 seconds')), 60000)
+      setTimeout(() => reject(new Error('Email sending timeout after 30 seconds')), 30000)
     );
     
     const result = await Promise.race([emailPromise, timeoutPromise]);
@@ -1285,8 +1293,20 @@ const sendEmail = async (to, subject, html) => {
     return { success: true, message: 'Email sent successfully', messageId: result.messageId };
     
   } catch (error) {
-    console.log('❌ Email sending error:', error.message);
-    return { success: false, error: error.message };
+    console.error('❌ Email sending error:', error.message);
+    console.error('❌ Error details:', {
+      name: error.name,
+      code: error.code,
+      command: error.command
+    });
+    
+    // Return detailed error information for debugging
+    return { 
+      success: false, 
+      error: error.message,
+      errorType: error.name,
+      errorCode: error.code
+    };
   }
 };
 
@@ -1737,35 +1757,44 @@ app.post('/api/auth/send-verification', async (req, res) => {
     // Try to send email using simple function (async, don't wait)
     console.log(`📧 Attempting to send OTP email to: ${email}`);
     
-    // Send email with verification code
+    // Send email with verification code using improved sendEmail function
     try {
       console.log('📧 Email configuration check:');
       console.log('  - EMAIL_USER:', process.env.EMAIL_USER || 'gauravvij1980@gmail.com');
-      console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS || 'keux xtjd bzat vnzj');
+      console.log('  - EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'Not set');
       console.log('  - Transporter configured:', !!transporter);
       
-      const mailOptions = {
-        from: 'gauravvij1980@gmail.com', // Hardcoded for reliability
-        to: email,
-        ...emailTemplates.verification(verificationCode)
-      };
+      const emailTemplate = emailTemplates.verification(verificationCode);
+      console.log('📧 Sending verification email to:', email);
 
-      console.log('📧 Sending email with options:', {
-        from: mailOptions.from,
-        to: mailOptions.to,
-        subject: mailOptions.subject
-      });
+      const emailResult = await sendEmail(
+        email,
+        emailTemplate.subject,
+        emailTemplate.html
+      );
 
-      const emailResult = await transporter.sendMail(mailOptions);
-      console.log('✅ Email sent successfully:', emailResult.messageId);
-      console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
+      if (emailResult.success) {
+        console.log('✅ Email sent successfully:', emailResult.messageId);
+        console.log(`✅ Verification email sent to ${email} with code: ${verificationCode}`);
 
-      res.json({
-        success: true,
-        message: 'Verification code sent successfully to your email',
-        verificationCode: verificationCode,
-        note: 'If email not received, use this code: ' + verificationCode
-      });
+        res.json({
+          success: true,
+          message: 'Verification code sent successfully to your email',
+          verificationCode: verificationCode,
+          note: 'If email not received, use this code: ' + verificationCode
+        });
+      } else {
+        console.log('❌ Email sending failed:', emailResult.error);
+        console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
+        
+        // Return success with the code in response for development
+        res.json({
+          success: true,
+          message: 'Verification code generated (email failed to send)',
+          verificationCode: verificationCode,
+          emailError: emailResult.error
+        });
+      }
     } catch (emailError) {
       console.error('❌ Email sending error:', emailError);
       console.log(`📧 Email failed to send, but code is: ${verificationCode}`);
