@@ -305,7 +305,11 @@ app.use((req, res, next) => {
     'https://*.onrender.com'
   ];
   
-  if (allowedOrigins.includes(origin) || origin?.includes('render.com') || origin?.includes('onrender.com')) {
+  // More permissive CORS for thebioping.com
+  if (allowedOrigins.includes(origin) || 
+      origin?.includes('render.com') || 
+      origin?.includes('onrender.com') ||
+      origin?.includes('thebioping.com')) {
     res.header('Access-Control-Allow-Origin', origin);
   }
   
@@ -1230,47 +1234,52 @@ const pdfUpload = multer({
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'bioping-super-secure-jwt-secret-key-2025-very-long-and-random-string';
 
-// SENDGRID EMAIL SYSTEM - RENDER COMPATIBLE
-let transporter;
+// RESEND EMAIL SYSTEM - HTTP API (NO SMTP)
+// Using Resend HTTP API instead of SMTP for Render compatibility
+const RESEND_API_KEY = process.env.RESEND_API_KEY || 're_your_resend_api_key_here';
 
-// SendGrid configuration for Render (HTTP-based, not SMTP)
-transporter = nodemailer.createTransport({
-  host: 'smtp.sendgrid.net',
-  port: 587,
-  secure: false,
-  auth: {
-    user: 'apikey',
-    pass: process.env.SENDGRID_API_KEY || 'SG.your_sendgrid_api_key_here'
-  }
-});
+console.log('📧 Email configured with Resend HTTP API (Render Compatible)');
+console.log('📧 RESEND_API_KEY set:', process.env.RESEND_API_KEY ? 'Yes' : 'No');
+console.log('📧 RESEND_API_KEY value:', process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 4) + '****' : 'Not set');
 
-console.log('📧 Email configured with SendGrid SMTP (Render Compatible)');
-console.log('📧 SENDGRID_API_KEY set:', process.env.SENDGRID_API_KEY ? 'Yes' : 'No');
-console.log('📧 SENDGRID_API_KEY value:', process.env.SENDGRID_API_KEY ? process.env.SENDGRID_API_KEY.substring(0, 4) + '****' : 'Not set');
-
-// SENDGRID EMAIL FUNCTION - RENDER COMPATIBLE
+// RESEND EMAIL FUNCTION - HTTP API (NO SMTP)
 const sendEmail = async (to, subject, html) => {
   try {
-    console.log(`📧 SENDGRID EMAIL: Sending to ${to}`);
+    console.log(`📧 RESEND EMAIL: Sending to ${to}`);
     
-    const mailOptions = {
-      from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
-      to: to,
-      subject: subject,
-      html: html
-    };
+    // Use Resend HTTP API instead of SMTP
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
+        to: [to],
+        subject: subject,
+        html: html
+      })
+    });
     
-    // SENDGRID EMAIL SENDING - RENDER COMPATIBLE
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ SENDGRID EMAIL: Sent successfully:', result.messageId);
+    const result = await response.json();
     
-    return { 
-      success: true, 
-      messageId: result.messageId 
-    };
+    if (response.ok) {
+      console.log('✅ RESEND EMAIL: Sent successfully:', result.id);
+      return { 
+        success: true, 
+        messageId: result.id 
+      };
+    } else {
+      console.error('❌ RESEND EMAIL ERROR:', result.message);
+      return { 
+        success: false, 
+        error: result.message
+      };
+    }
     
   } catch (error) {
-    console.error('❌ SENDGRID EMAIL ERROR:', error.message);
+    console.error('❌ RESEND EMAIL ERROR:', error.message);
     return { 
       success: false, 
       error: error.message
