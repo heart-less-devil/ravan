@@ -1246,7 +1246,7 @@ console.log('📧 RESEND_API_KEY value:', process.env.RESEND_API_KEY ? process.e
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 RESEND EMAIL: Sending to ${to}`);
-    console.log(`📧 RESEND EMAIL: From: BioPing <onboarding@resend.dev>`);
+    console.log(`📧 RESEND EMAIL: From: BioPing <noreply@thebioping.com>`);
     
     // Use Resend HTTP API instead of SMTP
     const response = await fetch('https://api.resend.com/emails', {
@@ -1256,7 +1256,7 @@ const sendEmail = async (to, subject, html) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'BioPing <onboarding@resend.dev>',
+        from: 'BioPing <noreply@thebioping.com>',
         to: [to],
         subject: subject,
         html: html
