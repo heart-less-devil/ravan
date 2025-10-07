@@ -275,9 +275,10 @@ console.log('  - Using live key:', stripeSecretKey.includes('sk_live_'));
 app.use(cors({
   origin: [
     'http://localhost:3000', 
+    'http://localhost:3001',
     'http://localhost:3002',
     'http://localhost:3005',
-    'http://localhost:3001',
+    'http://localhost:3006',
     'null', // Allow file:// protocol for local testing
     'https://thebioping.com',
     'https://www.thebioping.com',
@@ -297,6 +298,7 @@ app.use((req, res, next) => {
     'http://localhost:3001', 
     'http://localhost:3002',
     'http://localhost:3005',
+    'http://localhost:3006',
     'https://thebioping.com',
     'https://www.thebioping.com',
     'https://*.render.com',
@@ -1237,7 +1239,16 @@ transporter = nodemailer.createTransport({
   auth: {
     user: 'gauravvij1980@gmail.com',
     pass: 'keux xtjd bzat vnzj'
-  }
+  },
+  // Add timeout settings to prevent connection timeout
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 30000,   // 30 seconds
+  socketTimeout: 60000,     // 60 seconds
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  rateDelta: 1000,
+  rateLimit: 5
 });
 
 console.log('📧 Email configured with Gmail:', 'gauravvij1980@gmail.com');
@@ -1254,7 +1265,7 @@ transporter.verify(function(error, success) {
   }
 });
 
-// Simple and Reliable Email Function
+// Simple and Reliable Email Function with timeout handling
 const sendEmail = async (to, subject, html) => {
   try {
     console.log(`📧 Sending email to: ${to}`);
@@ -1267,7 +1278,13 @@ const sendEmail = async (to, subject, html) => {
       html: html
     };
     
-    const result = await transporter.sendMail(mailOptions);
+    // Add timeout wrapper for email sending
+    const emailPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Email sending timeout after 30 seconds')), 30000)
+    );
+    
+    const result = await Promise.race([emailPromise, timeoutPromise]);
     console.log('✅ Email sent successfully:', result.messageId);
     
     return { success: true, message: 'Email sent successfully', messageId: result.messageId };
