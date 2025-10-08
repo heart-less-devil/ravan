@@ -104,9 +104,10 @@ const Login = () => {
         // Store token in sessionStorage
         sessionStorage.setItem('token', data.token);
         
-        // Store user data in stateManager
+        // Store user data in stateManager BUT DO NOT persist to sessionStorage
+        // This ensures fresh data is fetched from backend on page refresh
         if (data.user) {
-          stateManager.set('user', data.user, true);
+          stateManager.set('user', data.user, false); // Changed from true to false
         }
         
         // Redirect to dashboard

@@ -5916,9 +5916,11 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
     try {
       user = await User.findOne({ email: req.user.email }).maxTimeMS(10000);
       if (user) {
-        console.log('✅ User found in MongoDB');
+        console.log('✅ User found in MongoDB with credits:', user.currentCredits);
         // Convert to plain object for JSON response
         user = user.toObject();
+      } else {
+        console.log('⚠️ User NOT found in MongoDB, will check file storage');
       }
     } catch (dbError) {
       console.log('⚠️ MongoDB error, falling back to file storage:', dbError.message);
@@ -5928,7 +5930,31 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
     if (!user) {
       user = mockDB.users.find(u => u.email === req.user.email);
       if (user) {
-        console.log('✅ User found in file storage');
+        console.log('✅ User found in file storage with credits:', user.currentCredits);
+        console.log('⚠️ WARNING: Using file storage data - MongoDB should be primary source!');
+        console.log('⚠️ This user needs to be synced to MongoDB!');
+        
+        // Create user in MongoDB if doesn't exist
+        try {
+          const User = require('./models/User');
+          const newMongoUser = await User.create({
+            email: user.email,
+            password: user.password,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            company: user.company,
+            role: user.role,
+            currentCredits: user.currentCredits,
+            paymentCompleted: user.paymentCompleted,
+            currentPlan: user.currentPlan,
+            createdAt: user.createdAt,
+            isVerified: user.isVerified,
+            isActive: user.isActive
+          });
+          console.log('✅ User created in MongoDB with credits:', newMongoUser.currentCredits);
+        } catch (createError) {
+          console.log('❌ Failed to create user in MongoDB:', createError.message);
+        }
       }
     }
     
@@ -8367,14 +8393,52 @@ app.post('/api/auth/cancel-subscription', authenticateToken, async (req, res) =>
 app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
   try {
     console.log('💳 CREDIT USAGE ENDPOINT CALLED for:', req.user.email);
-    const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
     
-    if (userIndex === -1) {
-      console.log('❌ User not found in file storage');
+    // CRITICAL FIX: Always fetch fresh user data from MongoDB first
+    let user = null;
+    let userIndex = -1;
+    
+    try {
+      const User = require('./models/User');
+      const mongoUser = await User.findOne({ email: req.user.email }).maxTimeMS(10000);
+      
+      if (mongoUser) {
+        console.log('✅ Using fresh data from MongoDB');
+        user = mongoUser.toObject();
+        
+        // Update mockDB with fresh MongoDB data to keep in sync
+        userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+        if (userIndex !== -1) {
+          // Sync the critical fields from MongoDB to mockDB
+          mockDB.users[userIndex].currentCredits = user.currentCredits;
+          mockDB.users[userIndex].creditUsageHistory = user.creditUsageHistory || [];
+          mockDB.users[userIndex].lastCreditUsage = user.lastCreditUsage;
+        }
+      } else {
+        // Fallback to mockDB if MongoDB doesn't have the user
+        console.log('⚠️ User not in MongoDB, using mockDB');
+        userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+        if (userIndex !== -1) {
+          user = mockDB.users[userIndex];
+        }
+      }
+    } catch (mongoError) {
+      console.error('❌ MongoDB fetch failed, falling back to mockDB:', mongoError.message);
+      userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+      if (userIndex !== -1) {
+        user = mockDB.users[userIndex];
+      }
+    }
+    
+    if (!user) {
+      console.log('❌ User not found in any storage');
       return res.status(404).json({ message: 'User not found' });
     }
-
-    const user = mockDB.users[userIndex];
+    
+    if (userIndex === -1) {
+      userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
+    }
+    
     console.log('💳 User current credits before:', user.currentCredits);
     
     // Enforce free trial expiry before allowing credit usage
@@ -8427,7 +8491,14 @@ app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
       user.lastCreditUsage = new Date().toISOString();
       console.log('💳 User current credits after decrement:', user.currentCredits);
       
-      // Save to MongoDB immediately
+      // Update mockDB immediately to keep in sync
+      if (userIndex !== -1) {
+        mockDB.users[userIndex].currentCredits = user.currentCredits;
+        mockDB.users[userIndex].lastCreditUsage = user.lastCreditUsage;
+        mockDB.users[userIndex].creditUsageHistory = user.creditUsageHistory;
+      }
+      
+      // Save to MongoDB immediately (CRITICAL for persistence)
       try {
         const User = require('./models/User');
         const mongoResult = await User.findOneAndUpdate(
@@ -8447,12 +8518,17 @@ app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
           { new: true, maxTimeMS: 10000 }
         );
         console.log(`💾 Credit usage saved to MongoDB for ${user.email}:`, mongoResult?.currentCredits);
+        
+        if (!mongoResult) {
+          console.error('⚠️ WARNING: MongoDB update returned null - data may not be persisted!');
+        }
       } catch (mongoError) {
-        console.error('❌ MongoDB save failed:', mongoError);
+        console.error('❌ CRITICAL: MongoDB save failed:', mongoError);
+        console.error('⚠️ Credits may revert on refresh!');
         // Continue with file save as fallback
       }
       
-      // Save to files as well
+      // Save to files as well (backup persistence)
       saveDataToFiles('credit_used');
       
       console.log(`💳 Credit consumed for ${user.email}: ${user.currentCredits + 1} → ${user.currentCredits}`);

@@ -401,13 +401,13 @@ const Dashboard = () => {
     
     if (userCredits > 0) {
       try {
-        // Call backend to use credit
+        // Call backend to use credit with proper authentication
         const response = await fetch(`${API_BASE_URL}/api/auth/use-credit`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email: user.email })
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          }
         });
 
         if (response.ok) {
@@ -649,6 +649,8 @@ const Dashboard = () => {
           searchType={searchType} 
           useCredit={consumeCredit} 
           userCredits={userCredits}
+          setUserCredits={setUserCredits}
+          setLastCreditUpdate={setLastCreditUpdate}
           globalSearchResults={globalSearchResults}
           setGlobalSearchResults={setGlobalSearchResults}
           handleManualRefresh={handleManualRefresh}
@@ -1543,7 +1545,7 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
 };
 
 // Enhanced Search Page Component
-const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus }) => {
+const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredit, userCredits, setUserCredits, setLastCreditUpdate, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',

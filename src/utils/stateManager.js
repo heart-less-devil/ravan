@@ -115,10 +115,12 @@ class StateManager {
 
   // User-specific methods
   async getUserData() {
-    return await this.get('user', async () => {
-      const token = sessionStorage.getItem('token');
-      if (!token) return null;
+    // CRITICAL FIX: Always fetch fresh user data from backend/MongoDB
+    // Do NOT use cache or sessionStorage to avoid stale credit data
+    const token = sessionStorage.getItem('token');
+    if (!token) return null;
 
+    try {
       const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
         method: 'GET',
         headers: {
@@ -129,10 +131,15 @@ class StateManager {
 
       if (response.ok) {
         const data = await response.json();
+        // Update cache but DO NOT persist to sessionStorage
+        this.set('user', data.user, false);
         return data.user;
       }
       return null;
-    });
+    } catch (error) {
+      console.error('Error fetching user data from backend:', error);
+      return null;
+    }
   }
 
   async getUserCredits() {
@@ -144,7 +151,9 @@ class StateManager {
     const user = await this.getUserData();
     if (user) {
       user.currentCredits = newCredits;
-      this.set('user', user, true);
+      // CRITICAL FIX: DO NOT persist user data to sessionStorage
+      // Always fetch fresh from backend/MongoDB to avoid stale credit data
+      this.set('user', user, false); // Changed from true to false
     }
   }
 
