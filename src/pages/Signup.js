@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
 import VerificationModal from '../components/VerificationModal';
 import { API_BASE_URL, tryApiCall } from '../config';
+import stateManager from '../utils/stateManager';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -19,7 +20,6 @@ const Signup = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isVerificationSent, setIsVerificationSent] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -259,7 +259,12 @@ const Signup = () => {
           // Auto login after successful account creation
           sessionStorage.setItem('token', accountData.token);
           
-          // Redirect to dashboard (payment check is now optional)
+          // Store user data in stateManager
+          if (accountData.user) {
+            stateManager.set('user', accountData.user, true);
+          }
+          
+          // Redirect to dashboard
           alert('Account created successfully! Redirecting to dashboard...');
           setShowVerificationModal(false);
           setVerificationError('');
@@ -400,7 +405,7 @@ const Signup = () => {
                   transition={{ duration: 0.6, delay: 0.3 }}
                   className="text-4xl font-bold text-black mb-3"
                 >
-                  {isVerificationSent ? 'Verify Your Email' : 'Join BioPing'}
+                  {showVerificationModal ? 'Verify Your Email' : 'Join BioPing'}
                 </motion.h2>
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
@@ -408,7 +413,7 @@ const Signup = () => {
                   transition={{ duration: 0.6, delay: 0.4 }}
                   className="text-black text-lg"
                 >
-                  {isVerificationSent ? (
+                  {showVerificationModal ? (
                     <>
                       We've sent a verification code to <span className="font-medium text-black">{formData.email}</span>
                     </>

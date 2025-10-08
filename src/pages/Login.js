@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { CompactSpinner } from '../components/LoadingSpinner';
+import stateManager from '../utils/stateManager';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -100,10 +101,15 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store only token in sessionStorage for authentication
+        // Store token in sessionStorage
         sessionStorage.setItem('token', data.token);
         
-        // Redirect to dashboard (payment check is now optional)
+        // Store user data in stateManager
+        if (data.user) {
+          stateManager.set('user', data.user, true);
+        }
+        
+        // Redirect to dashboard
         navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');

@@ -499,13 +499,14 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       }
       
       // Generate automatic invoice for successful payment
+      let invoiceResult = null;
       try {
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         const planId = paymentIntent.metadata?.planId || 'monthly';
         
         if (customerEmail) {
           console.log('🎯 Triggering automatic invoice generation...');
-          await generateAutomaticInvoice(paymentIntent, customerEmail, planId);
+          invoiceResult = await generateAutomaticInvoice(paymentIntent, customerEmail, planId);
         } else {
           console.log('⚠️ No customer email found for invoice generation');
         }
@@ -517,10 +518,12 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
       try {
         const customerEmail = paymentIntent.receipt_email || paymentIntent.customer_details?.email || paymentIntent.metadata?.customerEmail;
         if (customerEmail) {
+          // Check if invoice PDF is available
+          const hasInvoicePDF = invoiceResult && invoiceResult.pdfBuffer;
+          
           const mailOptions = {
-            from: process.env.EMAIL_USER || 'gauravvij1980@gmail.com',
             to: customerEmail,
-            subject: 'BioPing - Payment Confirmation',
+            subject: hasInvoicePDF ? 'BioPing - Payment Confirmation & Invoice' : 'BioPing - Payment Confirmation',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; color: white;">
@@ -547,7 +550,10 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                     </div>
                   </div>
                   <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                    Your invoice has been generated and is available in your account. If you have any questions, please contact our support team.
+                    ${hasInvoicePDF 
+                      ? '<strong>📎 Your invoice is attached to this email as a PDF.</strong><br>It is also available in your account dashboard.' 
+                      : 'Your invoice is available in your account dashboard.'
+                    } If you have any questions, please contact our support team.
                   </p>
                   <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                     <p style="color: #999; font-size: 12px;">
@@ -560,8 +566,18 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             `
           };
           
-          await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
-          console.log('✅ Payment confirmation email sent to:', customerEmail);
+          // Attach invoice PDF if available
+          if (hasInvoicePDF) {
+            const attachments = [{
+              filename: `BioPing-Invoice-${invoiceResult.invoiceData.id}.pdf`,
+              content: invoiceResult.pdfBuffer
+            }];
+            await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html, null, attachments);
+            console.log('✅ Payment confirmation email with invoice PDF sent to:', customerEmail);
+          } else {
+            await sendEmail(mailOptions.to, mailOptions.subject, mailOptions.html);
+            console.log('✅ Payment confirmation email sent to:', customerEmail);
+          }
         }
       } catch (emailError) {
         console.error('❌ Error sending payment confirmation email:', emailError);
@@ -1244,12 +1260,15 @@ console.log('📧 RESEND_API_KEY set:', process.env.RESEND_API_KEY ? 'Yes' : 'No
 console.log('📧 RESEND_API_KEY value:', process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 4) + '****' : 'Not set');
 
 // RESEND EMAIL FUNCTION - HTTP API (NO SMTP)
-const sendEmail = async (to, subject, html, replyTo = null) => {
+const sendEmail = async (to, subject, html, replyTo = null, attachments = []) => {
   try {
     console.log(`📧 RESEND EMAIL: Sending to ${to}`);
     console.log(`📧 RESEND EMAIL: From: BioPing <support@thebioping.com>`);
     if (replyTo) {
       console.log(`📧 RESEND EMAIL: Reply-To: ${replyTo}`);
+    }
+    if (attachments && attachments.length > 0) {
+      console.log(`📧 RESEND EMAIL: Attachments: ${attachments.length} file(s)`);
     }
     
     // Use Resend HTTP API instead of SMTP
@@ -1263,6 +1282,14 @@ const sendEmail = async (to, subject, html, replyTo = null) => {
     // Add reply-to header if provided
     if (replyTo) {
       emailBody.reply_to = replyTo;
+    }
+
+    // Add attachments if provided (Resend API format)
+    if (attachments && attachments.length > 0) {
+      emailBody.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content.toString('base64')
+      }));
     }
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -2719,7 +2746,7 @@ Timestamp: ${new Date().toLocaleString()}
         
         // Use simple Gmail function for reliable email sending
         const emailResult = await sendEmail(
-          'universalx0242@gmail.com',
+          'gauravvij1980@gmail.com',
           'New Contact Form Submission - BioPing',
           `
           <h2>New Contact Form Submission</h2>
@@ -2732,7 +2759,7 @@ Timestamp: ${new Date().toLocaleString()}
         );
         
         if (emailResult.success) {
-          console.log('✅ Contact form email sent successfully to universalx0242@gmail.com');
+          console.log('✅ Contact form email sent successfully to gauravvij1980@gmail.com');
           console.log('📧 Email ID:', emailResult.messageId);
         } else {
           console.log('❌ Contact form email failed:', emailResult.error);
@@ -6385,9 +6412,9 @@ app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
           trialEnd: null
         };
       } else if (user.currentPlan === 'free' && !user.paymentCompleted) {
-        // Free trial: 30 days from registration
+        // Free trial: 5 days from registration
         const trialStart = new Date(user.createdAt);
-        const trialEnd = new Date(trialStart.getTime() + (30 * 24 * 60 * 60 * 1000));
+        const trialEnd = new Date(trialStart.getTime() + (5 * 24 * 60 * 60 * 1000));
         const now = new Date();
         const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
         
@@ -6659,7 +6686,7 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
           trialInfo = { status: 'Test Account', daysRemaining: 'N/A', trialEnd: null };
         } else if (user.currentPlan === 'free' && !user.paymentCompleted) {
           const trialStart = new Date(user.createdAt);
-          const trialEnd = new Date(trialStart.getTime() + (30 * 24 * 60 * 60 * 1000));
+          const trialEnd = new Date(trialStart.getTime() + (5 * 24 * 60 * 60 * 1000));
           const now = new Date();
           const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
           trialInfo = {
@@ -6839,10 +6866,14 @@ async function generateAutomaticInvoice(paymentIntent, customerEmail, planId) {
     }
     
     console.log('✅ Automatic invoice generated successfully:', invoiceData.id);
-    return invoiceData;
+    return {
+      invoiceData,
+      pdfBuffer
+    };
     
   } catch (error) {
     console.error('❌ Error generating automatic invoice:', error);
+    return null;
   }
 }
 
@@ -8025,7 +8056,7 @@ app.get('/api/auth/subscription', authenticateToken, (req, res) => {
     const now = new Date();
     const registrationDate = new Date(user.createdAt || user.registrationDate || now);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
-    const trialDays = 3;
+    const trialDays = 5;
     const trialExpired = daysSinceRegistration >= trialDays;
     const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
     const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
@@ -8137,7 +8168,7 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
     const now = new Date();
     const registrationDate = new Date(user.createdAt || user.registrationDate || now);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
-    const trialDays = 3;
+    const trialDays = 5;
     const trialExpired = daysSinceRegistration >= trialDays;
     const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
     const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
@@ -8333,24 +8364,41 @@ app.post('/api/auth/cancel-subscription', authenticateToken, async (req, res) =>
 });
 
 // Update user credits (when they use credits)
-app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
+app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
   try {
+    console.log('💳 CREDIT USAGE ENDPOINT CALLED for:', req.user.email);
     const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
     
     if (userIndex === -1) {
+      console.log('❌ User not found in file storage');
       return res.status(404).json({ message: 'User not found' });
     }
 
     const user = mockDB.users[userIndex];
+    console.log('💳 User current credits before:', user.currentCredits);
     
     // Enforce free trial expiry before allowing credit usage
     if (!user.paymentCompleted || user.currentPlan === 'free') {
       const now = new Date();
       const registrationDate = new Date(user.createdAt || user.registrationDate || now);
       const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysSinceRegistration >= 3) {
+      if (daysSinceRegistration >= 5) {
         if (user.currentCredits !== 0) {
           mockDB.users[userIndex].currentCredits = 0;
+          
+          // Save trial expiry to MongoDB
+          try {
+            const User = require('./models/User');
+            await User.findOneAndUpdate(
+              { email: user.email },
+              { currentCredits: 0 },
+              { new: true, maxTimeMS: 10000 }
+            );
+            console.log(`💾 Trial expiry saved to MongoDB for ${user.email}`);
+          } catch (mongoError) {
+            console.error('❌ MongoDB trial expiry save failed:', mongoError);
+          }
+          
           saveDataToFiles('free_trial_expired_block');
         }
         return res.status(400).json({ success: false, message: 'Free trial expired' });
@@ -8377,6 +8425,34 @@ app.post('/api/auth/use-credit', authenticateToken, (req, res) => {
       
       user.currentCredits -= 1;
       user.lastCreditUsage = new Date().toISOString();
+      console.log('💳 User current credits after decrement:', user.currentCredits);
+      
+      // Save to MongoDB immediately
+      try {
+        const User = require('./models/User');
+        const mongoResult = await User.findOneAndUpdate(
+          { email: user.email },
+          {
+            currentCredits: user.currentCredits,
+            lastCreditUsage: user.lastCreditUsage,
+            $push: {
+              creditUsageHistory: {
+                action: 'search',
+                timestamp: new Date(),
+                creditsUsed: 1,
+                remainingCredits: user.currentCredits
+              }
+            }
+          },
+          { new: true, maxTimeMS: 10000 }
+        );
+        console.log(`💾 Credit usage saved to MongoDB for ${user.email}:`, mongoResult?.currentCredits);
+      } catch (mongoError) {
+        console.error('❌ MongoDB save failed:', mongoError);
+        // Continue with file save as fallback
+      }
+      
+      // Save to files as well
       saveDataToFiles('credit_used');
       
       console.log(`💳 Credit consumed for ${user.email}: ${user.currentCredits + 1} → ${user.currentCredits}`);

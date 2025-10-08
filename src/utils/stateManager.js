@@ -120,6 +120,7 @@ class StateManager {
       if (!token) return null;
 
       const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

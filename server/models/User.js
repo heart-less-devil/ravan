@@ -67,6 +67,26 @@ const userSchema = new mongoose.Schema({
   nextCreditRenewal: {
     type: Date
   },
+  lastCreditUsage: {
+    type: Date
+  },
+  creditUsageHistory: [{
+    action: {
+      type: String,
+      default: 'search'
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    creditsUsed: {
+      type: Number,
+      default: 1
+    },
+    remainingCredits: {
+      type: Number
+    }
+  }],
   subscriptionOnHold: {
     type: Boolean,
     default: false

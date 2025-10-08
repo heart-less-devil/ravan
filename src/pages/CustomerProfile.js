@@ -99,14 +99,15 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     // Load user data and payment status
   const loadUserData = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
+      if (!user || !user.email) return;
 
       // Get user profile
       const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (profileResponse.ok) {
@@ -127,16 +128,20 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
       // Get payment status
       const paymentResponse = await fetch(`${API_BASE_URL}/api/auth/payment-status`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       // Get user invoices
       const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (paymentResponse.ok) {
@@ -304,15 +309,15 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   const handleDownloadInvoice = async (invoice) => {
     try {
-      const token = sessionStorage.getItem('token');
-      
       // Add delay to prevent simultaneous downloads
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const response = await fetch(`${API_BASE_URL}/api/auth/download-invoice/${invoice.id}`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (response.ok) {
@@ -340,11 +345,12 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   const handleDownloadAllInvoices = async () => {
     try {
-      const token = sessionStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/api/auth/download-all-invoices`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (response.ok) {
@@ -381,17 +387,18 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   const handleSaveProfile = async () => {
     try {
-      const token = sessionStorage.getItem('token');
       console.log('Updating profile with:', editForm);
-      console.log('Token:', token);
+      console.log('User email:', user.email);
       
       const response = await fetch(`${API_BASE_URL}/api/auth/update-profile`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify({
+          ...editForm,
+          email: user.email
+        })
       });
 
       console.log('Response status:', response.status);
@@ -451,32 +458,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     return user.credits || 5;
   };
 
-  // Function to sync credits with backend
-  const syncCredits = async () => {
-    try {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.user) {
-          setUser(prev => ({
-            ...prev,
-            credits: data.user.currentCredits || 5,
-            usedCredits: prev.totalCredits - (data.user.currentCredits || 5)
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error syncing credits:', error);
-    }
-  };
+  // Sync functionality removed - credits are now managed by backend automatically
 
   // Function to refresh user data
   const refreshUserData = () => {
@@ -549,16 +531,6 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                     })}
                     <span className="font-semibold text-gray-900">{user.plan}</span>
                   </div>
-                                     <div className="text-sm text-gray-600">
-                     {user.credits} credits remaining
-                   </div>
-                   <button
-                     onClick={syncCredits}
-                     className="text-xs text-blue-600 hover:text-blue-700 mt-1 flex items-center space-x-1"
-                   >
-                     <RefreshCw className="w-3 h-3" />
-                     <span>Sync</span>
-                   </button>
                 </div>
               </div>
 
@@ -594,25 +566,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                   className="space-y-6"
                 >
                   {/* Stats Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                         <div className="bg-white rounded-2xl shadow-lg p-6">
-                       <div className="flex items-center justify-between">
-                         <div>
-                           <p className="text-sm font-medium text-gray-600">Credits Used</p>
-                           <p className="text-2xl font-bold text-gray-900">{user.usedCredits}/{user.totalCredits}</p>
-                           <button
-                             onClick={syncCredits}
-                             className="text-xs text-blue-600 hover:text-blue-700 mt-1 flex items-center space-x-1"
-                           >
-                             <RefreshCw className="w-3 h-3" />
-                             <span>Sync Credits</span>
-                           </button>
-                         </div>
-                         <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                           <Database className="w-6 h-6 text-blue-600" />
-                         </div>
-                       </div>
-                     </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     <div className="bg-white rounded-2xl shadow-lg p-6">
                       <div className="flex items-center justify-between">
@@ -737,7 +691,6 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                             })}
                             <div>
                               <p className="font-semibold text-gray-900">{user.plan}</p>
-                              <p className="text-sm text-gray-600">{user.credits} credits per month</p>
                             </div>
                           </div>
                           <div className="space-y-2">

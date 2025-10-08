@@ -58,9 +58,9 @@ const getTrialData = (user) => {
   }
   
   if (user.currentPlan === 'free' && !user.paymentCompleted) {
-    // Free trial: 30 days from registration
+    // Free trial: 5 days from registration
     const trialStart = new Date(user.createdAt);
-    const trialEnd = new Date(trialStart.getTime() + (30 * 24 * 60 * 60 * 1000));
+    const trialEnd = new Date(trialStart.getTime() + (5 * 24 * 60 * 60 * 1000));
     const now = new Date();
     const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
     

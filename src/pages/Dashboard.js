@@ -82,6 +82,7 @@ import LoadingSpinner, { CompactSpinner } from '../components/LoadingSpinner';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
@@ -93,18 +94,46 @@ const Dashboard = () => {
   const [globalSearchResults, setGlobalSearchResults] = useState(null);
   const [userCredits, setUserCredits] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
+  const [lastCreditUpdate, setLastCreditUpdate] = useState(0);
   const [showCustomerProfile, setShowCustomerProfile] = useState(false);
   const [showSubscriptionManager, setShowSubscriptionManager] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [userPaymentStatus, setUserPaymentStatus] = useState({ hasPaid: false, currentPlan: 'free' });
   const [error, setError] = useState(null);
-  const [daysRemaining, setDaysRemaining] = useState(3);
+  const [daysRemaining, setDaysRemaining] = useState(5);
   const [showError, setShowError] = useState(false);
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState(null);
   const [forceRender, setForceRender] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Load user data from stateManager on mount
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        console.log('🔄 Loading user data from stateManager...');
+        const userData = await stateManager.getUserData();
+        console.log('🔄 User data received:', userData);
+        
+        if (userData && userData.email) {
+          setUser(userData);
+          setIsLoadingUser(false);
+          console.log('✅ User data set successfully');
+        } else {
+          console.log('❌ No user data found, redirecting to login');
+          setIsLoadingUser(false);
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('❌ Error loading user data:', error);
+        setIsLoadingUser(false);
+        navigate('/login');
+      }
+    };
+    
+    loadUserData();
+  }, [navigate]);
 
   // Clear search state when navigating away from search page
   useEffect(() => {
@@ -145,15 +174,17 @@ const Dashboard = () => {
   // Check for user suspension
   const checkUserSuspension = async () => {
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) return;
+      if (!user || !user.email) return;
 
       console.log('🔍 Checking user suspension status...');
       
       const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       console.log('📡 Suspension check response status:', response.status);
@@ -187,35 +218,39 @@ const Dashboard = () => {
   const fetchUserData = useCallback(async () => {
     try {
       setIsInitialLoading(true);
-      const token = sessionStorage.getItem('token');
       console.log('=== OPTIMIZED FETCH USER DATA ===');
       
-      if (!token) {
-        console.log('No token found, redirecting to login');
-        window.location.href = '/login';
+      if (!user || !user.email) {
+        console.log('No user data found, but user might be loading...');
         return;
       }
+
+      // Check if we should skip credit update based on recent user action
+      const timeSinceLastCreditUpdate = Date.now() - lastCreditUpdate;
+      
+      // If credits were updated recently (within 10 seconds), skip backend credit fetch
+      const skipCreditUpdate = timeSinceLastCreditUpdate < 10000;
 
       // Make all API calls in parallel for faster loading
       console.log('Making parallel API calls...');
       const [profileResponse, subscriptionResponse, invoicesResponse] = await Promise.allSettled([
         fetch(`${API_BASE_URL}/api/auth/profile`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ email: user.email })
         }),
         fetch(`${API_BASE_URL}/api/auth/subscription`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ email: user.email })
         }),
         fetch(`${API_BASE_URL}/api/auth/invoices`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ email: user.email })
         })
       ]);
 
@@ -239,8 +274,18 @@ const Dashboard = () => {
         
         if (registrationDate) {
           const regDate = new Date(registrationDate);
-          const daysSinceRegistration = Math.floor((currentDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+          // Fix timezone issues by using UTC dates and Math.ceil for proper day calculation
+          const currentUTC = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+          const regUTC = new Date(regDate.getFullYear(), regDate.getMonth(), regDate.getDate());
+          const daysSinceRegistration = Math.ceil((currentUTC.getTime() - regUTC.getTime()) / (1000 * 60 * 60 * 24));
           const trialExpired = daysSinceRegistration >= 5;
+          
+          console.log('📅 Trial calculation:', {
+            registrationDate: regDate.toISOString(),
+            currentDate: currentDate.toISOString(),
+            daysSinceRegistration,
+            trialExpired
+          });
           
           if (trialExpired) {
             setUserCredits(0);
@@ -248,10 +293,12 @@ const Dashboard = () => {
           } else {
             const credits = profileData.user.currentCredits ?? 5;
             setUserCredits(credits);
-            setDaysRemaining(5 - daysSinceRegistration);
+            const remainingDays = Math.max(0, 5 - daysSinceRegistration);
+            setDaysRemaining(remainingDays);
           }
         } else {
-          if (typeof profileData.user.currentCredits === 'number') {
+          // Only update credits from backend if they weren't recently changed by user action
+          if (typeof profileData.user.currentCredits === 'number' && !skipCreditUpdate) {
             setUserCredits(profileData.user.currentCredits);
           }
         }
@@ -269,9 +316,9 @@ const Dashboard = () => {
           const currentPlan = subscriptionData.currentPlan || 'free';
           setUserPaymentStatus({ hasPaid, currentPlan });
           
-          // For paid users, update credits from subscription data
+          // For paid users, update credits from subscription data (but respect recent user actions)
           if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
-            if (typeof subscriptionData.currentCredits === 'number') {
+            if (typeof subscriptionData.currentCredits === 'number' && !skipCreditUpdate) {
               setUserCredits(subscriptionData.currentCredits);
             }
           }
@@ -313,17 +360,11 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = sessionStorage.getItem('token');
-    
-    if (!token) {
-      window.location.href = '/login';
-      return;
+    // Only fetch user data if user is loaded and not loading
+    if (user && user.email && !isLoadingUser) {
+      fetchUserData();
     }
-
-    // Fetch user data once on component mount
-    fetchUserData();
-  }, []);
+  }, [user, isLoadingUser]);
 
   // This useEffect was causing navigation conflicts - removed
   // The search state clearing is now handled in the main useEffect above
@@ -349,7 +390,9 @@ const Dashboard = () => {
   // }, [location.pathname]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
+    // Clear user data from state and stateManager
+    setUser(null);
+    stateManager.clear();
     navigate('/login');
   };
 
@@ -358,15 +401,13 @@ const Dashboard = () => {
     
     if (userCredits > 0) {
       try {
-        const token = sessionStorage.getItem('token');
-        
         // Call backend to use credit
         const response = await fetch(`${API_BASE_URL}/api/auth/use-credit`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ email: user.email })
         });
 
         if (response.ok) {
@@ -374,29 +415,51 @@ const Dashboard = () => {
           const newCredits = data.remainingCredits;
           console.log(`✅ Backend credit update: ${userCredits} → ${newCredits}`);
           
-          // Immediately update state
+          // Update state with backend response
           setUserCredits(newCredits);
+          setLastCreditUpdate(Date.now()); // Track when credits were last updated
           
-          console.log('💳 Frontend credits updated immediately:', newCredits);
+          // Also update user state to keep it in sync
+          setUser(prev => ({
+            ...prev,
+            currentCredits: newCredits
+          }));
+          
+          console.log('💳 Frontend credits updated from backend:', newCredits);
           
           // Log credit usage for monitoring
           console.log(`💳 Credit used successfully. Remaining: ${newCredits}`);
           return true;
         } else {
-          console.error('❌ Failed to use credit on backend');
-          // Fallback to frontend-only update
-          const newCredits = userCredits - 1;
-          console.log(`🔄 Frontend fallback: ${userCredits} → ${newCredits}`);
+          const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+          console.error('❌ Failed to use credit on backend:', response.status, errorData);
+          
+          // Fallback: update frontend credits anyway to allow functionality
+          const newCredits = Math.max(0, userCredits - 1);
           setUserCredits(newCredits);
-          return true;
+          setLastCreditUpdate(Date.now()); // Track when credits were last updated
+          
+          setUser(prev => ({
+            ...prev,
+            currentCredits: newCredits
+          }));
+          console.log(`🔄 Frontend fallback: ${userCredits} → ${newCredits}`);
+          return true; // Still allow the action to proceed
         }
       } catch (error) {
         console.error('❌ Error using credit:', error);
-        // Fallback to frontend-only update
-        const newCredits = userCredits - 1;
-        console.log(`🔄 Frontend fallback (error): ${userCredits} → ${newCredits}`);
+        
+        // Fallback: update frontend credits anyway to allow functionality
+        const newCredits = Math.max(0, userCredits - 1);
         setUserCredits(newCredits);
-        return true;
+        setLastCreditUpdate(Date.now()); // Track when credits were last updated
+        
+        setUser(prev => ({
+          ...prev,
+          currentCredits: newCredits
+        }));
+        console.log(`🔄 Frontend fallback (error): ${userCredits} → ${newCredits}`);
+        return true; // Still allow the action to proceed
       }
     } else {
       console.log('❌ No credits remaining, showing popup');
@@ -445,26 +508,25 @@ const Dashboard = () => {
     setSearchLoading(true);
     setError(null); // Clear any previous errors
     try {
-      const token = sessionStorage.getItem('token');
-      
-      if (!token) {
+      if (!user || !user.email) {
         setError('Please login again to search.');
         return;
       }
       
       console.log('Searching with:', { searchType, searchQuery });
-      console.log('Using token:', token);
+      console.log('Using user email:', user.email);
       console.log('API URL:', `${API_BASE_URL}/search-biotech`);
       
       const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify({
           searchType: searchType,
-          searchQuery: searchQuery.trim()
+          searchQuery: searchQuery.trim(),
+          email: user.email
         })
       });
 
@@ -583,6 +645,7 @@ const Dashboard = () => {
         }
         return <SearchPage 
           key={`search-${forceRender}`}
+          user={user}
           searchType={searchType} 
           useCredit={consumeCredit} 
           userCredits={userCredits}
@@ -631,16 +694,16 @@ const Dashboard = () => {
       case '/dashboard/contact':
         return <Contact />;
       case '/dashboard/pricing':
-        return <PricingPage />;
+        return <PricingPage user={user} />;
       case '/dashboard/pricing-management':
-        return <PricingManagementPage />;
+        return <PricingManagementPage user={user} />;
           
       default:
         return <DashboardHome user={user} userPaymentStatus={userPaymentStatus} userCredits={userCredits} daysRemaining={daysRemaining} onManageSubscription={() => setShowSubscriptionManager(true)} />;
     }
   };
 
-  if (!user || isInitialLoading) {
+  if (!user || isLoadingUser) {
     return (
       <LoadingSpinner
         size="xl"
@@ -1480,7 +1543,7 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
 };
 
 // Enhanced Search Page Component
-const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus }) => {
+const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredit, userCredits, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',
@@ -1510,7 +1573,7 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
   const [groupedResults, setGroupedResults] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
-  const [daysRemaining, setDaysRemaining] = useState(3);
+  const [daysRemaining, setDaysRemaining] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [allContactsCurrentPage, setAllContactsCurrentPage] = useState(1);
   const [allContactsItemsPerPage] = useState(25);
@@ -1523,17 +1586,21 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     setIsGlobalSearch(true);
     
     try {
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found. Please login again.');
+        return;
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify({
           searchType: searchType,
-          searchQuery: searchQuery.trim()
+          searchQuery: searchQuery.trim(),
+          email: user.email
         })
       });
 
@@ -1726,20 +1793,24 @@ const SearchPage = ({ searchType = 'Company Name', useCredit: consumeCredit, use
     setCurrentSearchType('Advanced Search');
 
     try {
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found. Please login again.');
+        return;
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify({
           drugName: formData.drugName,
           diseaseArea: formData.diseaseArea,
           partnerType: formData.lookingFor,
           region: formData.region,
-          function: formData.function
+          function: formData.function,
+          email: user.email
         })
       });
 
@@ -4259,7 +4330,7 @@ const Contact = () => {
 };
 
 // Enhanced Pricing Page Component - BioPing Style
-const PricingPage = () => {
+const PricingPage = ({ user }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isAnnual, setIsAnnual] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -4472,6 +4543,11 @@ const PricingPage = () => {
   const handleSelectPlan = async (plan) => {
     console.log('🎯 handleSelectPlan called with plan:', plan);
     
+    if (!user || !user.email) {
+      console.error('User not found');
+      return;
+    }
+    
     if (plan.id === 'free') {
       console.log('🆓 Free plan selected - activating without payment');
       
@@ -4483,19 +4559,17 @@ const PricingPage = () => {
       try {
         setPaymentStatus('Activating free plan...');
         
-        const token = sessionStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/api/auth/activate-free-plan`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ email: user.email })
         });
         
         if (response.ok) {
           const data = await response.json();
           setUserCurrentPlan('free');
-          sessionStorage.setItem('userCurrentPlan', 'free');
           setPaymentStatus('Free plan activated successfully!');
           
           // Refresh user data
@@ -4543,21 +4617,18 @@ const PricingPage = () => {
       } else if (selectedPlan.id === 'daily-12') {
         credits = 50; // Daily credits
       }
-      // Credits will be updated via backend sync
-      
-      // Sync with backend
+      // Credits will be updated automatically by backend
       try {
-        const token = sessionStorage.getItem('token');
         const response = await fetch(`${API_BASE_URL}/api/auth/update-payment-status`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             paymentCompleted: true,
             currentPlan: selectedPlan.id,
-            currentCredits: credits
+            currentCredits: credits,
+            email: user.email
           })
         });
         
@@ -5150,7 +5221,7 @@ const AnalyticsPage = () => {
 };
 
 // Simple Pricing Analytics Page
-const PricingAnalyticsPage = () => {
+const PricingAnalyticsPage = ({ user }) => {
   const [pricingData, setPricingData] = useState({
     plans: [],
     recentPurchases: [],
@@ -5168,14 +5239,18 @@ const PricingAnalyticsPage = () => {
   const fetchPricingAnalytics = async () => {
     try {
       setLoading(true);
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found');
+        return;
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/pricing-analytics`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (!response.ok) {
@@ -5265,14 +5340,18 @@ const PricingAnalyticsPage = () => {
 
   const exportAnalyticsData = async () => {
     try {
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found');
+        return;
+      }
       
       const response = await fetch(`${API_BASE_URL}/api/pricing-analytics/export`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (!response.ok) {
@@ -5621,7 +5700,7 @@ const PricingAnalyticsPage = () => {
 };
 
 // Pricing Management Page Component
-const PricingManagementPage = () => {
+const PricingManagementPage = ({ user }) => {
   const navigate = useNavigate();
   const [pricingPlans, setPricingPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -5644,11 +5723,17 @@ const PricingManagementPage = () => {
   const fetchPricingPlans = async () => {
     try {
       setLoading(true);
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found');
+        return;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ email: user.email })
       });
       
       if (response.ok) {
@@ -5669,7 +5754,11 @@ const PricingManagementPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found');
+        return;
+      }
+      
       const url = editingPlan 
         ? `${API_BASE_URL}/api/admin/pricing-plans/${editingPlan._id}`
         : `${API_BASE_URL}/api/admin/pricing-plans`;
@@ -5680,11 +5769,12 @@ const PricingManagementPage = () => {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
         },
         body: JSON.stringify({
           ...formData,
-          features: formData.features.split(',').map(f => f.trim()).filter(f => f)
+          features: formData.features.split(',').map(f => f.trim()).filter(f => f),
+          email: user.email
         })
       });
 
@@ -5714,12 +5804,18 @@ const PricingManagementPage = () => {
     if (!window.confirm('Are you sure you want to delete this pricing plan?')) return;
     
     try {
-      const token = sessionStorage.getItem('token');
+      if (!user || !user.email) {
+        setError('User not found');
+        return;
+      }
+      
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-plans/${planId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ email: user.email })
       });
 
       if (response.ok) {

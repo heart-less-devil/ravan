@@ -363,16 +363,14 @@ const BDTrackerPage = () => {
     const projectName = prompt('Enter project name for the Excel file:');
     if (!projectName) return;
     
-    // Create CSV content with proper headers
-    const headers = [...columns.map(col => col.label), columnHeadings.actions].join(',');
+    // Create CSV content with proper headers (excluding Actions column)
+    const headers = columns.map(col => col.label).join(',');
     const rows = filteredEntries.map(entry => {
       const rowData = columns.map(col => {
         const value = entry[col.key] || '';
         // Escape quotes and wrap in quotes for CSV
         return `"${value.toString().replace(/"/g, '""')}"`;
       });
-      // Add empty actions column
-      rowData.push('""');
       return rowData.join(',');
     }).join('\n');
     

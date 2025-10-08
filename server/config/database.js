@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     // MongoDB URI - using the working connection string
-    const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://bioping:bioping123@cluster0.mongodb.net/bioping?retryWrites=true&w=majority';
+    const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://universal:universal07@cluster0.f2z1iic.mongodb.net/bioping?retryWrites=true&w=majority&appName=Cluster0';
     
     console.log('🔄 Attempting MongoDB connection...');
     console.log('🔍 MongoDB URI (masked):', mongoURI.replace(/\/\/.*@/, '//***:***@'));
@@ -119,7 +119,7 @@ const connectDB = async () => {
       
       try {
         const envContent = `# MongoDB Configuration
-MONGODB_URI=mongodb+srv://bioping:bioping123@cluster0.mongodb.net/bioping?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://universal:universal07@cluster0.f2z1iic.mongodb.net/bioping?retryWrites=true&w=majority&appName=Cluster0
 
 # Server Configuration
 PORT=5000
