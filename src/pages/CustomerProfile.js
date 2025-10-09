@@ -101,13 +101,20 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     try {
       if (!user || !user.email) return;
 
+      // Get authentication token
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        console.log('No authentication token found');
+        return;
+      }
+
       // Get user profile
       const profileResponse = await fetch(`${API_BASE_URL}/api/auth/profile`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: user.email })
+        }
       });
 
       if (profileResponse.ok) {
@@ -126,29 +133,30 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
         }
       }
 
-      // Get payment status
-      const paymentResponse = await fetch(`${API_BASE_URL}/api/auth/payment-status`, {
-        method: 'POST',
+      // Get subscription status
+      const subscriptionResponse = await fetch(`${API_BASE_URL}/api/auth/subscription`, {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: user.email })
+        }
       });
 
       // Get user invoices
       const invoicesResponse = await fetch(`${API_BASE_URL}/api/auth/invoices`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: user.email })
+        }
       });
 
-      if (paymentResponse.ok) {
-        const paymentData = await paymentResponse.json();
-        console.log('Payment data received:', paymentData);
+      // Process subscription data
+      if (subscriptionResponse.ok) {
+        const subscriptionData = await subscriptionResponse.json();
+        console.log('Subscription data received:', subscriptionData);
         
-        // Determine plan based on payment status
+        // Determine plan based on subscription status
         let planName = 'Free';
         let planStatus = 'active';
         let credits = 5;
@@ -156,28 +164,41 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
         let subscriptionStatus = 'inactive';
         let amount = 0;
         let usedCredits = 0;
+        let nextBillingDate = null;
 
-        if (paymentData.paymentCompleted && paymentData.currentPlan !== 'free') {
-          planName = paymentData.currentPlan === 'monthly' ? 'Monthly Plan' : 
-                    paymentData.currentPlan === 'annual' ? 'Annual Plan' : 
-                    paymentData.currentPlan === 'test' ? 'Test Plan' : 'Paid Plan';
+        if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
+          planName = subscriptionData.currentPlan === 'monthly' ? 'Monthly Plan' : 
+                    subscriptionData.currentPlan === 'annual' ? 'Annual Plan' : 
+                    subscriptionData.currentPlan === 'test' ? 'Test Plan' : 'Paid Plan';
           planStatus = 'active';
-          credits = paymentData.currentPlan === 'monthly' ? 50 : 
-                   paymentData.currentPlan === 'annual' ? 100 : 
-                   paymentData.currentPlan === 'test' ? 1 : 5;
-          totalCredits = credits;
+          credits = subscriptionData.currentCredits || (subscriptionData.currentPlan === 'monthly' ? 50 : 
+                   subscriptionData.currentPlan === 'annual' ? 100 : 
+                   subscriptionData.currentPlan === 'test' ? 1 : 5);
+          totalCredits = subscriptionData.currentPlan === 'monthly' ? 50 : 
+                        subscriptionData.currentPlan === 'annual' ? 100 : 
+                        subscriptionData.currentPlan === 'test' ? 1 : 5;
           subscriptionStatus = 'active';
-          amount = paymentData.currentPlan === 'test' ? 1 : 
-                  paymentData.currentPlan === 'monthly' ? 500 : 
-                  paymentData.currentPlan === 'annual' ? 4800 : 0;
+          amount = subscriptionData.currentPlan === 'test' ? 1 : 
+                  subscriptionData.currentPlan === 'monthly' ? 500 : 
+                  subscriptionData.currentPlan === 'annual' ? 4800 : 0;
+          
+          // Use backend calculated next billing date for subscription plans
+          if (subscriptionData.isSubscriptionPlan && subscriptionData.nextBillingDate) {
+            nextBillingDate = subscriptionData.nextBillingDate;
+          } else {
+            // One-time payment plans don't show next billing
+            nextBillingDate = null;
+          }
           
           // Calculate used credits based on total and remaining
-          usedCredits = totalCredits - credits;
+          usedCredits = Math.max(0, totalCredits - credits);
         } else {
-          // Free users - default to 5 credits
-          credits = 5;
+          // Free users - get actual credits from backend
+          credits = subscriptionData.currentCredits || 5;
           totalCredits = 5;
-          usedCredits = 0;
+          usedCredits = Math.max(0, totalCredits - credits);
+          amount = 0;
+          nextBillingDate = null;
         }
 
         // Get invoices data
@@ -213,7 +234,9 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
           subscription: {
             ...prev.subscription,
             status: subscriptionStatus,
-            amount: amount
+            amount: amount,
+            currentPeriodEnd: nextBillingDate || new Date().toISOString(),
+            interval: amount > 0 ? 'month' : 'none'
           }
         }));
       }
@@ -233,7 +256,7 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
       setUser(prev => ({
         ...prev,
         credits: newCredits,
-        usedCredits: prev.totalCredits - newCredits
+        usedCredits: Math.max(0, prev.totalCredits - newCredits)
       }));
     };
     
@@ -444,11 +467,14 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
 
   // Function to update credits when they are used
   const updateCredits = (creditsUsed) => {
-    setUser(prev => ({
-      ...prev,
-      credits: Math.max(0, (prev.credits || 5) - creditsUsed),
-      usedCredits: prev.totalCredits - Math.max(0, (prev.credits || 5) - creditsUsed)
-    }));
+    setUser(prev => {
+      const newCredits = Math.max(0, (prev.credits || 5) - creditsUsed);
+      return {
+        ...prev,
+        credits: newCredits,
+        usedCredits: Math.max(0, prev.totalCredits - newCredits)
+      };
+    });
     
     console.log(`Credits updated: ${creditsUsed} used, ${Math.max(0, (user.credits || 5) - creditsUsed)} remaining`);
   };
@@ -609,15 +635,20 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                       <div>
                         <p className="text-sm font-medium text-gray-600 mb-2">Billing Amount</p>
                         <p className="text-lg font-semibold text-gray-900">
-                          {formatCurrency(user.subscription.amount, user.subscription.currency)}/{user.subscription.interval}
+                          {user.subscription.amount > 0 ? 
+                            `${formatCurrency(user.subscription.amount, user.subscription.currency)}/${user.subscription.interval}` : 
+                            'Free plan'
+                          }
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 mb-2">Next Billing</p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {formatDate(user.subscription.currentPeriodEnd)}
-                        </p>
-                      </div>
+                      {user.subscription.amount > 0 && user.subscription.currentPeriodEnd && user.subscription.currentPeriodEnd !== new Date().toISOString() && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 mb-2">Next Billing</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {formatDate(user.subscription.currentPeriodEnd)}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
                         <div className="flex items-center space-x-2">
@@ -696,20 +727,27 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                           <div className="space-y-2">
                             <div className="flex justify-between">
                               <span className="text-sm text-gray-600">Billing Cycle</span>
-                              <span className="text-sm font-medium text-gray-900">Monthly</span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {user.subscription.amount > 0 ? 'Monthly' : 'None'}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm text-gray-600">Amount</span>
                               <span className="text-sm font-medium text-gray-900">
-                                {formatCurrency(user.subscription.amount, user.subscription.currency)}
+                                {user.subscription.amount > 0 ? 
+                                  formatCurrency(user.subscription.amount, user.subscription.currency) : 
+                                  'Free plan'
+                                }
                               </span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Next Billing</span>
-                              <span className="text-sm font-medium text-gray-900">
-                                {formatDate(user.subscription.currentPeriodEnd)}
-                              </span>
-                            </div>
+                             {user.subscription.amount > 0 && user.subscription.currentPeriodEnd && user.subscription.currentPeriodEnd !== new Date().toISOString() && (
+                               <div className="flex justify-between">
+                                 <span className="text-sm text-gray-600">Next Billing</span>
+                                 <span className="text-sm font-medium text-gray-900">
+                                   {formatDate(user.subscription.currentPeriodEnd)}
+                                 </span>
+                               </div>
+                             )}
                           </div>
                         </div>
                       </div>

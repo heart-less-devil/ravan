@@ -315,7 +315,7 @@ app.use((req, res, next) => {
   }
   
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cache-Control, Pragma');
   res.header('Access-Control-Allow-Credentials', 'true');
   
   if (req.method === 'OPTIONS') {
@@ -5991,7 +5991,74 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
       }
     }
 
+    // Determine actual credits to send
+    let creditsToSend = user.currentCredits;
+    const isFreeUser = !user.paymentCompleted || user.currentPlan === 'free';
+    
+    // For paid users, ensure they have the correct credits for their plan
+    if (!isFreeUser) {
+      const expectedCredits = user.currentPlan === 'monthly' || user.currentPlan === 'basic' ? 50 :
+                             user.currentPlan === 'annual' || user.currentPlan === 'premium' ? 100 :
+                             user.currentPlan === 'test' ? 1 : 5;
+      
+      // If paid user has wrong credits, fix them
+      if (creditsToSend !== expectedCredits) {
+        console.log(`🔧 Fixing credits for paid user: ${creditsToSend} → ${expectedCredits} (${user.currentPlan} plan)`);
+        creditsToSend = expectedCredits;
+        
+        // Update in MongoDB
+        try {
+          await User.findOneAndUpdate(
+            { email: user.email },
+            { currentCredits: expectedCredits },
+            { new: true, maxTimeMS: 10000 }
+          );
+          console.log(`✅ Updated user credits in MongoDB to ${expectedCredits}`);
+        } catch (dbError) {
+          console.log('⚠️ Could not update MongoDB, updating file storage...');
+          // Fallback to file storage
+          const userIndex = mockDB.users.findIndex(u => u.email === user.email);
+          if (userIndex !== -1) {
+            mockDB.users[userIndex].currentCredits = expectedCredits;
+            saveDataToFiles('credits_fixed');
+          }
+        }
+      }
+    }
+    
+    // If currentCredits is undefined or null, set based on plan and trial status
+    if (creditsToSend === undefined || creditsToSend === null) {
+      if (isFreeUser) {
+        // Check trial status for free users
+        const registrationDate = new Date(user.createdAt || user.registrationDate || new Date());
+        const now = new Date();
+        const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+        const trialExpired = daysSinceRegistration >= 5;
+        
+        creditsToSend = trialExpired ? 0 : 5;
+      } else {
+        // Paid users get default credits based on plan
+        if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
+          creditsToSend = 50;
+        } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
+          creditsToSend = 100;
+        } else if (user.currentPlan === 'test') {
+          creditsToSend = 1;
+        } else {
+          creditsToSend = 5;
+        }
+      }
+    }
+    
     // Return complete user data including invoices and payment history
+    console.log('📤 Sending profile data with credits:', {
+      email: user.email,
+      currentPlan: user.currentPlan || 'free',
+      currentCredits: creditsToSend,
+      storedCredits: user.currentCredits,
+      paymentCompleted: user.paymentCompleted || false
+    });
+
     res.json({
       user: {
         email: user.email,
@@ -6003,7 +6070,7 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
         createdAt: user.createdAt,
         currentPlan: user.currentPlan || 'free',
         paymentCompleted: user.paymentCompleted || false,
-        currentCredits: user.currentCredits || 5,
+        currentCredits: creditsToSend,
         invoices: [...(user.invoices || []), ...stripeInvoices],
         paymentHistory: user.paymentHistory || [],
         lastCreditRenewal: user.lastCreditRenewal,
@@ -7347,28 +7414,34 @@ app.put('/api/auth/update-profile', authenticateToken, async (req, res) => {
 // Get user invoices endpoint - Fetch from Stripe
 app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
   try {
-    let user = mockDB.users.find(u => u.email === req.user.email);
+    console.log('🔍 Fetching invoices for:', req.user.email);
     
-    // If not found in mockDB, try MongoDB
+    let user = null;
+    
+    // Try MongoDB first
+    try {
+      user = await User.findOne({ email: req.user.email }).maxTimeMS(10000);
+      if (user) {
+        console.log('✅ User found in MongoDB for invoices');
+        user = user.toObject();
+      } else {
+        console.log('⚠️ User NOT found in MongoDB, will check file storage');
+      }
+    } catch (dbError) {
+      console.log('⚠️ MongoDB error, falling back to file storage:', dbError.message);
+    }
+    
+    // Fallback to file storage if MongoDB fails
     if (!user) {
-      try {
-        const mongoUser = await User.findOne({ email: req.user.email });
-        if (mongoUser) {
-          // Convert MongoDB user to mockDB format
-          user = {
-            email: mongoUser.email,
-            name: `${mongoUser.firstName} ${mongoUser.lastName}`.trim(),
-            invoices: mongoUser.invoices || [],
-            paymentHistory: mongoUser.paymentHistory || []
-          };
-          console.log('✅ Found user in MongoDB:', user.email);
-        }
-      } catch (mongoError) {
-        console.log('❌ MongoDB not available, using file-based storage only');
+      user = mockDB.users.find(u => u.email === req.user.email);
+      if (user) {
+        console.log('✅ User found in file storage for invoices');
+        console.log('⚠️ WARNING: Using file storage data - MongoDB should be primary source!');
       }
     }
     
     if (!user) {
+      console.log('❌ User not found in any database');
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -8070,11 +8143,36 @@ app.get('/api/auth/payment-status', authenticateToken, (req, res) => {
 });
 
 // Subscription management endpoints
-app.get('/api/auth/subscription', authenticateToken, (req, res) => {
+app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
   try {
-    const user = mockDB.users.find(u => u.email === req.user.email);
+    console.log('🔍 Fetching subscription for:', req.user.email);
+    
+    let user = null;
+    
+    // Try MongoDB first
+    try {
+      user = await User.findOne({ email: req.user.email }).maxTimeMS(10000);
+      if (user) {
+        console.log('✅ User found in MongoDB for subscription');
+        user = user.toObject();
+      } else {
+        console.log('⚠️ User NOT found in MongoDB, will check file storage');
+      }
+    } catch (dbError) {
+      console.log('⚠️ MongoDB error, falling back to file storage:', dbError.message);
+    }
+    
+    // Fallback to file storage if MongoDB fails
+    if (!user) {
+      user = mockDB.users.find(u => u.email === req.user.email);
+      if (user) {
+        console.log('✅ User found in file storage for subscription');
+        console.log('⚠️ WARNING: Using file storage data - MongoDB should be primary source!');
+      }
+    }
     
     if (!user) {
+      console.log('❌ User not found in any database');
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -8137,14 +8235,8 @@ app.get('/api/auth/subscription', authenticateToken, (req, res) => {
             mockDB.users[userIndex].currentCredits = 0;
             saveDataToFiles('free_trial_expired');
           }
-        } else if (
-          mockDB.users[userIndex].currentCredits === undefined ||
-          mockDB.users[userIndex].currentCredits === null
-        ) {
-          // Ensure default 5 credits during trial
-          mockDB.users[userIndex].currentCredits = 5;
-          saveDataToFiles('free_trial_defaulted');
         }
+        // Don't modify existing credits - let them stay as they are
       }
     }
 
@@ -8165,12 +8257,49 @@ app.get('/api/auth/subscription', authenticateToken, (req, res) => {
       }
     }
 
+    // Calculate next billing date for subscription plans
+    let nextBillingDate = null;
+    let isSubscriptionPlan = false;
+    
+    if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
+      // Check if it's a subscription plan (monthly/annual) vs one-time payment (test/daily)
+      if (user.currentPlan === 'monthly' || user.currentPlan === 'annual' || 
+          user.currentPlan === 'basic' || user.currentPlan === 'premium') {
+        isSubscriptionPlan = true;
+        
+        if (user.nextCreditRenewal) {
+          nextBillingDate = user.nextCreditRenewal;
+        } else if (user.lastCreditRenewal) {
+          // Calculate next month's same date
+          const lastPaymentDate = new Date(user.lastCreditRenewal);
+          const nextMonth = new Date(lastPaymentDate);
+          nextMonth.setMonth(nextMonth.getMonth() + 1);
+          nextBillingDate = nextMonth.toISOString();
+        } else {
+          // First time subscription, calculate from registration date
+          const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+          const nextMonth = new Date(registrationDate);
+          nextMonth.setMonth(nextMonth.getMonth() + 1);
+          nextBillingDate = nextMonth.toISOString();
+        }
+      }
+    }
+
+    console.log('📤 Sending subscription data with credits:', {
+      email: user.email,
+      currentPlan: user.currentPlan || 'free',
+      currentCredits: currentCredits,
+      paymentCompleted: user.paymentCompleted || false
+    });
+
     res.json({
       paymentCompleted: user.paymentCompleted || false,
       currentPlan: user.currentPlan || 'free',
       currentCredits: currentCredits,
       lastCreditRenewal: user.lastCreditRenewal,
       nextCreditRenewal: user.nextCreditRenewal,
+      nextBillingDate: nextBillingDate,
+      isSubscriptionPlan: isSubscriptionPlan,
       shouldRenewCredits,
       creditsToGive,
       trialExpired,
@@ -8182,9 +8311,15 @@ app.get('/api/auth/subscription', authenticateToken, (req, res) => {
   }
 });
 
-app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
+app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => {
   try {
-    const user = mockDB.users.find(u => u.email === req.user.email);
+    // Use MongoDB instead of mockDB
+    let user;
+    if (isMongoConnected()) {
+      user = await User.findOne({ email: req.user.email }).lean();
+    } else {
+      user = mockDB.users.find(u => u.email === req.user.email);
+    }
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -8249,14 +8384,8 @@ app.get('/api/auth/subscription-status', authenticateToken, (req, res) => {
             mockDB.users[userIndex].currentCredits = 0;
             saveDataToFiles('free_trial_expired');
           }
-        } else if (
-          mockDB.users[userIndex].currentCredits === undefined ||
-          mockDB.users[userIndex].currentCredits === null
-        ) {
-          // Ensure default 5 credits during trial
-          mockDB.users[userIndex].currentCredits = 5;
-          saveDataToFiles('free_trial_defaulted');
         }
+        // Don't modify existing credits - let them stay as they are
       }
     }
 

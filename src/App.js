@@ -4,6 +4,7 @@ import { MantineProvider } from '@mantine/core';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
+import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Search from './pages/Search';
@@ -61,13 +62,14 @@ const CacheBuster = ({ children }) => {
 
 function App() {
   return (
-    <MantineProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ScrollToTop />
-        <CacheBuster>
-          <div className="App min-h-screen bg-gray-50">
-            <KeepAlive />
-            <Routes>
+    <ErrorBoundary>
+      <MantineProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <ScrollToTop />
+          <CacheBuster>
+            <div className="App min-h-screen bg-gray-50">
+              <KeepAlive />
+              <Routes>
               {/* Public Routes */}
               <Route path="/" element={
                 <>
@@ -244,6 +246,7 @@ function App() {
         </CacheBuster>
       </Router>
     </MantineProvider>
+    </ErrorBoundary>
   );
 }
 

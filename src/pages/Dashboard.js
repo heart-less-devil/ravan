@@ -92,7 +92,7 @@ const Dashboard = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [globalSearchResults, setGlobalSearchResults] = useState(null);
-  const [userCredits, setUserCredits] = useState(5);
+  const [userCredits, setUserCredits] = useState(0);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [lastCreditUpdate, setLastCreditUpdate] = useState(0);
   const [showCustomerProfile, setShowCustomerProfile] = useState(false);
@@ -100,7 +100,7 @@ const Dashboard = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [userPaymentStatus, setUserPaymentStatus] = useState({ hasPaid: false, currentPlan: 'free' });
   const [error, setError] = useState(null);
-  const [daysRemaining, setDaysRemaining] = useState(5);
+  const [daysRemaining, setDaysRemaining] = useState(0);
   const [showError, setShowError] = useState(false);
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState(null);
@@ -225,6 +225,14 @@ const Dashboard = () => {
         return;
       }
 
+      // Get authentication token
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        console.log('No authentication token found');
+        setIsInitialLoading(false);
+        return;
+      }
+
       // Check if we should skip credit update based on recent user action
       const timeSinceLastCreditUpdate = Date.now() - lastCreditUpdate;
       
@@ -233,24 +241,35 @@ const Dashboard = () => {
 
       // Make all API calls in parallel for faster loading
       console.log('Making parallel API calls...');
+      // Add cache-busting timestamp to prevent stale data
+      const timestamp = Date.now();
       const [profileResponse, subscriptionResponse, invoicesResponse] = await Promise.allSettled([
-        fetch(`${API_BASE_URL}/api/auth/profile`, {
+        fetch(`${API_BASE_URL}/api/auth/profile?t=${timestamp}`, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email: user.email })
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
         }),
-        fetch(`${API_BASE_URL}/api/auth/subscription`, {
+        fetch(`${API_BASE_URL}/api/auth/subscription?t=${timestamp}`, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email: user.email })
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
         }),
-        fetch(`${API_BASE_URL}/api/auth/invoices`, {
+        fetch(`${API_BASE_URL}/api/auth/invoices?t=${timestamp}`, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ email: user.email })
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
         })
       ]);
 
@@ -258,6 +277,11 @@ const Dashboard = () => {
       if (profileResponse.status === 'fulfilled' && profileResponse.value.ok) {
         const profileData = await profileResponse.value.json();
         console.log('✅ Profile data loaded');
+        console.log('📊 FULL PROFILE DATA:', profileData);
+        console.log('📊 Credits received from backend:', profileData.user.currentCredits);
+        console.log('📊 Plan:', profileData.user.currentPlan);
+        console.log('📊 Payment status:', profileData.user.paymentCompleted);
+        console.log('🔍 CURRENT STATE - userCredits:', userCredits, 'daysRemaining:', daysRemaining);
         
         setUser(profileData.user);
         
@@ -265,19 +289,35 @@ const Dashboard = () => {
         if (profileData.user) {
           const hasPaid = profileData.user.paymentCompleted || false;
           const currentPlan = profileData.user.currentPlan || 'free';
+          console.log('💰 Payment status update:', { 
+            hasPaid, 
+            currentPlan, 
+            paymentCompleted: profileData.user.paymentCompleted,
+            userCredits: profileData.user.currentCredits
+          });
           setUserPaymentStatus({ hasPaid, currentPlan });
+          
+          // CRITICAL FIX: Set daysRemaining to 0 for paid users
+          if (hasPaid) {
+            console.log('💳 Paid user detected - setting daysRemaining to 0');
+            setDaysRemaining(0);
+          }
         }
         
         // Handle credits
         const currentDate = new Date();
         const registrationDate = profileData.user.createdAt || profileData.user.registrationDate;
         
-        if (registrationDate) {
+        // Check if user is free or paid
+        const isFreeUser = !profileData.user.paymentCompleted && profileData.user.currentPlan === 'free';
+        
+        if (isFreeUser && registrationDate) {
+          console.log('🆓 Free user detected - checking trial');
           const regDate = new Date(registrationDate);
-          // Fix timezone issues by using UTC dates and Math.ceil for proper day calculation
+          // Fix timezone issues by using UTC dates and Math.floor for proper day calculation
           const currentUTC = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
           const regUTC = new Date(regDate.getFullYear(), regDate.getMonth(), regDate.getDate());
-          const daysSinceRegistration = Math.ceil((currentUTC.getTime() - regUTC.getTime()) / (1000 * 60 * 60 * 24));
+          const daysSinceRegistration = Math.floor((currentUTC.getTime() - regUTC.getTime()) / (1000 * 60 * 60 * 24));
           const trialExpired = daysSinceRegistration >= 5;
           
           console.log('📅 Trial calculation:', {
@@ -288,19 +328,21 @@ const Dashboard = () => {
           });
           
           if (trialExpired) {
+            console.log('⏰ Trial expired - credits set to 0');
             setUserCredits(0);
             setDaysRemaining(0);
           } else {
-            const credits = profileData.user.currentCredits ?? 5;
+            const credits = profileData.user.currentCredits ?? 0;
+            console.log('✅ Trial active - credits set to:', credits);
             setUserCredits(credits);
             const remainingDays = Math.max(0, 5 - daysSinceRegistration);
             setDaysRemaining(remainingDays);
           }
         } else {
-          // Only update credits from backend if they weren't recently changed by user action
-          if (typeof profileData.user.currentCredits === 'number' && !skipCreditUpdate) {
-            setUserCredits(profileData.user.currentCredits);
-          }
+          // Paid user or no registration date - always use backend credits
+          const credits = profileData.user.currentCredits ?? 0;
+          console.log('💳 Paid user - credits set to:', credits);
+          setUserCredits(credits);
         }
       } else {
         console.log('❌ Profile fetch failed');
@@ -310,15 +352,26 @@ const Dashboard = () => {
       if (subscriptionResponse.status === 'fulfilled' && subscriptionResponse.value.ok) {
         const subscriptionData = await subscriptionResponse.value.json();
         console.log('✅ Subscription data loaded');
+        console.log('📊 Subscription credits:', subscriptionData.currentCredits);
+        console.log('📊 Subscription plan:', subscriptionData.currentPlan);
+        console.log('📊 Subscription payment:', subscriptionData.paymentCompleted);
         
         if (subscriptionData) {
           const hasPaid = subscriptionData.paymentCompleted || false;
           const currentPlan = subscriptionData.currentPlan || 'free';
+          console.log('💳 Subscription payment status update:', { hasPaid, currentPlan });
           setUserPaymentStatus({ hasPaid, currentPlan });
           
-          // For paid users, update credits from subscription data (but respect recent user actions)
+          // CRITICAL FIX: Set daysRemaining to 0 for paid users
+          if (hasPaid) {
+            console.log('💳 Paid user detected in subscription - setting daysRemaining to 0');
+            setDaysRemaining(0);
+          }
+          
+          // For paid users, update credits from subscription data
           if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
-            if (typeof subscriptionData.currentCredits === 'number' && !skipCreditUpdate) {
+            if (typeof subscriptionData.currentCredits === 'number') {
+              console.log('💳 Updating paid user credits from subscription:', subscriptionData.currentCredits);
               setUserCredits(subscriptionData.currentCredits);
             }
           }
@@ -655,6 +708,7 @@ const Dashboard = () => {
           setGlobalSearchResults={setGlobalSearchResults}
           handleManualRefresh={handleManualRefresh}
           userPaymentStatus={userPaymentStatus}
+          daysRemaining={daysRemaining}
         />;
       case '/dashboard/bd-tracker':
         // Check for suspension before allowing access to BD Tracker
@@ -1059,17 +1113,17 @@ const Dashboard = () => {
                     {userPaymentStatus?.hasPaid ? (
                       `You have <span className="font-bold text-blue-600">${userCredits} premium credits</span> to explore our platform!`
                     ) : (
-                      `You have <span className="font-bold text-blue-600">${userCredits || 5} free credits</span> to explore our platform!`
+                      `You have <span className="font-bold text-blue-600">${userCredits} free credits</span> to explore our platform!`
                     )}
                   </p>
                   <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Credits Remaining:</span>
-                      <span className="text-lg font-bold text-blue-600">{userCredits || 5}</span>
+                      <span className="text-lg font-bold text-blue-600">{userCredits}</span>
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-sm text-gray-600">Expires in:</span>
-                      <span className="text-sm font-medium text-orange-600">{daysRemaining || 5} days</span>
+                      <span className="text-sm font-medium text-orange-600">{daysRemaining} days</span>
                     </div>
                   </div>
                 </div>
@@ -1358,7 +1412,7 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
               <div className="flex items-center space-x-3 bg-white/20 backdrop-blur-sm rounded-2xl px-4 py-2">
                 <Gift className="w-5 h-5" />
                 <span className="font-medium">
-                  Credits: {userPaymentStatus?.hasPaid ? `${userCredits} premium` : `${userCredits || 5} / ${daysRemaining || 5} days`}
+                  Credits: {userPaymentStatus?.hasPaid ? `${userCredits} premium` : `${userCredits} / ${daysRemaining} days`}
                 </span>
               </div>
             </div>
@@ -1545,7 +1599,7 @@ const DashboardHome = ({ user, userPaymentStatus, userCredits, daysRemaining, on
 };
 
 // Enhanced Search Page Component
-const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredit, userCredits, setUserCredits, setLastCreditUpdate, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus }) => {
+const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredit, userCredits, setUserCredits, setLastCreditUpdate, globalSearchResults, setGlobalSearchResults, handleManualRefresh, userPaymentStatus, daysRemaining }) => {
   const [formData, setFormData] = useState({
     drugName: '',
     diseaseArea: '',
@@ -1575,7 +1629,6 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
   const [groupedResults, setGroupedResults] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
-  const [daysRemaining, setDaysRemaining] = useState(5);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [allContactsCurrentPage, setAllContactsCurrentPage] = useState(1);
   const [allContactsItemsPerPage] = useState(25);
@@ -1950,8 +2003,6 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
   const handleResetCompanyFilter = () => {
     setFilteredSearchResults(null); // Reset to original results
   };
-
-  // daysRemaining is passed as a prop from parent component
 
 
 
@@ -2546,11 +2597,19 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
                   <div>
                     <div className="text-sm font-medium text-gray-900">Credits Left</div>
                     <div className="text-lg font-bold text-blue-600">
-                      {userPaymentStatus.hasPaid ? (
-                        `${userCredits} credits`
-                      ) : (
-                        daysRemaining > 0 ? `${userCredits} / ${daysRemaining} days` : '0 credits (trial expired)'
-                      )}
+                      {(() => {
+                        console.log('🎯 Credits display logic:', {
+                          hasPaid: userPaymentStatus?.hasPaid,
+                          userCredits,
+                          daysRemaining,
+                          currentPlan: userPaymentStatus?.currentPlan
+                        });
+                        return userPaymentStatus?.hasPaid ? (
+                          `${userCredits} credits`
+                        ) : (
+                          daysRemaining > 0 ? `${userCredits} / ${daysRemaining} days` : '0 credits (trial expired)'
+                        );
+                      })()}
                     </div>
 
                   </div>
@@ -4655,8 +4714,14 @@ const PricingPage = ({ user }) => {
   };
 
   const handlePaymentError = (error) => {
-    setPaymentStatus('Payment failed: ' + error);
-    console.error('Payment error:', error);
+    try {
+      if (error) {
+        setPaymentStatus('Payment failed: ' + error);
+        console.error('Payment error:', error);
+      }
+    } catch (err) {
+      console.error('Error in handlePaymentError:', err);
+    }
   };
 
   const getColorClasses = (color) => {

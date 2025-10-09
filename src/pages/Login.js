@@ -101,6 +101,9 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Clear any existing cached data to ensure fresh data
+        stateManager.clear();
+        
         // Store token in sessionStorage
         sessionStorage.setItem('token', data.token);
         

@@ -705,36 +705,9 @@ const BDTrackerPage = () => {
                   </th>
                 ))}
                 <th className="border border-gray-200 px-2 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 w-24">
-                  {editingColumn === 'actions' ? (
-                    <input
-                      type="text"
-                      value={columnHeadings.actions}
-                      onChange={(e) => setColumnHeadings(prev => ({ ...prev, actions: e.target.value }))}
-                      onBlur={() => {
-                        setEditingColumn(null);
-                        saveColumnHeadings({ ...columnHeadings, actions: columnHeadings.actions });
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          setEditingColumn(null);
-                          saveColumnHeadings({ ...columnHeadings, actions: columnHeadings.actions });
-                        }
-                      }}
-                      className="w-full bg-transparent border-none outline-none text-sm font-semibold text-gray-900"
-                      autoFocus
-                    />
-                  ) : (
-                    <div 
-                      className="cursor-pointer hover:bg-blue-50 hover:border-blue-200 px-2 py-1 rounded border border-transparent transition-all duration-200 group"
-                      onClick={() => setEditingColumn('actions')}
-                      title="Click to edit column heading"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-900">{columnHeadings.actions}</span>
-                        <Edit3 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                      </div>
-                    </div>
-                  )}
+                  <div className="px-2 py-1">
+                    <span className="text-sm font-semibold text-gray-900">{columnHeadings.actions}</span>
+                  </div>
                 </th>
               </tr>
             </thead>

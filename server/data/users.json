@@ -10,7 +10,45 @@
     "createdAt": "2025-07-23T13:13:54.493Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 0
+    "currentCredits": 0,
+    "creditUsageHistory": [
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:47:08.328Z",
+        "creditsUsed": 1,
+        "remainingCredits": 4,
+        "_id": "68e6a39cd0bb1587d4341b9d"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:48:25.850Z",
+        "creditsUsed": 1,
+        "remainingCredits": 3,
+        "_id": "68e6a3e9d0bb1587d4341ba8"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:48:30.669Z",
+        "creditsUsed": 1,
+        "remainingCredits": 2,
+        "_id": "68e6a3eed0bb1587d4341baf"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:49:19.506Z",
+        "creditsUsed": 1,
+        "remainingCredits": 1,
+        "_id": "68e6a41fd0bb1587d4341bc0"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:50:33.325Z",
+        "creditsUsed": 1,
+        "remainingCredits": 0,
+        "_id": "68e6a469d0bb1587d4341bdf"
+      }
+    ],
+    "lastCreditUsage": "2025-10-08T17:50:33.325Z"
   },
   {
     "id": 2,
@@ -48,9 +86,9 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 38,
-    "lastCreditRenewal": "2025-09-28T12:37:31.816Z",
-    "nextCreditRenewal": "2025-10-28T12:37:31.816Z",
+    "currentCredits": 50,
+    "lastCreditRenewal": "2025-10-09T11:42:09.424Z",
+    "nextCreditRenewal": null,
     "company": "Company",
     "invoices": [
       {
@@ -91,78 +129,181 @@
     "creditUsageHistory": [
       {
         "action": "search",
-        "timestamp": "2025-09-28T15:47:53.521Z",
+        "timestamp": "2025-10-08T17:42:31.549Z",
         "creditsUsed": 1,
-        "remainingCredits": 49
+        "remainingCredits": 24,
+        "_id": "68e6a287d0bb1587d4341aef"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-28T18:59:41.996Z",
+        "timestamp": "2025-10-08T17:42:51.571Z",
         "creditsUsed": 1,
-        "remainingCredits": 48
+        "remainingCredits": 23,
+        "_id": "68e6a29bd0bb1587d4341af8"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-28T19:12:23.015Z",
+        "timestamp": "2025-10-08T17:43:10.442Z",
         "creditsUsed": 1,
-        "remainingCredits": 47
+        "remainingCredits": 22,
+        "_id": "68e6a2aed0bb1587d4341b05"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-29T06:02:02.300Z",
+        "timestamp": "2025-10-08T17:43:42.283Z",
         "creditsUsed": 1,
-        "remainingCredits": 46
+        "remainingCredits": 21,
+        "_id": "68e6a2ced0bb1587d4341b26"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-29T06:14:31.468Z",
+        "timestamp": "2025-10-08T17:46:03.941Z",
         "creditsUsed": 1,
-        "remainingCredits": 45
+        "remainingCredits": 20,
+        "_id": "68e6a35bd0bb1587d4341b36"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-29T06:17:44.471Z",
+        "timestamp": "2025-10-08T17:46:08.956Z",
         "creditsUsed": 1,
-        "remainingCredits": 44
+        "remainingCredits": 19,
+        "_id": "68e6a360d0bb1587d4341b43"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-29T06:23:11.597Z",
+        "timestamp": "2025-10-08T17:46:10.707Z",
         "creditsUsed": 1,
-        "remainingCredits": 43
+        "remainingCredits": 18,
+        "_id": "68e6a362d0bb1587d4341b52"
       },
       {
         "action": "search",
-        "timestamp": "2025-09-29T06:23:13.698Z",
+        "timestamp": "2025-10-08T17:46:19.580Z",
         "creditsUsed": 1,
-        "remainingCredits": 42
+        "remainingCredits": 17,
+        "_id": "68e6a36bd0bb1587d4341b63"
       },
       {
         "action": "search",
-        "timestamp": "2025-10-01T10:19:00.525Z",
+        "timestamp": "2025-10-08T17:46:22.753Z",
         "creditsUsed": 1,
-        "remainingCredits": 41
+        "remainingCredits": 16,
+        "_id": "68e6a36ed0bb1587d4341b76"
       },
       {
         "action": "search",
-        "timestamp": "2025-10-01T10:19:23.914Z",
+        "timestamp": "2025-10-08T17:46:26.665Z",
         "creditsUsed": 1,
-        "remainingCredits": 40
+        "remainingCredits": 15,
+        "_id": "68e6a372d0bb1587d4341b8b"
       },
       {
         "action": "search",
-        "timestamp": "2025-10-01T10:24:33.043Z",
+        "timestamp": "2025-10-08T17:54:44.147Z",
         "creditsUsed": 1,
-        "remainingCredits": 39
+        "remainingCredits": 14,
+        "_id": "68e6a564044aea176c6e6be5"
       },
       {
         "action": "search",
-        "timestamp": "2025-10-01T10:24:35.719Z",
+        "timestamp": "2025-10-08T17:54:46.508Z",
         "creditsUsed": 1,
-        "remainingCredits": 38
+        "remainingCredits": 13,
+        "_id": "68e6a566044aea176c6e6bfe"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:54:57.713Z",
+        "creditsUsed": 1,
+        "remainingCredits": 12,
+        "_id": "68e6a571044aea176c6e6c33"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:55:00.641Z",
+        "creditsUsed": 1,
+        "remainingCredits": 11,
+        "_id": "68e6a574044aea176c6e6c50"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:55:01.386Z",
+        "creditsUsed": 1,
+        "remainingCredits": 10,
+        "_id": "68e6a575044aea176c6e6c6f"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:56:37.342Z",
+        "creditsUsed": 1,
+        "remainingCredits": 9,
+        "_id": "68e6a5d5044aea176c6e6cb0"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:56:58.827Z",
+        "creditsUsed": 1,
+        "remainingCredits": 8,
+        "_id": "68e6a5ea044aea176c6e6cf5"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:57:01.148Z",
+        "creditsUsed": 1,
+        "remainingCredits": 7,
+        "_id": "68e6a5ed044aea176c6e6d1a"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T17:57:23.898Z",
+        "creditsUsed": 1,
+        "remainingCredits": 6,
+        "_id": "68e6a603044aea176c6e6d67"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T18:12:38.106Z",
+        "creditsUsed": 1,
+        "remainingCredits": 5,
+        "_id": "68e6a9967a23751cb5e7d2ac"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T18:12:43.560Z",
+        "creditsUsed": 1,
+        "remainingCredits": 4,
+        "_id": "68e6a99b7a23751cb5e7d2d7"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T18:12:45.134Z",
+        "creditsUsed": 1,
+        "remainingCredits": 3,
+        "_id": "68e6a99d7a23751cb5e7d304"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T18:12:48.174Z",
+        "creditsUsed": 1,
+        "remainingCredits": 2,
+        "_id": "68e6a9a07a23751cb5e7d333"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T18:12:49.592Z",
+        "creditsUsed": 1,
+        "remainingCredits": 1,
+        "_id": "68e6a9a17a23751cb5e7d364"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-08T18:12:50.996Z",
+        "creditsUsed": 1,
+        "remainingCredits": 0,
+        "_id": "68e6a9a27a23751cb5e7d39d"
       }
     ],
-    "lastCreditUsage": "2025-10-01T10:24:35.719Z"
+    "lastCreditUsage": "2025-10-08T18:12:50.996Z"
   },
   {
     "id": 5,
@@ -279,8 +420,19 @@
     "role": "other",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5,
+    "currentCredits": 50,
     "name": "sdacdsvf dsad",
-    "createdAt": "2025-10-04T12:53:21.821Z"
+    "createdAt": "2025-10-04T12:53:21.821Z",
+    "lastCreditRenewal": "2025-10-09T11:16:43.184Z",
+    "nextCreditRenewal": null,
+    "creditUsageHistory": [
+      {
+        "action": "search",
+        "timestamp": "2025-10-09T11:01:39.751Z",
+        "creditsUsed": 1,
+        "remainingCredits": 4
+      }
+    ],
+    "lastCreditUsage": "2025-10-09T11:01:39.751Z"
   }
 ]

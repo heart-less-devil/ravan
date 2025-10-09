@@ -100,9 +100,20 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stripeReady, setStripeReady] = useState(false);
+  const [isMounted, setIsMounted] = useState(true);
+
+  // Track component mount status
+  useEffect(() => {
+    setIsMounted(true);
+    return () => {
+      setIsMounted(false);
+    };
+  }, []);
 
   // Debug Stripe loading
   useEffect(() => {
+    if (!isMounted) return;
+    
     console.log('🔧 Stripe Debug Info:');
     console.log('  - Stripe object:', !!stripe);
     console.log('  - Elements object:', !!elements);
@@ -112,7 +123,7 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       setStripeReady(true);
       console.log('✅ Stripe Elements ready!');
     }
-  }, [stripe, elements]);
+  }, [stripe, elements, isMounted]);
 
   const amount = isAnnual ? plan.annualPrice : plan.monthlyPrice;
   const savings = isAnnual ? (plan.monthlyPrice * 12) - plan.annualPrice : 0;
@@ -126,7 +137,13 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       const errorMsg = 'Stripe not loaded. Please refresh the page.';
       console.error('❌ Stripe not loaded:', { stripe: !!stripe, elements: !!elements });
       setError(errorMsg);
-      onError && onError(errorMsg);
+      if (isMounted && onError) {
+        try {
+          onError(errorMsg);
+        } catch (err) {
+          console.error('Error calling onError callback:', err);
+        }
+      }
       setLoading(false);
       return;
     }
@@ -136,7 +153,13 @@ const CheckoutForm = ({ plan, isAnnual, onSuccess, onError, onClose }) => {
       const errorMsg = 'Invalid payment amount. Free plans should not require payment processing.';
       console.error('❌ Invalid amount:', amount);
       setError(errorMsg);
-      onError && onError(errorMsg);
+      if (isMounted && onError) {
+        try {
+          onError(errorMsg);
+        } catch (err) {
+          console.error('Error calling onError callback:', err);
+        }
+      }
       setLoading(false);
       return;
     }
