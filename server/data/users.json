@@ -86,7 +86,7 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 5,
+    "currentCredits": 45,
     "lastCreditRenewal": "2025-10-09T11:42:09.424Z",
     "nextCreditRenewal": null,
     "company": "Company",
@@ -301,9 +301,169 @@
         "creditsUsed": 1,
         "remainingCredits": 0,
         "_id": "68e6a9a27a23751cb5e7d39d"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:20:38.676Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e90826daaf7da63ae4ca7b"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:20:42.676Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48,
+        "_id": "68e9082adaaf7da63ae4cab2"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:35.375Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e9085fdaaf7da63ae4cb77"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:35.724Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48,
+        "_id": "68e9085fdaaf7da63ae4cbb2"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:37.153Z",
+        "creditsUsed": 1,
+        "remainingCredits": 47,
+        "_id": "68e90861daaf7da63ae4cbef"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:37.251Z",
+        "creditsUsed": 1,
+        "remainingCredits": 46,
+        "_id": "68e90861daaf7da63ae4cc2e"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:37.357Z",
+        "creditsUsed": 1,
+        "remainingCredits": 45,
+        "_id": "68e90861daaf7da63ae4cc6f"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:37.470Z",
+        "creditsUsed": 1,
+        "remainingCredits": 44,
+        "_id": "68e90861daaf7da63ae4ccb3"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:21:37.548Z",
+        "creditsUsed": 1,
+        "remainingCredits": 44,
+        "_id": "68e90861daaf7da63ae4ccd5"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:51:00.171Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e90f44f8ab084d787f9870"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:51:01.834Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48,
+        "_id": "68e90f45f8ab084d787f98b9"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:51:03.365Z",
+        "creditsUsed": 1,
+        "remainingCredits": 47,
+        "_id": "68e90f47f8ab084d787f9904"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T13:52:06.141Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e90f865722e5c137d3ea8f"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:03:32.334Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e912345722e5c137d3ebc8"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:03:33.765Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48,
+        "_id": "68e912355722e5c137d3ec19"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:13:46.912Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e9149a212508b7770b4ff2"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:13:58.172Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48,
+        "_id": "68e914a6212508b7770b5047"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:13:59.924Z",
+        "creditsUsed": 1,
+        "remainingCredits": 47,
+        "_id": "68e914a7212508b7770b509e"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:14:14.001Z",
+        "creditsUsed": 1,
+        "remainingCredits": 49,
+        "_id": "68e914b6212508b7770b51ff"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:14:15.153Z",
+        "creditsUsed": 1,
+        "remainingCredits": 48,
+        "_id": "68e914b7212508b7770b525a"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:18:00.174Z",
+        "creditsUsed": 1,
+        "remainingCredits": 47,
+        "_id": "68e91598aef06336ea7edefa"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:18:01.964Z",
+        "creditsUsed": 1,
+        "remainingCredits": 46,
+        "_id": "68e91599aef06336ea7edf59"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-10-10T14:18:03.254Z",
+        "creditsUsed": 1,
+        "remainingCredits": 45
       }
     ],
-    "lastCreditUsage": "2025-10-08T18:12:50.996Z"
+    "lastCreditUsage": "2025-10-10T14:18:03.254Z"
   },
   {
     "id": 5,

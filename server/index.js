@@ -6014,10 +6014,10 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
                              user.currentPlan === 'test' ? 1 : 
                              user.currentPlan === 'daily-12' ? 50 : 5; // Added daily-12 support
       
-      // CRITICAL FIX: Don't auto-correct credits for daily-12 plan (they can vary)
-      if (user.currentPlan === 'daily-12') {
-        console.log(`💳 Daily-12 plan: Using actual credits (${creditsToSend}) - no auto-correction`);
-        // Keep actual credits for daily plan
+      // CRITICAL FIX: Don't auto-correct credits for ANY paid plan (they can vary due to usage)
+      if (user.currentPlan === 'daily-12' || user.currentPlan === 'monthly' || user.currentPlan === 'annual' || user.currentPlan === 'basic' || user.currentPlan === 'premium') {
+        console.log(`💳 ${user.currentPlan} plan: Using actual credits (${creditsToSend}) - no auto-correction`);
+        // Keep actual credits for all paid plans
       } else if (creditsToSend !== expectedCredits) {
         console.log(`🔧 Fixing credits for paid user: ${creditsToSend} → ${expectedCredits} (${user.currentPlan} plan)`);
         creditsToSend = expectedCredits;
