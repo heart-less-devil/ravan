@@ -16,22 +16,22 @@ const connectDB = async () => {
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 15000, // Reduced to 15 seconds
-      socketTimeoutMS: 20000, // Reduced timeout
-      bufferCommands: false,
-      maxPoolSize: 5, // Reduced pool size
-      minPoolSize: 1,
-      maxIdleTimeMS: 20000,
-      connectTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 30000, // Increased to 30 seconds for better reliability
+      socketTimeoutMS: 45000,
+      bufferCommands: true, // FIXED: Enable buffering for better connection handling
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
+      connectTimeoutMS: 30000,
       retryWrites: true,
       w: 'majority',
       appName: 'BioPing'
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`🗄️  Database: ${conn.connection.name}`);
     
-    // Set global query timeout
-    mongoose.set('bufferCommands', true); // Allow buffering until connection is ready
+    // Buffering already enabled in connection options above
     
     // Set global query timeout for all operations
     mongoose.set('maxTimeMS', 10000);

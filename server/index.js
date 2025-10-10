@@ -288,7 +288,7 @@ app.use(cors({
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma']
 }));
 
 // Additional CORS headers for preflight requests
@@ -387,10 +387,16 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
           const User = require('./models/User');
           const planId = paymentIntent.metadata?.planId || 'monthly';
           
-          // Calculate credits based on plan
-          let credits = 5; // default
+          // Calculate credits based on plan - EXACT credits for each plan
+          let credits = 5; // default for free plan
+          console.log('💳 Calculating credits for plan:', planId);
+          
           if (planId === 'daily-12') {
             credits = 50;
+          } else if (planId === 'monthly') {
+            credits = 50; // Monthly plan
+          } else if (planId === 'annual') {
+            credits = 100; // Annual plan
           } else if (planId === 'basic') {
             credits = 50;
           } else if (planId === 'premium') {
@@ -401,7 +407,11 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
             credits = 50;
           } else if (planId === 'premium-yearly') {
             credits = 100;
+          } else if (planId === 'test') {
+            credits = 1;
           }
+          
+          console.log('💳 Credits assigned for plan', planId, ':', credits);
           
           // Check if this is a subscription payment
           const isSubscriptionPayment = planId === 'daily-12' || planId === 'yearly' || planId === 'basic-yearly' || planId === 'premium-yearly';
@@ -1927,6 +1937,7 @@ app.post('/api/auth/create-account', [
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user object
+    // IMPORTANT: Free users get exactly 5 credits once, never regenerated
     const newUserData = {
       firstName,
       lastName,
@@ -1936,7 +1947,7 @@ app.post('/api/auth/create-account', [
       role: 'other',
       paymentCompleted: false,
       currentPlan: 'free',
-      currentCredits: 5
+      currentCredits: 5  // One-time allocation, consumed permanently
     };
 
     let newUser = null;
@@ -5912,13 +5923,14 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
     
     let user = null;
     
-    // Try MongoDB first
+    // Try MongoDB first - FORCE FRESH DATA
     try {
       user = await User.findOne({ email: req.user.email }).maxTimeMS(10000);
       if (user) {
         console.log('✅ User found in MongoDB with credits:', user.currentCredits);
         // Convert to plain object for JSON response
         user = user.toObject();
+        console.log('✅ Using FRESH MongoDB data - credits:', user.currentCredits);
       } else {
         console.log('⚠️ User NOT found in MongoDB, will check file storage');
       }
@@ -5999,10 +6011,14 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
     if (!isFreeUser) {
       const expectedCredits = user.currentPlan === 'monthly' || user.currentPlan === 'basic' ? 50 :
                              user.currentPlan === 'annual' || user.currentPlan === 'premium' ? 100 :
-                             user.currentPlan === 'test' ? 1 : 5;
+                             user.currentPlan === 'test' ? 1 : 
+                             user.currentPlan === 'daily-12' ? 50 : 5; // Added daily-12 support
       
-      // If paid user has wrong credits, fix them
-      if (creditsToSend !== expectedCredits) {
+      // CRITICAL FIX: Don't auto-correct credits for daily-12 plan (they can vary)
+      if (user.currentPlan === 'daily-12') {
+        console.log(`💳 Daily-12 plan: Using actual credits (${creditsToSend}) - no auto-correction`);
+        // Keep actual credits for daily plan
+      } else if (creditsToSend !== expectedCredits) {
         console.log(`🔧 Fixing credits for paid user: ${creditsToSend} → ${expectedCredits} (${user.currentPlan} plan)`);
         creditsToSend = expectedCredits;
         
@@ -8176,86 +8192,50 @@ app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if subscription is active and when credits should renew
+    // CRITICAL FIX: DO NOT auto-renew credits here - only read from database
+    // Credits should ONLY be added/renewed through payment webhooks
     const now = new Date();
     const registrationDate = new Date(user.createdAt || user.registrationDate || now);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
     const trialDays = 5;
     const trialExpired = daysSinceRegistration >= trialDays;
     const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
-    const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
-    const nextRenewal = user.nextCreditRenewal ? new Date(user.nextCreditRenewal) : null;
     
-    let shouldRenewCredits = false;
-    let creditsToGive = 0;
+    console.log('💳 Reading credits from database (NO AUTO-RENEWAL):', {
+      email: user.email,
+      currentCredits: user.currentCredits,
+      plan: user.currentPlan,
+      trialExpired: trialExpired
+    });
 
-    if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
-      // Check if it's time to renew credits based on plan type
-      if (!lastCreditRenewal || now >= nextRenewal) {
-        shouldRenewCredits = true;
-        
-        // Set credits based on plan
-        if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
-          creditsToGive = 50;
-        } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
-          creditsToGive = 100;
-        } else if (user.currentPlan === 'daily-12') {
-          creditsToGive = 50; // Daily plan gets 50 credits
-        } else if (user.currentPlan === 'test') {
-          creditsToGive = 1;
+    // For expired free trial users, enforce 0 credits
+    if (!user.paymentCompleted && user.currentPlan === 'free' && trialExpired) {
+      if (user.currentCredits > 0) {
+        console.log('⚠️ Free trial expired, setting credits to 0');
+        // Update in MongoDB
+        try {
+          await User.findOneAndUpdate(
+            { email: user.email },
+            { currentCredits: 0 },
+            { new: true, maxTimeMS: 10000 }
+          );
+        } catch (err) {
+          console.error('MongoDB update failed:', err.message);
         }
-        
-        // Update user with new credits and renewal date
+        // Update in mockDB
         const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
         if (userIndex !== -1) {
-          mockDB.users[userIndex].currentCredits = creditsToGive;
-          mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
-          
-          // Set renewal period based on plan type
-          let renewalDays = 30; // Default monthly
-          if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
-            renewalDays = 30; // Annual plans have monthly EMI, so monthly renewal
-          }
-          // Monthly plans don't auto-renew, so no next renewal date
-          if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
-            mockDB.users[userIndex].nextCreditRenewal = null; // No auto-renewal for monthly
-          } else {
-            mockDB.users[userIndex].nextCreditRenewal = new Date(now.getTime() + renewalDays * 24 * 60 * 60 * 1000).toISOString();
-          }
-          saveDataToFiles();
-        }
-      }
-    } else {
-      // Enforce free-trial credits server-side
-      const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
-      if (userIndex !== -1) {
-        if (trialExpired) {
-          // Trial expired → force credits to 0
-          if (mockDB.users[userIndex].currentCredits !== 0) {
             mockDB.users[userIndex].currentCredits = 0;
             saveDataToFiles('free_trial_expired');
           }
-        }
-        // Don't modify existing credits - let them stay as they are
+        user.currentCredits = 0;
       }
     }
 
-    // Return current credits (don't override if user has used some)
-    let currentCredits = user.currentCredits;
-    if (currentCredits === undefined || currentCredits === null) {
-      // Set default credits based on plan
-      if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
-        if (user.currentPlan === 'monthly') {
-          currentCredits = 50;
-        } else if (user.currentPlan === 'annual') {
-          currentCredits = 100;
-        } else if (user.currentPlan === 'test') {
-          currentCredits = 1;
-        }
-      } else {
-        currentCredits = trialExpired ? 0 : 5; // Free users with trial enforcement
-      }
-    }
+    // Return current credits from database (NO MODIFICATION)
+    let currentCredits = user.currentCredits || 0;
+    
+    console.log('✅ Returning credits from database:', currentCredits);
 
     // Calculate next billing date for subscription plans
     let nextBillingDate = null;
@@ -8300,8 +8280,6 @@ app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
       nextCreditRenewal: user.nextCreditRenewal,
       nextBillingDate: nextBillingDate,
       isSubscriptionPlan: isSubscriptionPlan,
-      shouldRenewCredits,
-      creditsToGive,
       trialExpired,
       daysRemaining: user.paymentCompleted && user.currentPlan !== 'free' ? null : trialDaysRemaining
     });
@@ -8325,86 +8303,52 @@ app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => 
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if subscription is active and when credits should renew
+    // CRITICAL FIX: DO NOT auto-renew credits here - only read from database
+    // Credits should ONLY be added/renewed through payment webhooks
     const now = new Date();
     const registrationDate = new Date(user.createdAt || user.registrationDate || now);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
     const trialDays = 5;
     const trialExpired = daysSinceRegistration >= trialDays;
     const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
-    const lastCreditRenewal = user.lastCreditRenewal ? new Date(user.lastCreditRenewal) : null;
-    const nextRenewal = user.nextCreditRenewal ? new Date(user.nextCreditRenewal) : null;
     
-    let shouldRenewCredits = false;
-    let creditsToGive = 0;
+    console.log('💳 Reading subscription status (NO AUTO-RENEWAL):', {
+      email: user.email,
+      currentCredits: user.currentCredits,
+      plan: user.currentPlan,
+      trialExpired: trialExpired
+    });
 
-    if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
-      // Check if it's time to renew credits based on plan type
-      if (!lastCreditRenewal || now >= nextRenewal) {
-        shouldRenewCredits = true;
-        
-        // Set credits based on plan
-        if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
-          creditsToGive = 50;
-        } else if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
-          creditsToGive = 100;
-        } else if (user.currentPlan === 'daily-12') {
-          creditsToGive = 50; // Daily plan gets 50 credits
-        } else if (user.currentPlan === 'test') {
-          creditsToGive = 1;
-        }
-        
-        // Update user with new credits and renewal date
-        const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
-        if (userIndex !== -1) {
-          mockDB.users[userIndex].currentCredits = creditsToGive;
-          mockDB.users[userIndex].lastCreditRenewal = now.toISOString();
-          
-          // Set renewal period based on plan type
-          let renewalDays = 30; // Default monthly
-          if (user.currentPlan === 'annual' || user.currentPlan === 'premium') {
-            renewalDays = 30; // Annual plans have monthly EMI, so monthly renewal
+    // For expired free trial users, enforce 0 credits
+    if (!user.paymentCompleted && user.currentPlan === 'free' && trialExpired) {
+      if (user.currentCredits > 0) {
+        console.log('⚠️ Free trial expired, setting credits to 0');
+        // Update in MongoDB
+        if (isMongoConnected()) {
+          try {
+            await User.findOneAndUpdate(
+              { email: user.email },
+              { currentCredits: 0 },
+              { new: true, maxTimeMS: 10000 }
+            );
+          } catch (err) {
+            console.error('MongoDB update failed:', err.message);
           }
-          // Monthly plans don't auto-renew, so no next renewal date
-          if (user.currentPlan === 'monthly' || user.currentPlan === 'basic') {
-            mockDB.users[userIndex].nextCreditRenewal = null; // No auto-renewal for monthly
-          } else {
-            mockDB.users[userIndex].nextCreditRenewal = new Date(now.getTime() + renewalDays * 24 * 60 * 60 * 1000).toISOString();
-          }
-          saveDataToFiles();
         }
-      }
-    } else {
-      // Enforce free-trial credits server-side
+        // Update in mockDB
       const userIndex = mockDB.users.findIndex(u => u.email === req.user.email);
       if (userIndex !== -1) {
-        if (trialExpired) {
-          // Trial expired → force credits to 0
-          if (mockDB.users[userIndex].currentCredits !== 0) {
             mockDB.users[userIndex].currentCredits = 0;
             saveDataToFiles('free_trial_expired');
           }
-        }
-        // Don't modify existing credits - let them stay as they are
+        user.currentCredits = 0;
       }
     }
 
-    // Return current credits (don't override if user has used some)
-    let currentCredits = user.currentCredits;
-    if (currentCredits === undefined || currentCredits === null) {
-      // Set default credits based on plan
-      if (user.paymentCompleted && user.currentPlan && user.currentPlan !== 'free') {
-        if (user.currentPlan === 'monthly') {
-          currentCredits = 50;
-        } else if (user.currentPlan === 'annual') {
-          currentCredits = 100;
-        } else if (user.currentPlan === 'test') {
-          currentCredits = 1;
-        }
-      } else {
-        currentCredits = trialExpired ? 0 : 5; // Free users with trial enforcement
-      }
-    }
+    // Return current credits from database (NO MODIFICATION)
+    let currentCredits = user.currentCredits || 0;
+    
+    console.log('✅ Returning subscription status with credits:', currentCredits);
 
     res.json({
       paymentCompleted: user.paymentCompleted || false,
@@ -8412,8 +8356,6 @@ app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => 
       currentCredits: currentCredits,
       lastCreditRenewal: user.lastCreditRenewal,
       nextCreditRenewal: user.nextCreditRenewal,
-      shouldRenewCredits,
-      creditsToGive,
       trialExpired,
       daysRemaining: user.paymentCompleted && user.currentPlan !== 'free' ? null : trialDaysRemaining
     });
@@ -8650,6 +8592,10 @@ app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
         
         if (!mongoResult) {
           console.error('⚠️ WARNING: MongoDB update returned null - data may not be persisted!');
+          console.error('⚠️ User email:', user.email);
+          console.error('⚠️ Attempted to set credits to:', user.currentCredits);
+        } else {
+          console.log('✅ MongoDB update successful - credits persisted:', mongoResult.currentCredits);
         }
       } catch (mongoError) {
         console.error('❌ CRITICAL: MongoDB save failed:', mongoError);

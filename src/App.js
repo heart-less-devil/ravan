@@ -175,7 +175,12 @@ function App() {
               } />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
-              <Route path="/cookie-policy" element={<CookiePolicy />} />
+              <Route path="/cookie-policy" element={
+                <>
+                  <CookiePolicy />
+                  <CookieConsent />
+                </>
+              } />
 
               {/* Dashboard Routes - Protected */}
               <Route path="/dashboard" element={<Dashboard />} />

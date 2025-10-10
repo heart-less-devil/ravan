@@ -48,11 +48,11 @@ const Footer = () => {
   return (
     <footer className="relative bg-white text-black overflow-hidden">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none"></div>
       
       {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-primary-500/20 to-secondary-500/20 rounded-full blur-3xl animate-float"></div>
-      <div className="absolute bottom-20 right-10 w-24 h-24 bg-gradient-to-r from-accent-500/20 to-primary-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-primary-500/20 to-secondary-500/20 rounded-full blur-3xl animate-float pointer-events-none"></div>
+      <div className="absolute bottom-20 right-10 w-24 h-24 bg-gradient-to-r from-accent-500/20 to-primary-500/20 rounded-full blur-3xl animate-float pointer-events-none" style={{ animationDelay: '2s' }}></div>
 
       {/* Main Footer Content */}
       <div className="container-custom py-20 relative z-10">
@@ -187,7 +187,7 @@ const Footer = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-300 bg-gray-50">
+      <div className="border-t border-gray-300 bg-gray-50 relative z-20">
         <div className="container-custom py-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="text-center">
@@ -204,22 +204,22 @@ const Footer = () => {
               </div>
 
               {/* Legal Links */}
-              <div className="flex items-center space-x-6 text-sm">
+              <div className="flex items-center space-x-6 text-sm relative z-30">
                 <Link 
                   to="/privacy" 
-                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium"
+                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium cursor-pointer"
                 >
                   Privacy Policy
                 </Link>
                 <Link 
                   to="/terms" 
-                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium"
+                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium cursor-pointer"
                 >
                   Terms of Service
                 </Link>
                 <Link 
                   to="/cookie-policy" 
-                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium"
+                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium cursor-pointer"
                 >
                   Cookie Policy
                 </Link>

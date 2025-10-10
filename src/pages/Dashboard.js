@@ -217,14 +217,9 @@ const Dashboard = () => {
   // Fetch user data function - accessible throughout the component
   const fetchUserData = useCallback(async () => {
     try {
-      setIsInitialLoading(true);
       console.log('=== OPTIMIZED FETCH USER DATA ===');
+      setIsInitialLoading(true);
       
-      if (!user || !user.email) {
-        console.log('No user data found, but user might be loading...');
-        return;
-      }
-
       // Get authentication token
       const token = sessionStorage.getItem('token');
       if (!token) {
@@ -414,10 +409,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Only fetch user data if user is loaded and not loading
+    // FIXED: Remove user from dependencies to prevent infinite loop
     if (user && user.email && !isLoadingUser) {
       fetchUserData();
     }
-  }, [user, isLoadingUser]);
+  }, [isLoadingUser]); // Removed 'user' from dependencies
 
   // This useEffect was causing navigation conflicts - removed
   // The search state clearing is now handled in the main useEffect above

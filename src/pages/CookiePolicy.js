@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Shield, Cookie, Settings, Eye, Globe, Clock, CheckCircle } from 'lucide-react';
 
 const CookiePolicy = () => {
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  const handleManageCookies = () => {
+    // Clear existing cookie consent to force banner to show
+    localStorage.removeItem('cookieConsent');
+    sessionStorage.removeItem('cookieConsent');
+    // Trigger a page reload to show the cookie banner
+    window.location.reload();
+  };
+
   const cookieTypes = [
     {
       title: "Essential Cookies",
@@ -91,7 +101,7 @@ const CookiePolicy = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent"
           >
-            Cookie Policy
+            Cookie Policy – TheBioPing.com
           </motion.h1>
           
           <motion.div
@@ -101,18 +111,26 @@ const CookiePolicy = () => {
             className="flex items-center justify-center space-x-4 text-gray-600 mb-8"
           >
             <Clock className="w-5 h-5" />
-            <span className="text-lg">Last updated: December 2024</span>
+            <span className="text-lg">Last updated: September 2025</span>
           </motion.div>
           
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+            className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed space-y-4"
           >
-            We use cookies to enhance your browsing experience, analyze site traffic, and understand where our visitors are coming from. 
-            This policy explains how we use cookies and your rights regarding them.
-          </motion.p>
+            <p>
+              This Cookie Policy explains how <strong>BioPing, Inc.</strong> ("we," "our," or "us") uses cookies and similar
+              technologies on <strong>https://thebioping.com</strong>. It also describes your choices and rights under applicable
+              data protection laws, including the <strong>EU/UK General Data Protection Regulation (GDPR)</strong> and
+              the <strong>California Consumer Privacy Act (CCPA/CPRA)</strong>.
+            </p>
+            <p>
+              By clicking <strong>"Accept All"</strong>, you agree to the use of cookies as described in this policy. You can
+              manage or withdraw your consent at any time.
+            </p>
+          </motion.div>
         </motion.div>
       </div>
 
@@ -139,12 +157,18 @@ const CookiePolicy = () => {
               
               <div className="space-y-4">
                 <p className="text-gray-700 leading-relaxed text-lg">
-                  Cookies are small text files that are stored on your device when you visit a website. They help websites remember information about your visit, 
-                  such as your preferred language and other settings. This can make your next visit easier and the site more useful to you.
+                  Cookies are small text files stored on your device when you visit a website. They help website's
+                  function, improve your browsing experience, and provide analytics and marketing insights.
                 </p>
                 <p className="text-gray-700 leading-relaxed text-lg">
-                  Cookies play an important role in making the web work more efficiently and providing information to website owners about how their sites are used.
+                  Cookies can be:
                 </p>
+                <ul className="space-y-2 text-gray-700 ml-4">
+                  <li>• <strong>Session cookies</strong> (expire when you close your browser)</li>
+                  <li>• <strong>Persistent cookies</strong> (remain until deleted or expired)</li>
+                  <li>• <strong>First-party cookies</strong> (set by our site)</li>
+                  <li>• <strong>Third-party cookies</strong> (set by service providers like Google)</li>
+                </ul>
               </div>
             </motion.div>
 
@@ -194,11 +218,36 @@ const CookiePolicy = () => {
               </div>
             </motion.div>
 
-            {/* Your Rights */}
+            {/* Third-Party Cookies and Transfers */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 1.0 }}
+              className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100"
+            >
+              <div className="flex items-start space-x-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Globe className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Third-Party Cookies and Transfers</h2>
+                  <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"></div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  Some cookies are placed by third-party providers (Google, Meta, LinkedIn, etc.) which may process your data outside the EEA/UK or the United States. 
+                  These providers are responsible for their own data processing. Please review their privacy policies for more details.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Your Rights */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.1 }}
               className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100"
             >
               <div className="flex items-start space-x-4 mb-6">
@@ -211,57 +260,125 @@ const CookiePolicy = () => {
                 </div>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <p className="text-gray-700 leading-relaxed text-lg">
-                  Under GDPR and other privacy laws, you have several rights regarding cookies and your personal data:
+                  Depending on your location, you have the following rights:
                 </p>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {userRights.map((right, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 1.1 + index * 0.05 }}
-                      className="flex items-start space-x-3"
-                    >
-                      <CheckCircle className="w-5 h-5 text-orange-500 mt-1 flex-shrink-0" />
-                      <span className="text-gray-700">{right}</span>
-                    </motion.div>
-                  ))}
+                
+                <div className="space-y-6">
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-blue-900 mb-3">GDPR/UK GDPR (EU/EEA & UK users):</h4>
+                    <ul className="space-y-2 text-blue-800">
+                      <li>• Right to be informed about cookies</li>
+                      <li>• Right to give or withdraw consent for non-essential cookies</li>
+                      <li>• Right to access, delete, or restrict processing of your data</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                    <h4 className="font-semibold text-green-900 mb-3">CCPA/CPRA (California residents):</h4>
+                    <ul className="space-y-2 text-green-800">
+                      <li>• Right to opt-out of "sale" or "sharing" of personal information</li>
+                      <li>• Right to know what categories of data are collected</li>
+                      <li>• Right to request deletion of personal information</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </motion.div>
 
-            {/* How to Manage Cookies */}
+            {/* Managing Cookies */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.2 }}
-              className="bg-gradient-to-r from-orange-600 to-amber-600 rounded-3xl p-8 text-white"
+              transition={{ duration: 0.6, delay: 1.3 }}
+              className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100"
             >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Settings className="w-8 h-8 text-white" />
+              <div className="flex items-start space-x-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Settings className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold mb-4">How to Manage Cookies</h3>
-                <p className="text-orange-100 text-lg max-w-2xl mx-auto">
-                  You can control and manage cookies through your browser settings. Here's how to manage cookies in popular browsers:
-                </p>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Managing Cookies</h2>
+                  <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"></div>
+                </div>
               </div>
               
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <h4 className="font-semibold mb-2">Chrome</h4>
-                  <p className="text-orange-100 text-sm">Settings → Privacy and Security → Cookies and other site data</p>
+              <div className="space-y-6">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  You can control cookies in the following ways:
+                </p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Cookie Banner Controls:</h4>
+                    <p className="text-gray-700">Use "Customize," "Reject All," or "Accept All" in our banner.</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Manage Preferences Anytime:</h4>
+                    <p className="text-gray-700">
+                      <button 
+                        onClick={handleManageCookies}
+                        className="text-orange-600 underline cursor-pointer hover:text-orange-700 font-medium transition-colors"
+                      >
+                        [Manage Cookies]
+                      </button> (click to reopen banner).
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-4">Browser Settings:</h4>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4 rounded-lg hover:shadow-md transition-shadow">
+                        <h5 className="font-semibold text-blue-900 mb-2 flex items-center">
+                          <span className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">C</span>
+                          Chrome
+                        </h5>
+                        <p className="text-blue-800 text-sm">Settings → Privacy and Security → Cookies and other site data</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 p-4 rounded-lg hover:shadow-md transition-shadow">
+                        <h5 className="font-semibold text-orange-900 mb-2 flex items-center">
+                          <span className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">F</span>
+                          Firefox
+                        </h5>
+                        <p className="text-orange-800 text-sm">Options → Privacy & Security → Cookies and Site Data</p>
+                      </div>
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow">
+                        <h5 className="font-semibold text-gray-900 mb-2 flex items-center">
+                          <span className="w-6 h-6 bg-gray-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">S</span>
+                          Safari
+                        </h5>
+                        <p className="text-gray-700 text-sm">Preferences → Privacy → Manage Website Data</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <h4 className="font-semibold mb-2">Firefox</h4>
-                  <p className="text-orange-100 text-sm">Options → Privacy & Security → Cookies and Site Data</p>
+              </div>
+            </motion.div>
+
+            {/* Retention & Security */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.4 }}
+              className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100"
+            >
+              <div className="flex items-start space-x-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Shield className="w-6 h-6 text-white" />
                 </div>
-                <div className="text-center">
-                  <h4 className="font-semibold mb-2">Safari</h4>
-                  <p className="text-orange-100 text-sm">Preferences → Privacy → Manage Website Data</p>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Retention & Security</h2>
+                  <div className="w-16 h-1 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"></div>
                 </div>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-gray-700 leading-relaxed text-lg">
+                  Cookies are stored for varying durations (session or persistent). We do not store personally identifiable information in cookies. 
+                  Data collected through cookies is protected with reasonable security measures.
+                </p>
               </div>
             </motion.div>
 
@@ -269,7 +386,7 @@ const CookiePolicy = () => {
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.4 }}
+              transition={{ duration: 0.6, delay: 1.5 }}
               className="mt-8 bg-white/70 backdrop-blur-sm rounded-3xl p-8 text-center border border-gray-100"
             >
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Questions About Cookies?</h3>
