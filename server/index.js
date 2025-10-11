@@ -5761,8 +5761,18 @@ app.post('/api/auth/forgot-password', [
 
     const { email } = req.body;
     
-    // Check if user exists
-    const user = mockDB.users.find(u => u.email === email);
+    // Check if user exists (try MongoDB first, then fallback to file-based)
+    let user = null;
+    try {
+      console.log('🔍 Checking MongoDB for user password reset...');
+      user = await User.findOne({ email }).maxTimeMS(10000);
+      console.log('✅ MongoDB query completed for password reset');
+    } catch (dbError) {
+      console.log('❌ MongoDB not available for password reset, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
+      user = mockDB.users.find(u => u.email === email);
+    }
+    
     if (!user) {
       return res.status(400).json({ 
         success: false,
@@ -5879,8 +5889,29 @@ app.post('/api/auth/reset-password', [
       });
     }
 
-    // Find the user
-    const user = mockDB.users.find(u => u.email === email);
+    // Find the user (try MongoDB first, then fallback to file-based)
+    let user = null;
+    let isMongoUser = false;
+    try {
+      console.log('🔍 Checking MongoDB for password reset user...');
+      user = await User.findOne({ email }).maxTimeMS(10000);
+      if (user) {
+        console.log('✅ User found in MongoDB for password reset');
+        isMongoUser = true;
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB not available for password reset, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
+    }
+    
+    // Fallback to file storage if MongoDB fails or user not found
+    if (!user) {
+      user = mockDB.users.find(u => u.email === email);
+      if (user) {
+        console.log('✅ User found in file storage for password reset');
+      }
+    }
+    
     if (!user) {
       return res.status(400).json({ 
         success: false,
@@ -5892,16 +5923,38 @@ app.post('/api/auth/reset-password', [
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
     
-    // Update user's password
-    user.password = hashedPassword;
+    // Update user's password based on storage type
+    if (isMongoUser) {
+      // Update in MongoDB
+      try {
+        await User.findOneAndUpdate(
+          { email },
+          { password: hashedPassword },
+          { new: true }
+        );
+        console.log('✅ Password updated in MongoDB');
+      } catch (dbError) {
+        console.log('❌ Failed to update password in MongoDB:', dbError.message);
+        return res.status(500).json({ 
+          success: false,
+          message: 'Failed to update password' 
+        });
+      }
+    } else {
+      // Update in file storage
+      user.password = hashedPassword;
+      console.log('✅ Password updated in file storage');
+    }
 
     // Remove the used verification code
     mockDB.verificationCodes = mockDB.verificationCodes.filter(
       record => !(record.email === email && record.code === code && record.type === 'password-reset')
     );
 
-    // Save data to files
-    saveDataToFiles();
+    // Save data to files (only for file storage users)
+    if (!isMongoUser) {
+      saveDataToFiles();
+    }
 
     console.log(`✅ Password reset successful for ${email}`);
 
