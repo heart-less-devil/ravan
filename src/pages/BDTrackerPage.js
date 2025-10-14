@@ -559,6 +559,23 @@ const BDTrackerPage = ({ user, userPaymentStatus }) => {
     hasAccess = true;
   }
 
+  // Emergency fix: Allow access on production domain for admin users
+  if (!hasAccess && window.location.hostname === 'thebioping.com') {
+    console.log('🚨 Production mode: Checking for admin access...');
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.email === 'gauravvij1980@gmail.com' || payload.email === 'universalx0242@gmail.com') {
+          console.log('✅ Production admin access granted to:', payload.email);
+          hasAccess = true;
+        }
+      } catch (e) {
+        console.log('❌ JWT decode failed in production:', e);
+      }
+    }
+  }
+
   // If no access, show upgrade content
   if (!hasAccess) {
     return (
