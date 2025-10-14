@@ -731,6 +731,11 @@ const Dashboard = () => {
             </div>
           );
         }
+        console.log('🔍 Dashboard passing to BDTrackerPage:', {
+          user: user,
+          userEmail: user?.email,
+          userPaymentStatus: userPaymentStatus
+        });
         return <BDTrackerPage user={user} userPaymentStatus={userPaymentStatus} />;
 
       case '/dashboard/resources/definitions':
