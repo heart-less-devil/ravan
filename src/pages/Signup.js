@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
 import VerificationModal from '../components/VerificationModal';
+import PasswordStrength from '../components/PasswordStrength';
 import { API_BASE_URL, tryApiCall } from '../config';
 import stateManager from '../utils/stateManager';
 
@@ -87,8 +88,8 @@ const Signup = () => {
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
       console.log('Password too short');
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol';
       console.log('Password complexity requirements not met');
     }
 
@@ -297,27 +298,6 @@ const Signup = () => {
     await sendVerificationCode();
   };
 
-  const passwordStrength = () => {
-    if (!formData.password) return { score: 0, color: 'gray', text: '' };
-    
-    let score = 0;
-    if (formData.password.length >= 8) score++;
-    if (/(?=.*[a-z])/.test(formData.password)) score++;
-    if (/(?=.*[A-Z])/.test(formData.password)) score++;
-    if (/(?=.*\d)/.test(formData.password)) score++;
-    if (/(?=.*[!@#$%^&*])/.test(formData.password)) score++;
-
-    const colors = ['red', 'orange', 'yellow', 'lightgreen', 'green'];
-    const texts = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-    
-    return {
-      score: Math.min(score, 4),
-      color: colors[score - 1] || 'gray',
-      text: texts[score - 1] || ''
-    };
-  };
-
-  const strength = passwordStrength();
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
@@ -625,32 +605,9 @@ const Signup = () => {
                     )}
                   </div>
                   
-                  {/* Enhanced Password Strength */}
+                  {/* Password Strength Indicator */}
                   {formData.password && (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-black">Password strength:</span>
-                        <span className={`text-sm font-medium ${
-                          strength.color === 'red' ? 'text-red-400' :
-                          strength.color === 'yellow' ? 'text-yellow-400' :
-                          strength.color === 'green' ? 'text-green-400' :
-                          'text-black'
-                        }`}>
-                          {strength.text}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-700 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            strength.color === 'red' ? 'bg-red-500' :
-                            strength.color === 'yellow' ? 'bg-yellow-500' :
-                            strength.color === 'green' ? 'bg-green-500' :
-                            'bg-gray-500'
-                          }`}
-                          style={{ width: `${(strength.score / 4) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    <PasswordStrength password={formData.password} />
                   )}
                 </div>
 

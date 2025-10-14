@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle, X, RefreshCw, AlertCircle } from 'lucide-react';
+import PasswordStrength from '../components/PasswordStrength';
 import { API_BASE_URL } from '../config';
 import { CompactSpinner } from '../components/LoadingSpinner';
 import stateManager from '../utils/stateManager';
@@ -195,10 +196,18 @@ const Login = () => {
       return;
     }
 
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(newPassword)) {
+      setForgotError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol');
+      return;
+    }
+
     if (newPassword !== confirmNewPassword) {
       setForgotError('Passwords do not match');
       return;
     }
+
+    // Note: We can't check current password on frontend for security reasons
+    // Backend will validate that new password is different from current password
 
     setIsVerifying(true);
     setForgotError('');
@@ -718,6 +727,11 @@ const Login = () => {
                       )}
                     </button>
                   </div>
+                  
+                  {/* Password Strength Indicator */}
+                  {newPassword && (
+                    <PasswordStrength password={newPassword} />
+                  )}
                 </div>
 
                 {/* Confirm New Password */}

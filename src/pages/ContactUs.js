@@ -3,6 +3,50 @@ import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
+// Collapsible FAQ Component
+const CollapsibleFAQ = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-5 text-left bg-gradient-to-r from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 transition-all duration-300 flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset group"
+      >
+        <h3 className="font-semibold text-gray-900 pr-4 group-hover:text-blue-600 transition-colors duration-200">{question}</h3>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="flex-shrink-0 p-1 rounded-full bg-gray-100 group-hover:bg-blue-100 transition-colors duration-200"
+        >
+          <svg 
+            className="w-4 h-4 text-gray-600 group-hover:text-blue-600 transition-colors duration-200" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+          </svg>
+        </motion.div>
+      </button>
+      
+      <motion.div
+        initial={false}
+        animate={{ 
+          height: isOpen ? "auto" : 0,
+          opacity: isOpen ? 1 : 0
+        }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        className="overflow-hidden"
+      >
+        <div className="px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100">
+          <p className="text-gray-700 leading-relaxed text-sm">{answer}</p>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -347,14 +391,11 @@ const ContactUs = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="card p-6"
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  {faq.question}
-                </h3>
-                <p className="text-gray-600">
-                  {faq.answer}
-                </p>
+                <CollapsibleFAQ 
+                  question={faq.question}
+                  answer={faq.answer}
+                />
               </motion.div>
             ))}
           </div>

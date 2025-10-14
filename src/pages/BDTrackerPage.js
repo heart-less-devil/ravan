@@ -19,7 +19,7 @@ import {
 import { Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const BDTrackerPage = () => {
+const BDTrackerPage = ({ user, userPaymentStatus }) => {
   const [entries, setEntries] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -464,6 +464,81 @@ const BDTrackerPage = () => {
         fullScreen={true}
         color="cyber"
       />
+    );
+  }
+
+  // Check if user has paid access or is universalx0242@gmail.com
+  console.log('🔍 BD Tracker Access Check:', {
+    userEmail: user?.email,
+    userPaymentStatus,
+    hasPaid: userPaymentStatus?.hasPaid,
+    currentPlan: userPaymentStatus?.currentPlan,
+    userPaymentCompleted: user?.paymentCompleted,
+    userCurrentPlan: user?.currentPlan
+  });
+  
+  // Permanent access list for specific users
+  const permanentAccessEmails = [
+    'gauravvij1980@gmail.com',
+    'universalx0242@gmail.com'
+  ];
+  
+  // Check for permanent access first
+  const hasPermanentAccess = permanentAccessEmails.includes(user?.email);
+  
+  // Check for paid plan access
+  const hasPaidAccess = userPaymentStatus?.hasPaid || 
+                        user?.paymentCompleted ||
+                        (userPaymentStatus?.currentPlan && userPaymentStatus?.currentPlan !== 'free') ||
+                        (user?.currentPlan && user?.currentPlan !== 'free');
+  
+  const hasAccess = hasPermanentAccess || hasPaidAccess;
+  
+  console.log('🔍 BD Tracker Access Result:', { 
+    hasAccess,
+    hasPermanentAccess,
+    hasPaidAccess,
+    userEmail: user?.email,
+    checks: {
+      userPaymentStatusHasPaid: userPaymentStatus?.hasPaid,
+      userPaymentCompleted: user?.paymentCompleted,
+      userPaymentStatusPlan: userPaymentStatus?.currentPlan,
+      userCurrentPlan: user?.currentPlan
+    }
+  });
+
+  // If no access, show upgrade content
+  if (!hasAccess) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Paid Members Access Only</h3>
+            <p className="text-gray-600 mb-6">
+              BD Tracker is exclusively available to paid members. Upgrade your plan to access our premium business development tracking tools.
+            </p>
+            <div className="space-y-3">
+              <Link
+                to="/dashboard"
+                className="block w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Go Back
+              </Link>
+              <Link
+                to="/dashboard/pricing"
+                className="block w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
+              >
+                Upgrade Now
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 

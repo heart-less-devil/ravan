@@ -114,8 +114,22 @@ const BDInsights = ({ user, userPaymentStatus }) => {
   };
 
 
-  // Check if user has paid access or is universalx0242@gmail.com
-  const hasAccess = userPaymentStatus?.hasPaid || user?.email === 'universalx0242@gmail.com';
+  // Permanent access list for specific users
+  const permanentAccessEmails = [
+    'gauravvij1980@gmail.com',
+    'universalx0242@gmail.com'
+  ];
+  
+  // Check for permanent access first
+  const hasPermanentAccess = permanentAccessEmails.includes(user?.email);
+  
+  // Check for paid plan access
+  const hasPaidAccess = userPaymentStatus?.hasPaid || 
+                        user?.paymentCompleted ||
+                        (userPaymentStatus?.currentPlan && userPaymentStatus?.currentPlan !== 'free') ||
+                        (user?.currentPlan && user?.currentPlan !== 'free');
+  
+  const hasAccess = hasPermanentAccess || hasPaidAccess;
 
   // If no access, show upgrade content
   if (!hasAccess) {

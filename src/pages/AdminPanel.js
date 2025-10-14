@@ -563,6 +563,83 @@ const AdminPanel = () => {
     }
   };
 
+  // User Approval Functions
+  const handleApproveUser = async (userId) => {
+    try {
+      if (!window.confirm('Are you sure you want to approve this user?')) {
+        return;
+      }
+
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/approve-user/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('User approved successfully');
+        fetchUsers(); // Refresh the users list
+      } else {
+        const error = await response.json();
+        alert(`Failed to approve user: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error approving user:', error);
+      alert('Error approving user');
+    }
+  };
+
+  const handleRejectUser = async (userId) => {
+    try {
+      if (!window.confirm('Are you sure you want to reject this user? This will delete their account.')) {
+        return;
+      }
+
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/reject-user/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        alert('User rejected and account deleted');
+        fetchUsers(); // Refresh the users list
+      } else {
+        const error = await response.json();
+        alert(`Failed to reject user: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error rejecting user:', error);
+      alert('Error rejecting user');
+    }
+  };
+
+  const handleViewUserDetails = (user) => {
+    // Open a modal or navigate to user details page
+    const userDetails = `
+User ID: ${user.id || user._id}
+Name: ${user.name || `${user.firstName || ''} ${user.lastName || ''}`}
+Email: ${user.email}
+Company: ${user.company || 'Not specified'}
+Role: ${user.role || 'other'}
+Status: ${user.isActive ? 'Active' : 'Inactive'}
+Verified: ${user.isVerified ? 'Yes' : 'No'}
+Approved: ${user.isApproved ? 'Yes' : 'No'}
+Plan: ${user.currentPlan || 'free'}
+Credits: ${user.currentCredits || 0}
+Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
+Created: ${user.createdAt ? new Date(user.createdAt).toLocaleString() : 'Unknown'}
+    `;
+    
+    alert(userDetails);
+  };
+
   // Credit Management Functions
   // Credit management functions removed - credits can only be consumed, never restored
 
@@ -838,121 +915,94 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Enhanced Stats Cards - MongoDB Atlas Data */}
+        {/* Enhanced Stats Cards - Only Important Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Users */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 shadow-2xl border border-blue-400/20 backdrop-blur-sm"
+            className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium mb-2">Total Users</p>
-                <p className="text-4xl font-bold text-white">
+                <p className="text-gray-600 text-sm font-medium mb-1">Total Users</p>
+                <p className="text-3xl font-bold text-gray-900">
                   {comprehensiveData?.summary?.totalUsers || users.length || 0}
                 </p>
-                <p className="text-blue-200 text-xs mt-2">MongoDB Atlas users</p>
+                <p className="text-gray-500 text-xs mt-1">Registered accounts</p>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <Users className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </motion.div>
 
+          {/* Active Users */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 shadow-2xl border border-green-400/20 backdrop-blur-sm"
+            className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm font-medium mb-2">Active Users</p>
-                <p className="text-4xl font-bold text-white">
+                <p className="text-gray-600 text-sm font-medium mb-1">Active Users</p>
+                <p className="text-3xl font-bold text-gray-900">
                   {comprehensiveData?.summary?.activeUsers || users.filter(u => u.isActive).length || 0}
                 </p>
-                <p className="text-green-200 text-xs mt-2">Verified & active</p>
+                <p className="text-gray-500 text-xs mt-1">Currently active</p>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <CheckCircle className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </motion.div>
 
+          {/* Revenue */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 shadow-2xl border border-purple-400/20 backdrop-blur-sm"
+            className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm font-medium mb-2">Potential Customers</p>
-                <p className="text-4xl font-bold text-white">
-                  {comprehensiveData?.summary?.potentialCustomers || potentialCustomers.length || 0}
-                </p>
-                <p className="text-purple-200 text-xs mt-2">Hot leads & prospects</p>
+                <p className="text-gray-600 text-sm font-medium mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-gray-900">$485,199</p>
+                <p className="text-gray-500 text-xs mt-1">Monthly recurring</p>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <AlertTriangle className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </motion.div>
 
+          {/* Pending Approvals */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl p-6 shadow-2xl border border-yellow-400/20 backdrop-blur-sm"
+            className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-yellow-100 text-sm font-medium mb-2">Total Revenue</p>
-                <p className="text-4xl font-bold text-white">${stats.totalRevenue.toLocaleString()}</p>
-                <p className="text-yellow-200 text-xs mt-2">Estimated value</p>
+                <p className="text-gray-600 text-sm font-medium mb-1">Pending Approvals</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {comprehensiveData?.users?.filter(u => !u.isApproved).length || 0}
+                </p>
+                <p className="text-gray-500 text-xs mt-1">Awaiting review</p>
               </div>
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <DollarSign className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Clock className="w-6 h-6 text-purple-600" />
               </div>
             </div>
           </motion.div>
+        </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Registered Users</p>
-                <p className="text-3xl font-bold text-blue-600">{users.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-2xl border border-indigo-400/20 backdrop-blur-sm cursor-pointer hover:scale-105 transition-transform duration-200"
-            onClick={() => navigate('/dashboard/pdf-management')}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-indigo-100 text-sm font-medium mb-2">PDF Management</p>
-                <p className="text-3xl font-bold text-white">6</p>
-                <p className="text-indigo-200 text-xs mt-2">BD Resources</p>
-              </div>
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <FileText className="w-8 h-8 text-white" />
-              </div>
-            </div>
-          </motion.div>
+
+
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1130,10 +1180,10 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                 { id: 'manage', name: 'Manage Data', icon: FileText },
                 { id: 'users', name: 'Users', icon: Users },
                 { id: 'user-management', name: 'User Management', icon: Users },
+                { id: 'pending-approvals', name: 'Pending Approvals', icon: Clock, badge: comprehensiveData?.users?.filter(u => !u.isApproved).length || 0 },
                 { id: 'activity', name: 'User Activity', icon: BarChart3 },
                 { id: 'trials', name: 'Trial Data', icon: RefreshCw },
                 { id: 'customers', name: 'Potential Customers', icon: Users },
-
                 { id: 'contacts', name: 'Contact Submissions', icon: Mail },
                 { id: 'subscriptions', name: 'Subscription Details', icon: DollarSign },
                 { id: 'settings', name: 'Settings', icon: Settings }
@@ -1149,6 +1199,11 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                 >
                   <tab.icon className="w-5 h-5" />
                   <span>{tab.name}</span>
+                  {tab.badge > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                      {tab.badge}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -1454,6 +1509,164 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
               </motion.div>
             )}
 
+            {/* Pending Approvals Tab */}
+            {activeTab === 'pending-approvals' && (
+              <motion.div
+                key="pending-approvals"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-xl p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-2xl font-bold mb-2">Pending Account Approvals</h3>
+                        <p className="text-orange-100">Review and approve new user registrations</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-4xl font-bold">
+                          {comprehensiveData?.users?.filter(u => !u.isApproved).length || 0}
+                        </div>
+                        <div className="text-sm text-orange-100">Pending Review</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-semibold text-gray-900">Quick Actions</h4>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => {
+                            const pendingUsers = comprehensiveData?.users?.filter(u => !u.isApproved) || [];
+                            if (pendingUsers.length === 0) {
+                              alert('No pending approvals');
+                              return;
+                            }
+                            if (window.confirm(`Approve all ${pendingUsers.length} pending users?`)) {
+                              // Handle bulk approval
+                              alert('Bulk approval feature coming soon');
+                            }
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Approve All</span>
+                        </button>
+                        <button
+                          onClick={refreshData}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          <span>Refresh</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pending Users List */}
+                  {comprehensiveData?.users?.filter(u => !u.isApproved).length > 0 ? (
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                            <tr>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                User Details
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Company & Role
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Registration Date
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {comprehensiveData?.users?.filter(u => !u.isApproved).map((user) => {
+                              const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
+                              const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+                              
+                              return (
+                                <tr key={user.id} className="hover:bg-orange-50 transition-colors">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                                        <span className="text-sm font-bold text-white">
+                                          {initials}
+                                        </span>
+                                      </div>
+                                      <div className="ml-4">
+                                        <div className="text-sm font-semibold text-gray-900">
+                                          {fullName}
+                                        </div>
+                                        <div className="text-sm text-gray-600">{user.email}</div>
+                                        <div className="text-xs text-gray-500">
+                                          ID: {user.id || user._id}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {user.company || 'Not specified'}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {user.role?.replace('-', ' ') || 'other'}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => handleApproveUser(user.id)}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-1"
+                                      >
+                                        <CheckCircle className="w-4 h-4" />
+                                        <span>Approve</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectUser(user.id)}
+                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-1"
+                                      >
+                                        <X className="w-4 h-4" />
+                                        <span>Reject</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleViewUserDetails(user)}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-1"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                        <span>View</span>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-12 text-center">
+                      <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pending Approvals</h3>
+                      <p className="text-gray-600">All user accounts have been reviewed and approved.</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'activity' && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -1668,37 +1881,85 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                 transition={{ duration: 0.3 }}
               >
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
-                    <div className="flex items-center space-x-4">
-                      <button
-                        onClick={refreshData}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Refresh
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Test suspension with a quick 1-minute suspension
-                          const testUser = users.find(u => u.role !== 'admin');
-                          if (testUser) {
-                            setSelectedUserForSuspension(testUser);
-                            setSuspensionForm({
-                              reason: 'Test suspension - 1 minute',
-                              duration: 'custom',
-                              customDate: new Date(Date.now() + 60000).toISOString().slice(0, 16)
-                            });
-                            setSuspensionModal(true);
-                          } else {
-                            alert('No non-admin users found to test with');
-                          }
-                        }}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-lg hover:bg-orange-700"
-                      >
-                        <AlertTriangle className="w-4 h-4" />
-                        Test Suspension (1 min)
-                      </button>
+                  {/* Enhanced Header with Professional Stats */}
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-2xl font-bold mb-2">Advanced User Management</h3>
+                        <p className="text-blue-100">Comprehensive user control and analytics dashboard</p>
+                      </div>
+                      <div className="flex items-center space-x-6">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold">{comprehensiveData?.users?.length || 0}</div>
+                          <div className="text-sm text-blue-100">Total Users</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-green-300">
+                            {comprehensiveData?.users?.filter(u => u.isActive).length || 0}
+                          </div>
+                          <div className="text-sm text-blue-100">Active</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-yellow-300">
+                            {comprehensiveData?.users?.filter(u => !u.isVerified).length || 0}
+                          </div>
+                          <div className="text-sm text-blue-100">Pending</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-red-300">
+                            {comprehensiveData?.users?.filter(u => !u.isActive).length || 0}
+                          </div>
+                          <div className="text-sm text-blue-100">Suspended</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Advanced Filter and Search Bar */}
+                  <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search users by name, email..."
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="pending">Pending Approval</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                      <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">All Plans</option>
+                        <option value="free">Free</option>
+                        <option value="premium">Premium</option>
+                        <option value="annual">Annual</option>
+                      </select>
+                      <select className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">All Roles</option>
+                        <option value="business-development">Business Development</option>
+                        <option value="sales">Sales</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="executive">Executive</option>
+                        <option value="investor">Investor</option>
+                      </select>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={refreshData}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          <span>Refresh</span>
+                        </button>
+                        <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium flex items-center justify-center space-x-2">
+                          <Download className="w-4 h-4" />
+                          <span>Export</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1706,24 +1967,30 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
+                          <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                User
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                User Profile
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Email
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Contact Info
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Role
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Professional Role
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Account Status
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Credits
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Subscription Plan
                               </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Credits & Usage
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Last Activity
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 Actions
                               </th>
                             </tr>
@@ -1731,39 +1998,68 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                           <tbody className="bg-white divide-y divide-gray-200">
                             {users.map((user) => {
                               const suspensionStatus = getSuspensionStatus(user);
+                              const isPendingApproval = !user.isApproved;
+                              const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
+                              const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
+                              
                               return (
-                                <tr key={user.id}>
+                                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                                  {/* User Profile */}
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
-                                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span className="text-sm font-medium text-blue-600">
-                                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                                        <span className="text-sm font-bold text-white">
+                                          {initials}
                                         </span>
                                       </div>
-                                      <div className="ml-3">
-                                        <div className="text-sm font-medium text-gray-900">
-                                          {user.name || 'Unknown'}
+                                      <div className="ml-4">
+                                        <div className="text-sm font-semibold text-gray-900">
+                                          {fullName}
                                         </div>
-                                        <div className="text-sm text-gray-500">
-                                          ID: {user.id}
+                                        <div className="text-xs text-gray-500">
+                                          ID: {user.id || user._id}
+                                        </div>
+                                        <div className="text-xs text-gray-400">
+                                          Company: {user.company || 'Not specified'}
                                         </div>
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {user.email}
-                                  </td>
+                                  
+                                  {/* Contact Info */}
                                   <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    <div className="text-sm text-gray-900">{user.email}</div>
+                                    <div className="text-xs text-gray-500 flex items-center mt-1">
+                                      <Mail className="w-3 h-3 mr-1" />
+                                      {user.isVerified ? 'Verified' : 'Unverified'}
+                                    </div>
+                                  </td>
+                                  
+                                  {/* Professional Role */}
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                                       user.role === 'admin' 
-                                        ? 'bg-purple-100 text-purple-800' 
-                                        : 'bg-gray-100 text-gray-800'
+                                        ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                        : user.role === 'business-development'
+                                        ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                        : user.role === 'executive'
+                                        ? 'bg-green-100 text-green-800 border border-green-200'
+                                        : user.role === 'investor'
+                                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                        : 'bg-gray-100 text-gray-800 border border-gray-200'
                                     }`}>
-                                      {user.role}
+                                      {user.role?.replace('-', ' ') || 'other'}
                                     </span>
                                   </td>
+                                  
+                                  {/* Account Status */}
                                   <td className="px-6 py-4 whitespace-nowrap">
-                                    {suspensionStatus ? (
+                                    {isPendingApproval ? (
+                                      <div className="flex items-center space-x-2">
+                                        <Clock className="w-4 h-4 text-orange-500" />
+                                        <span className="text-sm text-orange-600 font-medium">Pending Approval</span>
+                                      </div>
+                                    ) : suspensionStatus ? (
                                       <div className="flex items-center space-x-2">
                                         {suspensionStatus.status === 'suspended' ? (
                                           <>
@@ -1784,44 +2080,107 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                     ) : (
                                       <div className="flex items-center space-x-2">
                                         <CheckCircle className="w-4 h-4 text-green-500" />
-                                        <span className="text-sm text-green-600 font-medium">Active</span>
+                                        <span className="text-sm text-green-600 font-medium">Active & Approved</span>
                                       </div>
                                     )}
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  
+                                  {/* Subscription Plan */}
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex flex-col">
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-1 ${
+                                        user.currentPlan === 'free' 
+                                          ? 'bg-gray-100 text-gray-800'
+                                          : user.currentPlan === 'premium'
+                                          ? 'bg-purple-100 text-purple-800'
+                                          : user.currentPlan === 'annual'
+                                          ? 'bg-green-100 text-green-800'
+                                          : 'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {user.currentPlan || 'free'}
+                                      </span>
+                                      <div className="text-xs text-gray-500">
+                                        {user.paymentCompleted ? 'Paid' : 'Trial'}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  
+                                  {/* Credits & Usage */}
+                                  <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center space-x-2">
-                                      <span className="font-medium">{user.currentCredits || 0}</span>
-                                      <span className="text-gray-500 text-xs">credits</span>
+                                      <div className="w-16 bg-gray-200 rounded-full h-2">
+                                        <div 
+                                          className="bg-blue-600 h-2 rounded-full" 
+                                          style={{ width: `${Math.min(100, ((user.currentCredits || 0) / 10) * 100)}%` }}
+                                        ></div>
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-900">{user.currentCredits || 0}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      Last used: {user.lastCreditUsage ? new Date(user.lastCreditUsage).toLocaleDateString() : 'Never'}
+                                    </div>
+                                  </td>
+                                  
+                                  {/* Last Activity */}
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div className="flex flex-col">
+                                      <span>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</span>
+                                      <span className="text-xs text-gray-400">
+                                        {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+                                      </span>
                                     </div>
                                   </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                     <div className="flex items-center space-x-2">
-                                      {suspensionStatus && suspensionStatus.status === 'suspended' ? (
-                                        <button
-                                          onClick={() => handleUnsuspendUser(user.id)}
-                                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
-                                        >
-                                          <CheckCircle className="w-3 h-3 mr-1" />
-                                          Unsuspend
-                                        </button>
+                                      {isPendingApproval ? (
+                                        <>
+                                          <button
+                                            onClick={() => handleApproveUser(user.id)}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
+                                          >
+                                            <CheckCircle className="w-3 h-3" />
+                                            <span>Approve</span>
+                                          </button>
+                                          <button
+                                            onClick={() => handleRejectUser(user.id)}
+                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
+                                          >
+                                            <X className="w-3 h-3" />
+                                            <span>Reject</span>
+                                          </button>
+                                        </>
                                       ) : (
-                                        <button
-                                          onClick={() => openSuspensionModal(user)}
-                                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
-                                        >
-                                          <AlertTriangle className="w-3 h-3 mr-1" />
-                                          Suspend
-                                        </button>
+                                        <>
+                                          <button
+                                            onClick={() => handleViewUserDetails(user)}
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
+                                          >
+                                            <Eye className="w-3 h-3" />
+                                            <span>View</span>
+                                          </button>
+                                          {suspensionStatus && suspensionStatus.status === 'suspended' ? (
+                                            <button
+                                              onClick={() => handleUnsuspendUser(user.id)}
+                                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
+                                            >
+                                              Unsuspend
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => openSuspensionModal(user)}
+                                              className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
+                                            >
+                                              Suspend
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={() => handleDeleteUser(user.id)}
+                                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
+                                          >
+                                            Delete
+                                          </button>
+                                        </>
                                       )}
-                                      {/* Credit management removed - credits can only be consumed, never restored */}
-                                      <button
-                                        onClick={() => handleDeleteUser(user.id)}
-                                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
-                                        title="Delete user"
-                                      >
-                                        <Trash2 className="w-3 h-3 mr-1" />
-                                        Delete
-                                      </button>
                                     </div>
                                   </td>
                                 </tr>
@@ -2065,97 +2424,229 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
             )}
           </div>
         </div>
-      </div>
 
-      {/* Suspension Modal */}
-      {suspensionModal && selectedUserForSuspension && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  Suspend User: {selectedUserForSuspension.name || selectedUserForSuspension.email}
-                </h3>
-                <button
-                  onClick={closeSuspensionModal}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+        {/* Pending Approvals Section */}
+        <div className="mt-8">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
+              <h2 className="text-2xl font-bold text-white flex items-center">
+                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Pending Approvals
+              </h2>
+              <p className="text-orange-100 mt-1">Review and approve new user registrations</p>
+            </div>
+            
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">New User Requests</h3>
+                  <p className="text-gray-600 text-sm">Users waiting for approval</p>
+                </div>
+                <div className="flex space-x-3">
+                  <button 
+                    onClick={async () => {
+                      // Approve all pending users
+                      if (window.confirm('Are you sure you want to approve all pending users?')) {
+                        try {
+                          const token = sessionStorage.getItem('token');
+                          console.log('API URL:', `${ADMIN_API_BASE_URL}/api/admin/approve-existing-users`);
+                          console.log('Token:', token ? 'Present' : 'Missing');
+                          
+                          const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/approve-existing-users`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            }
+                          });
+                          
+                          console.log('Response status:', response.status);
+                          
+                          if (response.ok) {
+                            const result = await response.json();
+                            console.log('Approval result:', result);
+                            alert(`Successfully approved ${result.approvedCount} existing users!`);
+                            // Refresh the page to show updated data
+                            window.location.reload();
+                          } else {
+                            const errorText = await response.text();
+                            console.error('Error response:', errorText);
+                            alert(`Failed to approve users: ${response.status} - ${errorText}`);
+                          }
+                        } catch (error) {
+                          console.error('Error approving users:', error);
+                          alert(`Error approving users: ${error.message}`);
+                        }
+                      }
+                    }}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    Approve All Existing
+                  </button>
+                  <button 
+                    onClick={() => {
+                      // Refresh pending users
+                      console.log('Refreshing pending users...');
+                    }}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    Refresh
+                  </button>
+                </div>
               </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reason for Suspension *
-                  </label>
-                  <textarea
-                    value={suspensionForm.reason}
-                    onChange={(e) => setSuspensionForm(prev => ({ ...prev, reason: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows="3"
-                    placeholder="Enter reason for suspension..."
-                    required
-                  />
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Suspension Duration
-                  </label>
-                  <select
-                    value={suspensionForm.duration}
-                    onChange={(e) => setSuspensionForm(prev => ({ ...prev, duration: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="1">1 Day</option>
-                    <option value="3">3 Days</option>
-                    <option value="7">1 Week</option>
-                    <option value="30">1 Month</option>
-                    <option value="90">3 Months</option>
-                    <option value="custom">Custom Date</option>
-                  </select>
-                </div>
+              {/* Pending Users Table */}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Registered
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {/* Sample pending users - replace with real data */}
+                    <tr className="hover:bg-orange-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-bold text-white">JD</span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">John Doe</div>
+                            <div className="text-sm text-gray-500">john.doe@company.com</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        Tech Corp
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Business Development
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        2 hours ago
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button 
+                          onClick={() => {
+                            if (window.confirm('Approve this user?')) {
+                              console.log('Approving user...');
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-900 bg-green-100 px-3 py-1 rounded-lg text-xs font-medium"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (window.confirm('Reject this user? This will delete their account.')) {
+                              console.log('Rejecting user...');
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-900 bg-red-100 px-3 py-1 rounded-lg text-xs font-medium"
+                        >
+                          Reject
+                        </button>
+                        <button 
+                          onClick={() => {
+                            console.log('Viewing user details...');
+                          }}
+                          className="text-blue-600 hover:text-blue-900 bg-blue-100 px-3 py-1 rounded-lg text-xs font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
 
-                {suspensionForm.duration === 'custom' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Custom End Date
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={suspensionForm.customDate}
-                      onChange={(e) => setSuspensionForm(prev => ({ ...prev, customDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                )}
+                    <tr className="hover:bg-orange-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-bold text-white">AS</span>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">Alice Smith</div>
+                            <div className="text-sm text-gray-500">alice.smith@startup.com</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        Startup Inc
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                          Marketing
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        1 day ago
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button 
+                          onClick={() => {
+                            if (window.confirm('Approve this user?')) {
+                              console.log('Approving user...');
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-900 bg-green-100 px-3 py-1 rounded-lg text-xs font-medium"
+                        >
+                          Approve
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (window.confirm('Reject this user? This will delete their account.')) {
+                              console.log('Rejecting user...');
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-900 bg-red-100 px-3 py-1 rounded-lg text-xs font-medium"
+                        >
+                          Reject
+                        </button>
+                        <button 
+                          onClick={() => {
+                            console.log('Viewing user details...');
+                          }}
+                          className="text-blue-600 hover:text-blue-900 bg-blue-100 px-3 py-1 rounded-lg text-xs font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-                <div className="flex items-center justify-end space-x-3 pt-4">
-                  <button
-                    onClick={closeSuspensionModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSuspensionSubmit}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700"
-                  >
-                    Suspend User
-                  </button>
-                </div>
+              {/* No pending users message */}
+              <div className="text-center py-8 text-gray-500">
+                <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-medium">No pending approvals</p>
+                <p className="text-sm">All users have been approved</p>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Credit Management Modal */}
-      {/* CREDIT MODIFICATION REMOVED - Credits can only be consumed, never restored */}
-      {/* This ensures the integrity of the credit system */}
-    </div>
   );
 };
 

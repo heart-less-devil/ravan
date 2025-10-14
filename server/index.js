@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 10000;
 connectDB();
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = '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';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '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';
 
 let stripe = null;
 if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here') {
@@ -2057,6 +2057,17 @@ app.post('/api/auth/login', [
       }
       
       console.log('✅ Password verified successfully');
+      
+      // Check if user is approved
+      if (!registeredUser.isApproved) {
+        console.log('❌ User not approved yet');
+        return res.status(403).json({ 
+          message: 'Your account is pending approval. Please wait for admin approval.',
+          pendingApproval: true
+        });
+      }
+      
+      console.log('✅ User is approved');
       
       // Generate JWT token for registered user
       const token = jwt.sign(
@@ -5247,6 +5258,252 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Admin: Approve user endpoint
+app.post('/api/admin/approve-user/:userId', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const adminEmail = req.user.email;
+    
+    console.log(`🔍 Admin approving user: ${userId} by ${adminEmail}`);
+    
+    // Try MongoDB first
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      user.isApproved = true;
+      user.approvedAt = new Date();
+      user.approvedBy = adminEmail;
+      await user.save();
+      
+      console.log(`✅ User ${user.email} approved by ${adminEmail}`);
+      
+      res.json({
+        success: true,
+        message: 'User approved successfully',
+        user: {
+          id: user._id,
+          email: user.email,
+          isApproved: user.isApproved,
+          approvedAt: user.approvedAt,
+          approvedBy: user.approvedBy
+        }
+      });
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, using file storage...');
+      
+      // Fallback to file storage
+      const userIndex = mockDB.users.findIndex(u => u.id === userId || u._id === userId);
+      if (userIndex === -1) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      mockDB.users[userIndex].isApproved = true;
+      mockDB.users[userIndex].approvedAt = new Date().toISOString();
+      mockDB.users[userIndex].approvedBy = adminEmail;
+      
+      saveDataToFiles('user_approval');
+      
+      console.log(`✅ User ${mockDB.users[userIndex].email} approved by ${adminEmail}`);
+      
+      res.json({
+        success: true,
+        message: 'User approved successfully',
+        user: {
+          id: mockDB.users[userIndex].id,
+          email: mockDB.users[userIndex].email,
+          isApproved: true,
+          approvedAt: mockDB.users[userIndex].approvedAt,
+          approvedBy: mockDB.users[userIndex].approvedBy
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error approving user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error approving user' 
+    });
+  }
+});
+
+// Admin: Reject user endpoint
+app.post('/api/admin/reject-user/:userId', authenticateAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const adminEmail = req.user.email;
+    
+    console.log(`🔍 Admin rejecting user: ${userId} by ${adminEmail}`);
+    
+    // Try MongoDB first
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      await User.findByIdAndDelete(userId);
+      
+      console.log(`✅ User ${user.email} rejected and deleted by ${adminEmail}`);
+      
+      res.json({
+        success: true,
+        message: 'User rejected and account deleted'
+      });
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, using file storage...');
+      
+      // Fallback to file storage
+      const userIndex = mockDB.users.findIndex(u => u.id === userId || u._id === userId);
+      if (userIndex === -1) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'User not found' 
+        });
+      }
+      
+      const userEmail = mockDB.users[userIndex].email;
+      mockDB.users.splice(userIndex, 1);
+      
+      saveDataToFiles('user_rejection');
+      
+      console.log(`✅ User ${userEmail} rejected and deleted by ${adminEmail}`);
+      
+      res.json({
+        success: true,
+        message: 'User rejected and account deleted'
+      });
+    }
+  } catch (error) {
+    console.error('Error rejecting user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error rejecting user' 
+    });
+  }
+});
+
+// Admin: Get pending approvals
+app.get('/api/admin/pending-approvals', authenticateAdmin, async (req, res) => {
+  try {
+    console.log('🔍 Fetching pending approvals...');
+    
+    let pendingUsers = [];
+    
+    // Try MongoDB first
+    try {
+      const users = await User.find({ isApproved: false }).select('-password').sort({ createdAt: -1 });
+      pendingUsers = users.map(user => ({
+        id: user._id,
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        company: user.company,
+        role: user.role,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        isApproved: user.isApproved,
+        createdAt: user.createdAt,
+        name: `${user.firstName} ${user.lastName}`.trim()
+      }));
+      
+      console.log(`✅ Found ${pendingUsers.length} pending users in MongoDB`);
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, using file storage...');
+      
+      // Fallback to file storage
+      pendingUsers = mockDB.users
+        .filter(user => !user.isApproved)
+        .map(user => ({
+          ...user,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+        }));
+      
+      console.log(`📁 Found ${pendingUsers.length} pending users in file storage`);
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        pendingUsers: pendingUsers,
+        totalPending: pendingUsers.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pending approvals:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error fetching pending approvals' 
+    });
+  }
+});
+
+// Admin: Approve all existing users (one-time migration)
+app.post('/api/admin/approve-existing-users', authenticateAdmin, async (req, res) => {
+  try {
+    const adminEmail = req.user.email;
+    console.log(`🔍 Admin approving all existing users by ${adminEmail}`);
+    
+    let approvedCount = 0;
+    
+    // Try MongoDB first
+    try {
+      const result = await User.updateMany(
+        { isApproved: { $ne: true } },
+        { 
+          $set: { 
+            isApproved: true, 
+            approvedAt: new Date(), 
+            approvedBy: adminEmail 
+          } 
+        }
+      );
+      
+      approvedCount = result.modifiedCount;
+      console.log(`✅ Approved ${approvedCount} existing users in MongoDB`);
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, using file storage...');
+      
+      // Fallback to file storage
+      const unapprovedUsers = mockDB.users.filter(user => !user.isApproved);
+      unapprovedUsers.forEach(user => {
+        user.isApproved = true;
+        user.approvedAt = new Date().toISOString();
+        user.approvedBy = adminEmail;
+      });
+      
+      approvedCount = unapprovedUsers.length;
+      saveDataToFiles('approve_existing_users');
+      
+      console.log(`✅ Approved ${approvedCount} existing users in file storage`);
+    }
+    
+    res.json({
+      success: true,
+      message: `Successfully approved ${approvedCount} existing users`,
+      approvedCount: approvedCount
+    });
+  } catch (error) {
+    console.error('Error approving existing users:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error approving existing users' 
+    });
+  }
+});
+
 // Delete user (admin only)
 app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
@@ -5864,7 +6121,7 @@ app.post('/api/auth/forgot-password', [
 app.post('/api/auth/reset-password', [
   body('email').isEmail().normalizeEmail(),
   body('code').isLength({ min: 6, max: 6 }),
-  body('newPassword').isLength({ min: 8 })
+  body('newPassword').isLength({ min: 8 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -5916,6 +6173,15 @@ app.post('/api/auth/reset-password', [
       return res.status(400).json({ 
         success: false,
         message: 'User not found' 
+      });
+    }
+
+    // Check if the new password is different from the current password
+    const isCurrentPassword = await bcrypt.compare(newPassword, user.password);
+    if (isCurrentPassword) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'New password must be different from your current password' 
       });
     }
 
@@ -8787,6 +9053,17 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(password)) {
+      return res.status(400).json({ 
+        message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol' 
+      });
+    }
+
     console.log(`🔧 Signup attempt for: ${email}`);
 
     // Check if email is blocked
@@ -8831,7 +9108,10 @@ app.post('/api/auth/signup', async (req, res) => {
       role: 'other',
       paymentCompleted: false,
       currentPlan: 'free',
-      currentCredits: 5
+      currentCredits: 5,
+      isApproved: false, // New users need approval
+      approvedAt: null,
+      approvedBy: null
     };
 
     let newUser = null;
@@ -8876,14 +9156,15 @@ app.post('/api/auth/signup', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User registered successfully. Your account is pending admin approval.',
       token,
       user: {
         id: userId,
         email: newUser.email,
         name: newUser.name || `${firstName} ${lastName}`,
         role: newUser.role
-      }
+      },
+      pendingApproval: true
     });
   } catch (error) {
     console.error('❌ Signup error:', error);

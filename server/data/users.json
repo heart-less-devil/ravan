@@ -719,6 +719,9 @@
         "remainingCredits": 44
       }
     ],
-    "lastCreditUsage": "2025-10-10T11:26:24.978Z"
+    "lastCreditUsage": "2025-10-10T11:26:24.978Z",
+    "lastPaymentError": "2025-10-14T12:30:01.321Z",
+    "paymentErrorCount": 1,
+    "lastPaymentErrorMessage": "You cannot confirm this PaymentIntent because it's missing a payment method. You can either update the PaymentIntent with a payment method and then confirm it again, or confirm it again directly with a payment method or ConfirmationToken."
   }
 ]

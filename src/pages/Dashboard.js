@@ -731,7 +731,7 @@ const Dashboard = () => {
             </div>
           );
         }
-        return <BDTrackerPage />;
+        return <BDTrackerPage user={user} userPaymentStatus={userPaymentStatus} />;
 
       case '/dashboard/resources/definitions':
         return <Definitions />;
@@ -2779,46 +2779,6 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
               )}
             </div>
             
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
-                  Page {currentPage} of {totalPages}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const page = i + 1;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md ${
-                          currentPage === page
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
           
 
         </div>
@@ -4387,6 +4347,104 @@ const Contact = () => {
 };
 
 // Enhanced Pricing Page Component - BioPing Style
+// Advanced Collapsible FAQ Component
+const CollapsibleFAQ = ({ question, answer, icon, category }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <motion.div 
+      className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-500 group"
+      whileHover={{ y: -2 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-8 py-6 text-left bg-gradient-to-r from-white via-gray-50 to-white hover:from-blue-50 hover:via-indigo-50 hover:to-purple-50 transition-all duration-500 flex items-center justify-between focus:outline-none focus:ring-4 focus:ring-blue-200 focus:ring-inset relative overflow-hidden"
+      >
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        
+        <div className="relative z-10 flex items-center space-x-4">
+          {icon && (
+            <motion.div 
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg"
+              animate={{ 
+                scale: isHovered ? 1.1 : 1,
+                rotate: isHovered ? 5 : 0
+              }}
+              transition={{ duration: 0.3 }}
+            >
+              {icon}
+            </motion.div>
+          )}
+          <div>
+            <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-300 mb-1">
+              {question}
+            </h3>
+            {category && (
+              <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                {category}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <motion.div
+          animate={{ 
+            rotate: isOpen ? 180 : 0,
+            scale: isHovered ? 1.1 : 1
+          }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="flex-shrink-0 p-2 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-purple-100 transition-all duration-300 shadow-md"
+        >
+          <svg 
+            className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-300" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+          </svg>
+        </motion.div>
+      </button>
+      
+      <motion.div
+        initial={false}
+        animate={{ 
+          height: isOpen ? "auto" : 0,
+          opacity: isOpen ? 1 : 0
+        }}
+        transition={{ 
+          duration: 0.5, 
+          ease: "easeInOut",
+          type: "spring",
+          stiffness: 100,
+          damping: 15
+        }}
+        className="overflow-hidden"
+      >
+        <div className="px-8 py-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-t border-blue-200 relative">
+          {/* Decorative elements */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+          <div className="absolute top-4 right-4 w-2 h-2 bg-blue-400 rounded-full opacity-50"></div>
+          <div className="absolute bottom-4 left-4 w-1 h-1 bg-purple-400 rounded-full opacity-30"></div>
+          
+          <motion.p 
+            className="text-gray-700 leading-relaxed text-base relative z-10"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: isOpen ? 1 : 0, y: isOpen ? 0 : 10 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            {answer}
+          </motion.p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const PricingPage = ({ user }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isAnnual, setIsAnnual] = useState(false);
@@ -4453,7 +4511,7 @@ const PricingPage = ({ user }) => {
       id: 'basic',
       name: "Basic Plan",
       description: "Ideal for growing businesses",
-      credits: "50 contacts/month",
+      credits: "",
       monthlyPrice: 390,
       annualPrice: 3750,
       features: [
@@ -4471,7 +4529,7 @@ const PricingPage = ({ user }) => {
       id: 'premium',
       name: "Premium Plan",
       description: "For advanced users and teams",
-      credits: "100 contacts/month",
+      credits: "",
       monthlyPrice: 790,
       annualPrice: 7585,
       features: [
@@ -4965,23 +5023,23 @@ const PricingPage = ({ user }) => {
       {/* FAQ Section */}
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h2>
-        <div className="space-y-6">
-          <div className="border-b border-gray-200 pb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Can I change my plan anytime?</h3>
-            <p className="text-gray-600">Yes, you can upgrade or downgrade your plan at any time. New plan starts and new charges activated for next 30 days.</p>
-          </div>
-          <div className="border-b border-gray-200 pb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h3>
-            <p className="text-gray-600">We accept all major credit and debit cards and bank payments.</p>
-          </div>
-          <div className="border-b border-gray-200 pb-6">
-            <h3 className="font-semibold text-gray-900 mb-2">How do free credits work?</h3>
-            <p className="text-gray-600">Free plan users get credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan.</p>
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-2">What kind of support do you provide?</h3>
-            <p className="text-gray-600">All plans include email and phone support during PST time hours in USA. Basic and Premium Plans have enhanced customer and BD support.</p>
-          </div>
+        <div className="space-y-4">
+          <CollapsibleFAQ 
+            question="Can I change my plan anytime?"
+            answer="Yes, you can upgrade or downgrade your plan at any time. New plan starts and new charges activated for next 30 days."
+          />
+          <CollapsibleFAQ 
+            question="What payment methods do you accept?"
+            answer="We accept all major credit and debit cards payments."
+          />
+          <CollapsibleFAQ 
+            question="How do free credits work?"
+            answer="Free plan users get credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan."
+          />
+          <CollapsibleFAQ 
+            question="What kind of support do you provide?"
+            answer="All plans include email and phone support during PST time hours in USA. Basic and Premium Plans have enhanced customer and BD support."
+          />
         </div>
       </div>
 
