@@ -482,27 +482,8 @@ const BDTrackerPage = ({ user, userPaymentStatus }) => {
     );
   }
 
-  // Use fallback user if original user is undefined
-  let effectiveUser = fallbackUser;
-  
-  // Emergency fix: If no user data available, check if we're on localhost and give access
-  if (!effectiveUser?.email && window.location.hostname === 'localhost') {
-    console.log('🚨 Emergency fix: No user data, checking for admin access...');
-    const token = sessionStorage.getItem('token');
-    if (token) {
-      // Decode JWT token to get user info
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('🔍 JWT payload:', payload);
-        if (payload.email === 'gauravvij1980@gmail.com' || payload.email === 'universalx0242@gmail.com') {
-          effectiveUser = { email: payload.email, name: payload.name };
-          console.log('✅ Emergency access granted to:', payload.email);
-        }
-      } catch (e) {
-        console.log('❌ JWT decode failed:', e);
-      }
-    }
-  }
+  // Use the user object directly (same as BD Insights)
+  const effectiveUser = user;
   
   // Check if user has paid access or is universalx0242@gmail.com
   console.log('🔍 BD Tracker Access Check:', {
@@ -537,7 +518,7 @@ const BDTrackerPage = ({ user, userPaymentStatus }) => {
                         (userPaymentStatus?.currentPlan && userPaymentStatus?.currentPlan !== 'free') ||
                         (effectiveUser?.currentPlan && effectiveUser?.currentPlan !== 'free');
   
-  const hasAccess = hasPermanentAccess || hasPaidAccess;
+  let hasAccess = hasPermanentAccess || hasPaidAccess;
   
   console.log('🔍 BD Tracker Access Result:', { 
     hasAccess,
