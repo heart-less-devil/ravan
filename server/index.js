@@ -1765,12 +1765,17 @@ app.post('/api/auth/send-verification', async (req, res) => {
     // Generate a 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
+    // Clean up old verification codes for this email first
+    mockDB.verificationCodes = mockDB.verificationCodes.filter(
+      record => record.email !== email
+    );
+    
     // Store the verification code (in production, this would be in a database)
     mockDB.verificationCodes.push({
       email,
       code: verificationCode,
       createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes (increased from 10)
     });
 
     // Send email FIRST, then save data
@@ -2057,17 +2062,6 @@ app.post('/api/auth/login', [
       }
       
       console.log('✅ Password verified successfully');
-      
-      // Check if user is approved
-      if (!registeredUser.isApproved) {
-        console.log('❌ User not approved yet');
-        return res.status(403).json({ 
-          message: 'Your account is pending approval. Please wait for admin approval.',
-          pendingApproval: true
-        });
-      }
-      
-      console.log('✅ User is approved');
       
       // Generate JWT token for registered user
       const token = jwt.sign(
@@ -9108,10 +9102,7 @@ app.post('/api/auth/signup', async (req, res) => {
       role: 'other',
       paymentCompleted: false,
       currentPlan: 'free',
-      currentCredits: 5,
-      isApproved: false, // New users need approval
-      approvedAt: null,
-      approvedBy: null
+      currentCredits: 5
     };
 
     let newUser = null;
@@ -9156,15 +9147,14 @@ app.post('/api/auth/signup', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'User registered successfully. Your account is pending admin approval.',
+      message: 'User registered successfully',
       token,
       user: {
         id: userId,
         email: newUser.email,
         name: newUser.name || `${firstName} ${lastName}`,
         role: newUser.role
-      },
-      pendingApproval: true
+      }
     });
   } catch (error) {
     console.error('❌ Signup error:', error);
