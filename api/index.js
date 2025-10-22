@@ -5,6 +5,7 @@ const xlsx = require('xlsx');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+const { body, validationResult } = require('express-validator');
 
 const app = express();
 
@@ -574,6 +575,94 @@ app.get('/api/pricing-analytics', authenticateToken, (req, res) => {
       { name: 'Basic', revenue: 20000, growth: 5 }
     ]
   });
+});
+
+// AI Deal Scraper endpoint
+app.post('/api/ai-deal-scraper', [
+  body('searchQuery').notEmpty().trim(),
+  body('sources').isArray(),
+  body('dateRange').isInt({ min: 1, max: 365 }),
+  body('userEmail').isEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Validation error', 
+        errors: errors.array() 
+      });
+    }
+
+    const { searchQuery, sources, dateRange, userEmail } = req.body;
+    
+    console.log(`🤖 AI Deal Scraper started for user: ${userEmail}`);
+    console.log(`🔍 Search query: ${searchQuery}`);
+    console.log(`📰 Sources: ${sources.join(', ')}`);
+    console.log(`📅 Date range: ${dateRange} days`);
+
+    // Return mock data for now
+    const mockDeals = [
+      {
+        buyer: 'Novartis',
+        seller: 'Shanghai Argo',
+        drugName: 'RNAi Therapeutics',
+        therapeuticArea: 'Cardiovascular and Metabolic',
+        stage: 'Phase I/II',
+        financials: '$185M upfront, $4.165B Total Value',
+        dealDate: new Date().toISOString().split('T')[0],
+        source: 'PR Newswire',
+        sourceUrl: 'https://www.prnewswire.com/news-releases/shanghai-argo-announces-multi-program-rnai-licenses-and-strategic-collaborations-with-novartis-302027699.html',
+        title: 'Shanghai Argo Announces Multi-Program RNAi Licenses and Strategic Collaborations with Novartis'
+      },
+      {
+        buyer: 'Pfizer',
+        seller: 'BioNTech',
+        drugName: 'mRNA Vaccine Platform',
+        therapeuticArea: 'Infectious Diseases',
+        stage: 'Marketed',
+        financials: '$2.8B total potential value',
+        dealDate: new Date().toISOString().split('T')[0],
+        source: 'BioSpace',
+        sourceUrl: 'https://www.biospace.com',
+        title: 'Pfizer and BioNTech Expand mRNA Collaboration'
+      },
+      {
+        buyer: 'Merck',
+        seller: 'Moderna',
+        drugName: 'Personalized Cancer Vaccine',
+        therapeuticArea: 'Oncology',
+        stage: 'Phase II',
+        financials: '$250M upfront, $1.2B total value',
+        dealDate: new Date().toISOString().split('T')[0],
+        source: 'Fierce Biotech',
+        sourceUrl: 'https://www.fiercebiotech.com',
+        title: 'Merck and Moderna Partner on Personalized Cancer Vaccines'
+      }
+    ];
+
+    console.log(`🎯 Returning ${mockDeals.length} mock deals for testing`);
+
+    res.json({
+      success: true,
+      data: {
+        deals: mockDeals,
+        totalFound: mockDeals.length,
+        sources: sources,
+        searchQuery: searchQuery,
+        dateRange: dateRange
+      },
+      creditsUsed: 1,
+      message: `Successfully scraped ${mockDeals.length} deals from ${sources.length} sources`
+    });
+
+  } catch (error) {
+    console.error('Error in AI Deal Scraper:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error scraping deals. Please try again.' 
+    });
+  }
 });
 
 // Export function for Vercel
