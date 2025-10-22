@@ -7,6 +7,7 @@ import SecurePDFViewer from '../components/SecurePDFViewer';
 import BDTrackerPage from './BDTrackerPage';
 import QuickGuide from './QuickGuide';
 import BDInsights from './BDInsights';
+import AIDealScraper from '../components/AIDealScraper';
 // StripePayment will be imported dynamically when needed
 import { 
   Grid, 
@@ -646,6 +647,7 @@ const Dashboard = () => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Grid, section: 'MAIN' },
     { name: 'Advanced Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
+    { name: 'AI Deal Scraper', path: '/dashboard/ai-deal-scraper', icon: Sparkles, section: 'DATA', paidOnly: true },
     { name: 'BD Tracker', path: '/dashboard/bd-tracker', icon: TrendingUp, section: 'MY DEALS' },
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },
@@ -705,6 +707,36 @@ const Dashboard = () => {
           handleManualRefresh={handleManualRefresh}
           userPaymentStatus={userPaymentStatus}
           daysRemaining={daysRemaining}
+        />;
+      case '/dashboard/ai-deal-scraper':
+        // Check for suspension before allowing access to AI Deal Scraper
+        if (suspensionData) {
+          return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-red-100">
+              <div className="text-center p-8 bg-white rounded-2xl shadow-lg border border-red-200">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-red-800 mb-2">Access Restricted</h2>
+                <p className="text-red-600 mb-4">Your account is currently suspended.</p>
+                <p className="text-sm text-gray-600 mb-6">
+                  Reason: {suspensionData.reason}<br/>
+                  Suspended until: {new Date(suspensionData.suspendedUntil).toLocaleString()}
+                </p>
+                <button
+                  onClick={() => checkUserSuspension()}
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Check Status
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return <AIDealScraper 
+          user={user}
+          userCredits={userCredits}
+          setUserCredits={setUserCredits}
         />;
       case '/dashboard/bd-tracker':
         // Check for suspension before allowing access to BD Tracker
