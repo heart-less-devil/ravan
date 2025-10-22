@@ -95,8 +95,14 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
     name: '',
     company: ''
   });
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // Load user data and payment status
+  // Load user data when component mounts or refresh is triggered
+  useEffect(() => {
+    loadUserData();
+  }, [refreshTrigger]);
+
+  // Load user data and payment status
   const loadUserData = async () => {
     try {
       if (!user || !user.email) return;
@@ -155,6 +161,12 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
       if (subscriptionResponse.ok) {
         const subscriptionData = await subscriptionResponse.json();
         console.log('Subscription data received:', subscriptionData);
+        console.log('Credit calculation debug:', {
+          paymentCompleted: subscriptionData.paymentCompleted,
+          currentPlan: subscriptionData.currentPlan,
+          currentCredits: subscriptionData.currentCredits,
+          isSubscriptionPlan: subscriptionData.isSubscriptionPlan
+        });
         
         // Determine plan based on subscription status
         let planName = 'Free';
@@ -169,18 +181,31 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
         if (subscriptionData.paymentCompleted && subscriptionData.currentPlan !== 'free') {
           planName = subscriptionData.currentPlan === 'monthly' ? 'Monthly Plan' : 
                     subscriptionData.currentPlan === 'annual' ? 'Annual Plan' : 
-                    subscriptionData.currentPlan === 'test' ? 'Test Plan' : 'Paid Plan';
+                    subscriptionData.currentPlan === 'test' ? 'Test Plan' : 
+                    subscriptionData.currentPlan === 'daily-12' ? 'Daily-12 Plan' : 'Paid Plan';
           planStatus = 'active';
-          credits = subscriptionData.currentCredits || (subscriptionData.currentPlan === 'monthly' ? 50 : 
-                   subscriptionData.currentPlan === 'annual' ? 100 : 
-                   subscriptionData.currentPlan === 'test' ? 1 : 5);
-          totalCredits = subscriptionData.currentPlan === 'monthly' ? 50 : 
-                        subscriptionData.currentPlan === 'annual' ? 100 : 
-                        subscriptionData.currentPlan === 'test' ? 1 : 5;
+          
+          // Get actual credits from backend
+          credits = subscriptionData.currentCredits || 0;
+          
+          // Set total credits based on plan type
+          if (subscriptionData.currentPlan === 'monthly') {
+            totalCredits = 50;
+          } else if (subscriptionData.currentPlan === 'annual') {
+            totalCredits = 100;
+          } else if (subscriptionData.currentPlan === 'test') {
+            totalCredits = 1;
+          } else if (subscriptionData.currentPlan === 'daily-12') {
+            totalCredits = 50;
+          } else {
+            totalCredits = 50; // Default for other paid plans
+          }
+          
           subscriptionStatus = 'active';
           amount = subscriptionData.currentPlan === 'test' ? 1 : 
                   subscriptionData.currentPlan === 'monthly' ? 500 : 
-                  subscriptionData.currentPlan === 'annual' ? 4800 : 0;
+                  subscriptionData.currentPlan === 'annual' ? 4800 : 
+                  subscriptionData.currentPlan === 'daily-12' ? 100 : 0;
           
           // Use backend calculated next billing date for subscription plans
           if (subscriptionData.isSubscriptionPlan && subscriptionData.nextBillingDate) {
@@ -190,16 +215,40 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
             nextBillingDate = null;
           }
           
-          // Calculate used credits based on total and remaining
+          // Calculate used credits: total - remaining
           usedCredits = Math.max(0, totalCredits - credits);
         } else {
           // Free users - get actual credits from backend
           credits = subscriptionData.currentCredits || 5;
           totalCredits = 5;
+          
+          // Special handling for free users:
+          // - If credits = 0, they've used all 5 (trial expired or all credits used)
+          // - If credits = 5, they've used 0 (fresh account)
+          // - If credits = 3, they've used 2, etc.
           usedCredits = Math.max(0, totalCredits - credits);
+          
+          // If trial is expired or credits are 0, show that they've used all credits
+          if ((subscriptionData.trialExpired || credits === 0) && totalCredits === 5) {
+            usedCredits = totalCredits; // Show 5/5 used
+          }
+          
           amount = 0;
           nextBillingDate = null;
         }
+
+        console.log('Final credit calculation:', {
+          planName,
+          credits,
+          totalCredits,
+          usedCredits,
+          calculation: `${usedCredits} = ${totalCredits} - ${credits}`,
+          isFreeUser: !subscriptionData.paymentCompleted || subscriptionData.currentPlan === 'free',
+          paymentCompleted: subscriptionData.paymentCompleted,
+          currentPlan: subscriptionData.currentPlan,
+          trialExpired: subscriptionData.trialExpired,
+          daysRemaining: subscriptionData.daysRemaining
+        });
 
         // Get invoices data
         let invoices = [];
@@ -753,7 +802,16 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                       </div>
 
                       <div className="border border-gray-200 rounded-lg p-6">
-                        <h4 className="font-semibold text-gray-900 mb-4">Usage</h4>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-semibold text-gray-900">Usage</h4>
+                          <button
+                            onClick={() => setRefreshTrigger(prev => prev + 1)}
+                            className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Refresh
+                          </button>
+                        </div>
                         <div className="space-y-4">
                           <div>
                             <div className="flex justify-between mb-2">
@@ -769,6 +827,16 @@ const CustomerProfile = ({ user: propUser, onBack }) => {
                           </div>
                           <div className="text-sm text-gray-600">
                             {user.totalCredits - user.usedCredits} credits remaining this month
+                            {user.usedCredits === user.totalCredits && user.totalCredits === 5 && (
+                              <span className="ml-2 text-red-600 font-medium">
+                                (All credits used)
+                              </span>
+                            )}
+                            {user.usedCredits === 0 && user.totalCredits === 5 && (
+                              <span className="ml-2 text-green-600 font-medium">
+                                (Fresh account)
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

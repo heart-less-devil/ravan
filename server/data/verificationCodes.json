@@ -195,24 +195,5 @@
     "code": "245967",
     "createdAt": "2025-10-07T15:54:08.870Z",
     "expiresAt": "2025-10-07T16:04:08.870Z"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "924199",
-    "createdAt": "2025-10-08T17:03:15.348Z",
-    "expiresAt": "2025-10-08T17:13:15.348Z",
-    "type": "password-reset"
-  },
-  {
-    "email": "amankk0007@gmail.com",
-    "code": "153383",
-    "createdAt": "2025-10-08T17:07:55.974Z",
-    "expiresAt": "2025-10-08T17:17:55.974Z"
-  },
-  {
-    "email": "thebioping.com@gmail.com",
-    "code": "272146",
-    "createdAt": "2025-10-14T13:06:57.645Z",
-    "expiresAt": "2025-10-14T13:36:57.645Z"
   }
 ]
