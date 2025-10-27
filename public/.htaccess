@@ -54,8 +54,19 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
-    RewriteRule ^index\.html$ - [L]
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Don't rewrite static assets
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^(.*)$ - [L]
+    
+    # Don't rewrite if the request is for a directory
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^(.*)$ - [L]
+    
+    # Don't rewrite files with common static file extensions
+    RewriteCond %{REQUEST_URI} \.(css|js|json|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|otf|pdf|map)$ [NC]
+    RewriteRule ^(.*)$ - [L]
+    
+    # Otherwise, serve index.html for React Router
     RewriteRule . /index.html [L]
 </IfModule>
