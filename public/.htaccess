@@ -55,18 +55,18 @@
     RewriteEngine On
     RewriteBase /
     
-    # Don't rewrite static assets
+    # Skip rewrite for existing files
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^(.*)$ - [L]
+    RewriteRule ^ - [L]
     
-    # Don't rewrite if the request is for a directory
+    # Skip rewrite for directories
     RewriteCond %{REQUEST_FILENAME} -d
-    RewriteRule ^(.*)$ - [L]
+    RewriteRule ^ - [L]
     
-    # Don't rewrite files with common static file extensions
-    RewriteCond %{REQUEST_URI} \.(css|js|json|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|otf|pdf|map)$ [NC]
-    RewriteRule ^(.*)$ - [L]
+    # Skip rewrite for files that end with static file extensions
+    RewriteCond %{REQUEST_URI} \.(css|js|json|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|otf|eot|pdf|map|webp)$ [NC]
+    RewriteRule ^ - [L]
     
-    # Otherwise, serve index.html for React Router
-    RewriteRule . /index.html [L]
+    # For all other requests, serve index.html
+    RewriteRule ^ /index.html [L]
 </IfModule>
