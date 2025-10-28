@@ -47,7 +47,7 @@ if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here'
 // ============================================================================
 
 // Web scraping dependencies
-// const puppeteer = require('puppeteer'); // Temporarily disabled for deployment
+// const puppeteer = require('puppeteer'); // Disabled - too heavy for Render free tier
 const cheerio = require('cheerio');
 const axios = require('axios');
 
@@ -56,7 +56,7 @@ const NEWS_SOURCES = {
   biospace: {
     name: 'BioSpace',
     url: 'https://www.biospace.com',
-    searchUrl: 'https://www.biospace.com/search',
+    searchUrl: 'https://www.biospace.com/search', 
     selectors: {
       articles: '.article-item, .news-item',
       title: 'h3 a, h2 a',
@@ -194,8 +194,52 @@ async function scrapeNewsSource(sourceId, searchQuery, dateRange) {
       throw new Error(`Unknown source: ${sourceId}`);
     }
 
-    console.log(`🔍 Scraping ${source.name} for: ${searchQuery}`);
+    console.log(`🔍 Mock scraping ${source.name} for: ${searchQuery}`);
 
+    // Return mock data - puppeteer disabled for Render deployment
+    const mockData = [
+      {
+        buyer: 'Novartis',
+        seller: 'Shanghai Argo',
+        drugName: 'RNAi Therapeutics',
+        therapeuticArea: 'Cardiovascular and Metabolic',
+        stage: 'Phase I/II',
+        financials: '$185M upfront, $4.165B Total Value',
+        dealDate: new Date().toISOString().split('T')[0],
+        source: source.name,
+        sourceUrl: source.url,
+        title: 'Novartis and Shanghai Argo Announce RNAi Collaboration'
+      },
+      {
+        buyer: 'Pfizer',
+        seller: 'BioNTech',
+        drugName: 'mRNA Vaccine Platform',
+        therapeuticArea: 'Infectious Diseases',
+        stage: 'Marketed',
+        financials: '$2.8B total potential value',
+        dealDate: new Date().toISOString().split('T')[0],
+        source: source.name,
+        sourceUrl: source.url,
+        title: 'Pfizer and BioNTech Expand mRNA Collaboration'
+      },
+      {
+        buyer: 'Merck',
+        seller: 'Moderna',
+        drugName: 'Personalized Cancer Vaccine',
+        therapeuticArea: 'Oncology',
+        stage: 'Phase II',
+        financials: '$250M upfront, $1.2B total value',
+        dealDate: new Date().toISOString().split('T')[0],
+        source: source.name,
+        sourceUrl: source.url,
+        title: 'Merck and Moderna Partner on Personalized Cancer Vaccines'
+      }
+    ];
+    
+    console.log(`✅ Returning mock data for ${source.name}`);
+    return mockData;
+
+    /* PUPPETEER DISABLED - TOO HEAVY FOR RENDER FREE TIER
     // Launch browser with better configuration
     const browser = await puppeteer.launch({
       headless: true,
@@ -329,6 +373,8 @@ async function scrapeNewsSource(sourceId, searchQuery, dateRange) {
     }
 
     return deals;
+    */  // END OF COMMENTED PUPPETEER CODE
+    
   } catch (error) {
     console.error(`Error scraping ${sourceId}:`, error);
     // Return mock data on error
