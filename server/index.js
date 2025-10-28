@@ -47,7 +47,7 @@ if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here'
 // ============================================================================
 
 // Web scraping dependencies
-const puppeteer = require('puppeteer');
+// const puppeteer = require('puppeteer'); // Temporarily disabled for deployment
 const cheerio = require('cheerio');
 const axios = require('axios');
 
