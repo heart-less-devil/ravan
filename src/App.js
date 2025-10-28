@@ -195,6 +195,7 @@ function App() {
               <Route path="/dashboard/contact" element={<Dashboard />} />
               <Route path="/dashboard/pricing" element={<Dashboard />} />
               <Route path="/dashboard/bd-tracker" element={<BDTrackerPage />} />
+              <Route path="/dashboard/ai-deal-scraper" element={<Dashboard />} />
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
