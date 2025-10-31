@@ -1,1 +1,74 @@
-[]
+[
+  {
+    "_id": "plan_1761913110491_1",
+    "id": "free",
+    "name": "Free",
+    "monthlyPrice": 0,
+    "yearlyPrice": 0,
+    "annualPrice": 0,
+    "credits": "5 credits for 5 days only",
+    "features": [
+      "1 Seat included",
+      "Get 5 free contacts",
+      "Credits expire after 5 days (including weekends)",
+      "No Credit Card Needed",
+      "No BD Insights Access"
+    ],
+    "description": "Perfect for getting started",
+    "isPopular": false,
+    "popular": false,
+    "isActive": true,
+    "buttonText": "Get started",
+    "buttonStyle": "outline",
+    "createdAt": "2025-10-31T12:18:30.491Z",
+    "updatedAt": "2025-10-31T12:18:30.491Z"
+  },
+  {
+    "_id": "plan_1761913110491_2",
+    "id": "basic",
+    "name": "Basic Plan",
+    "monthlyPrice": 390,
+    "yearlyPrice": 3750,
+    "annualPrice": 3750,
+    "credits": "50 contacts/month",
+    "features": [
+      "1 Seat included",
+      "50 contacts per month",
+      "Pay by credit/debit card",
+      "Access to BD Tracker",
+      "1 hr. of BD Consulting with Mr. Vik"
+    ],
+    "description": "Ideal for growing businesses",
+    "isPopular": false,
+    "popular": false,
+    "isActive": true,
+    "buttonText": "Choose plan",
+    "buttonStyle": "primary",
+    "createdAt": "2025-10-31T12:18:30.491Z",
+    "updatedAt": "2025-10-31T12:18:30.491Z"
+  },
+  {
+    "_id": "plan_1761913110491_3",
+    "id": "premium",
+    "name": "Premium Plan",
+    "monthlyPrice": 790,
+    "yearlyPrice": 7585,
+    "annualPrice": 7585,
+    "credits": "100 contacts/month",
+    "features": [
+      "1 Seat included",
+      "100 contacts per month",
+      "Pay by credit/debit card",
+      "Access to BD Tracker",
+      "2 hrs. of BD Consulting with Mr. Vik"
+    ],
+    "description": "For advanced users and teams",
+    "isPopular": true,
+    "popular": true,
+    "isActive": true,
+    "buttonText": "Choose plan",
+    "buttonStyle": "primary",
+    "createdAt": "2025-10-31T12:18:30.491Z",
+    "updatedAt": "2025-10-31T12:18:30.491Z"
+  }
+]

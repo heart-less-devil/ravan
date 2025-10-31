@@ -25,6 +25,7 @@ const Signup = () => {
   const [verificationError, setVerificationError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('privacy'); // 'privacy' or 'terms'
   const [isEmailBlocked, setIsEmailBlocked] = useState(false);
@@ -257,19 +258,10 @@ const Signup = () => {
         const accountData = await accountResponse.json();
 
         if (accountData.success) {
-          // Auto login after successful account creation
-          sessionStorage.setItem('token', accountData.token);
-          
-          // Store user data in stateManager
-          if (accountData.user) {
-            stateManager.set('user', accountData.user, true);
-          }
-          
-          // Redirect to dashboard
-          alert('Account created successfully! Redirecting to dashboard...');
+          // Do not auto-login; show approval modal
           setShowVerificationModal(false);
           setVerificationError('');
-          window.location.href = '/dashboard';
+          setShowApprovalModal(true);
         } else {
           setVerificationError(accountData.message || 'Failed to create account. Please try again.');
         }
@@ -900,6 +892,40 @@ const Signup = () => {
         error={verificationError}
         countdown={countdown}
       />
+
+      {/* Admin Approval Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowApprovalModal(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+            className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-gray-200"
+          >
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-black mb-3">Request Sent</h3>
+              <p className="text-black mb-6">
+                Aapki request admin ke paas chali gayi hai. Admin approve karega tabhi aap login kar paoge.
+              </p>
+              <button
+                onClick={() => {
+                  setShowApprovalModal(false);
+                  window.location.href = '/login';
+                }}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200"
+              >
+                OK, Take me to Login
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

@@ -10,7 +10,10 @@
     "createdAt": "2025-07-23T13:13:54.493Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 0
+    "currentCredits": 0,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 2,
@@ -23,7 +26,10 @@
     "createdAt": "2025-07-23T22:55:13.001Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 0
+    "currentCredits": 0,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 3,
@@ -35,7 +41,10 @@
     "role": "user",
     "createdAt": "2025-07-23T23:15:03.819Z",
     "paymentCompleted": false,
-    "currentPlan": "free"
+    "currentPlan": "free",
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 4,
@@ -198,7 +207,10 @@
         "remainingCredits": 32
       }
     ],
-    "lastCreditUsage": "2025-10-22T12:22:03.725Z"
+    "lastCreditUsage": "2025-10-22T12:22:03.725Z",
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 5,
@@ -211,20 +223,10 @@
     "createdAt": "2025-07-24T00:38:54.025Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5
-  },
-  {
-    "id": 6,
-    "firstName": "demo",
-    "lastName": "",
-    "email": "demo@bioping.com",
-    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
-    "name": "demo",
-    "role": "user",
-    "createdAt": "2025-07-24T00:38:54.025Z",
-    "paymentCompleted": false,
-    "currentPlan": "free",
-    "currentCredits": 5
+    "currentCredits": 5,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 7,
@@ -237,7 +239,10 @@
     "createdAt": "2025-07-24T00:38:54.025Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5
+    "currentCredits": 5,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 8,
@@ -251,7 +256,10 @@
     "currentPlan": "free",
     "currentCredits": 5,
     "name": "aman k",
-    "createdAt": "2025-08-01T22:32:38.187Z"
+    "createdAt": "2025-08-01T22:32:38.187Z",
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 9,
@@ -264,7 +272,10 @@
     "createdAt": "2025-07-24T00:38:54.025Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5
+    "currentCredits": 5,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 10,
@@ -277,7 +288,10 @@
     "createdAt": "2025-07-24T00:38:54.025Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5
+    "currentCredits": 5,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 11,
@@ -290,7 +304,10 @@
     "createdAt": "2025-07-24T00:38:54.025Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5
+    "currentCredits": 5,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 12,
@@ -303,7 +320,10 @@
     "createdAt": "2025-07-24T00:38:54.025Z",
     "paymentCompleted": false,
     "currentPlan": "free",
-    "currentCredits": 5
+    "currentCredits": 5,
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
   },
   {
     "id": 13,
@@ -317,6 +337,24 @@
     "currentPlan": "free",
     "currentCredits": 5,
     "name": "sdacdsvf dsad",
-    "createdAt": "2025-10-04T12:53:21.821Z"
+    "createdAt": "2025-10-04T12:53:21.821Z",
+    "isApproved": true,
+    "approvedAt": "2025-10-31T07:22:18.555Z",
+    "approvedBy": "universalx0242@gmail.com"
+  },
+  {
+    "id": 13,
+    "firstName": "demo",
+    "lastName": "",
+    "email": "demo@bioping.com",
+    "password": "$2a$10$20TtHYxGnnAA1EcZoXq06u2faT68sDulbmnMEJMyg.kRZBh6cicmS",
+    "name": "demo",
+    "role": "user",
+    "createdAt": "2025-10-31T12:25:40.526Z",
+    "paymentCompleted": false,
+    "currentPlan": "free",
+    "currentCredits": 5,
+    "invoices": [],
+    "paymentHistory": []
   }
 ]

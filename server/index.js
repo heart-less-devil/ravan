@@ -18,6 +18,7 @@ const connectDB = require('./config/database');
 // Import models
 const User = require('./models/User');
 const BDTracker = require('./models/BDTracker');
+const VerificationCode = require('./models/VerificationCode');
 
 // Helper function to check MongoDB connection
 const isMongoConnected = () => {
@@ -26,9 +27,6 @@ const isMongoConnected = () => {
 
 const app = express();
 const PORT = process.env.PORT || 3005;
-
-// Connect to MongoDB
-connectDB();
 
 // Initialize Stripe with proper configuration
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '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';
@@ -1708,7 +1706,7 @@ const emailTemplates = {
             <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${code}</span>
           </div>
           <p style="color: #666; font-size: 14px; margin-top: 20px;">
-            This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
+            This code will expire in 30 minutes. If you didn't request this code, please ignore this email.
           </p>
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
             <p style="color: #999; font-size: 12px;">
@@ -2116,18 +2114,38 @@ app.post('/api/auth/send-verification', async (req, res) => {
     // Generate a 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Clean up old verification codes for this email first
-    mockDB.verificationCodes = mockDB.verificationCodes.filter(
-      record => record.email !== email
-    );
-    
-    // Store the verification code (in production, this would be in a database)
-    mockDB.verificationCodes.push({
-      email,
-      code: verificationCode,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes (increased from 10)
-    });
+    // Try to save to MongoDB first
+    try {
+      console.log('💾 Attempting to save verification code to MongoDB...');
+      
+      // Delete old verification codes for this email
+      await VerificationCode.deleteMany({ email });
+      
+      // Create new verification code
+      const newVerificationCode = new VerificationCode({
+        email,
+        code: verificationCode,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+      });
+      
+      await newVerificationCode.save();
+      console.log(`✅ Verification code saved to MongoDB for: ${email}`);
+    } catch (dbError) {
+      console.log('❌ MongoDB save failed, using file-based storage...');
+      console.log('MongoDB Save Error:', dbError.message);
+      
+      // Fallback to file-based storage
+      mockDB.verificationCodes = mockDB.verificationCodes.filter(
+        record => record.email !== email
+      );
+      
+      mockDB.verificationCodes.push({
+        email,
+        code: verificationCode,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes
+      });
+    }
 
     // Send email FIRST, then save data
     console.log(`📧 OTP Generated for ${email}: ${verificationCode}`);
@@ -2218,12 +2236,43 @@ app.post('/api/auth/verify-email', [
 
     const { email, code } = req.body;
     
-    // Find the verification code
-    const verificationRecord = mockDB.verificationCodes.find(
-      record => record.email === email && 
-                record.code === code && 
-                new Date() < record.expiresAt
-    );
+    // Try MongoDB first
+    let verificationRecord = null;
+    try {
+      console.log('🔍 Checking MongoDB for verification code...');
+      verificationRecord = await VerificationCode.findOne({ 
+        email, 
+        code, 
+        isUsed: false,
+        expiresAt: { $gt: new Date() }
+      });
+      
+      if (verificationRecord) {
+        console.log('✅ Found verification code in MongoDB');
+        // Mark as used
+        await VerificationCode.deleteOne({ _id: verificationRecord._id });
+        console.log('✅ Verification code marked as used and deleted');
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB not available, checking file-based storage...');
+      console.log('MongoDB Error:', dbError.message);
+      
+      // Fallback to file-based storage
+      verificationRecord = mockDB.verificationCodes.find(
+        record => record.email === email && 
+                  record.code === code && 
+                  new Date(record.expiresAt) > new Date()
+      );
+      
+      if (verificationRecord) {
+        console.log('✅ Found verification code in file storage');
+        // Remove the used verification code
+        mockDB.verificationCodes = mockDB.verificationCodes.filter(
+          record => !(record.email === email && record.code === code)
+        );
+        saveDataToFiles('email_verified');
+      }
+    }
 
     if (!verificationRecord) {
       return res.status(400).json({ 
@@ -2231,14 +2280,6 @@ app.post('/api/auth/verify-email', [
         message: 'Invalid or expired verification code' 
       });
     }
-
-    // Remove the used verification code
-    mockDB.verificationCodes = mockDB.verificationCodes.filter(
-      record => !(record.email === email && record.code === code)
-    );
-
-    // Save data to files
-    saveDataToFiles('email_verified');
 
     res.json({
       success: true,
@@ -2301,6 +2342,12 @@ app.post('/api/auth/create-account', [
       password: hashedPassword,
       company,
       role: 'other',
+      // Email already OTP-verified at this point
+      isVerified: true,
+      otpVerifiedAt: new Date(),
+      // Admin approval flow
+      isApproved: false,
+      status: 'pending',
       paymentCompleted: false,
       currentPlan: 'free',
       currentCredits: 5  // One-time allocation, consumed permanently
@@ -2332,29 +2379,20 @@ app.post('/api/auth/create-account', [
       console.log(`✅ New user saved to file: ${email} (ID: ${userId})`);
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: userId,
-        email: newUser.email,
-        name: newUser.name || `${firstName} ${lastName}`,
-        role: newUser.role
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    console.log(`🎉 Account created successfully (awaiting admin approval): ${email}`);
 
-    console.log(`🎉 Account created successfully: ${email}`);
-
+    // Do NOT auto-login; require admin approval first
     res.status(201).json({
       success: true,
-      message: 'Account created successfully',
-      token,
+      message: 'Account created. Awaiting admin approval.',
+      awaitingApproval: true,
       user: {
         id: userId,
         email: newUser.email,
         name: newUser.name || `${firstName} ${lastName}`,
-        role: newUser.role
+        role: newUser.role,
+        status: 'pending',
+        isApproved: false
       }
     });
 
@@ -2413,6 +2451,12 @@ app.post('/api/auth/login', [
       }
       
       console.log('✅ Password verified successfully');
+      // Enforce admin approval and active status
+      if (registeredUser.isApproved !== true || (registeredUser.status && registeredUser.status !== 'active')) {
+        return res.status(403).json({
+          message: 'Aapka account admin approval ka intezar kar raha hai.'
+        });
+      }
       
       // Generate JWT token for registered user
       const token = jwt.sign(
@@ -5772,9 +5816,30 @@ app.post('/api/admin/approve-user/:userId', authenticateAdmin, async (req, res) 
       }
       
       user.isApproved = true;
+      user.status = 'active';
+      user.isActive = true;
+      user.isVerified = user.isVerified || true;
       user.approvedAt = new Date();
       user.approvedBy = adminEmail;
       await user.save();
+      // Try to notify the user via email (best-effort)
+      try {
+        const subject = 'Your BioPing account has been approved';
+        const html = `
+          <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6">
+            <h2>Account Approved ✅</h2>
+            <p>Hi ${user.firstName || ''} ${user.lastName || ''},</p>
+            <p>Your account has been approved by the admin. You can now log in and use the dashboard.</p>
+            <p><a href="${process.env.FRONTEND_BASE_URL || 'https://thebioping.com'}/login" style="background:#4f46e5;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Login Now</a></p>
+            <p>If you did not request this, please ignore this email.</p>
+          </div>
+        `;
+        if (typeof sendEmail === 'function') {
+          await sendEmail(user.email, subject, html);
+        }
+      } catch (notifyErr) {
+        console.log('⚠️ Failed to send approval email:', notifyErr.message);
+      }
       
       console.log(`✅ User ${user.email} approved by ${adminEmail}`);
       
@@ -5802,8 +5867,28 @@ app.post('/api/admin/approve-user/:userId', authenticateAdmin, async (req, res) 
       }
       
       mockDB.users[userIndex].isApproved = true;
+      mockDB.users[userIndex].status = 'active';
+      mockDB.users[userIndex].isActive = true;
       mockDB.users[userIndex].approvedAt = new Date().toISOString();
       mockDB.users[userIndex].approvedBy = adminEmail;
+      // Best-effort notify (file storage case)
+      try {
+        const subject = 'Your BioPing account has been approved';
+        const html = `
+          <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6">
+            <h2>Account Approved ✅</h2>
+            <p>Hi ${mockDB.users[userIndex].firstName || ''} ${mockDB.users[userIndex].lastName || ''},</p>
+            <p>Your account has been approved by the admin. You can now log in and use the dashboard.</p>
+            <p><a href="${process.env.FRONTEND_BASE_URL || 'https://thebioping.com'}/login" style="background:#4f46e5;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Login Now</a></p>
+            <p>If you did not request this, please ignore this email.</p>
+          </div>
+        `;
+        if (typeof sendEmail === 'function') {
+          await sendEmail(mockDB.users[userIndex].email, subject, html);
+        }
+      } catch (notifyErr) {
+        console.log('⚠️ Failed to send approval email (file):', notifyErr.message);
+      }
       
       saveDataToFiles('user_approval');
       
@@ -8868,18 +8953,36 @@ app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => 
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Server URL: https://bioping-backend.onrender.com`);
-  console.log(`📧 Email server status: Gmail SMTP configured`);
-  console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
-  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`📊 MongoDB: Connected`);
-  console.log(`✅ Health check available at: https://bioping-backend.onrender.com/api/health`);
-  console.log(`🔄 Sync old payments: https://bioping-backend.onrender.com/api/admin/sync-old-payments`);
-}).on('error', (err) => {
-  console.error('❌ Server failed to start:', err);
-  process.exit(1);
+// Start server after MongoDB connection
+connectDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌐 Server URL: https://bioping-backend.onrender.com`);
+    console.log(`📧 Email server status: Gmail SMTP configured`);
+    console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📊 MongoDB: Connected`);
+    console.log(`✅ Health check available at: https://bioping-backend.onrender.com/api/health`);
+    console.log(`🔄 Sync old payments: https://bioping-backend.onrender.com/api/admin/sync-old-payments`);
+  }).on('error', (err) => {
+    console.error('❌ Server failed to start:', err);
+    process.exit(1);
+  });
+}).catch((error) => {
+  console.log('⚠️ MongoDB connection failed, starting server with file storage...');
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Server running on port ${PORT} (file storage mode)`);
+    console.log(`🌐 Server URL: https://bioping-backend.onrender.com`);
+    console.log(`📧 Email server status: Gmail SMTP configured`);
+    console.log(`💳 Stripe integration: ${stripe ? 'Ready' : 'Not ready'}`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📊 MongoDB: File-based storage`);
+    console.log(`✅ Health check available at: https://bioping-backend.onrender.com/api/health`);
+    console.log(`🔄 Sync old payments: https://bioping-backend.onrender.com/api/admin/sync-old-payments`);
+  }).on('error', (err) => {
+    console.error('❌ Server failed to start:', err);
+    process.exit(1);
+  });
 }); 
 
 // Update user payment status

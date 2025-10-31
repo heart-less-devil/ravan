@@ -35,6 +35,16 @@ const userSchema = new mongoose.Schema({
     enum: ['business-development', 'sales', 'marketing', 'executive', 'investor', 'other'],
     default: 'other'
   },
+  // Account status lifecycle
+  status: {
+    type: String,
+    enum: ['pending', 'active', 'suspended'],
+    default: 'pending'
+  },
+  otpVerifiedAt: {
+    type: Date,
+    default: null
+  },
   isVerified: {
     type: Boolean,
     default: false

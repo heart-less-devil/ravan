@@ -7,6 +7,9 @@ const AdminUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [approvingIds, setApprovingIds] = useState([]);
+  const [rejectingIds, setRejectingIds] = useState([]);
+  const [viewUser, setViewUser] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -23,7 +26,8 @@ const AdminUsers = () => {
 
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users`, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -52,9 +56,15 @@ const AdminUsers = () => {
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
       });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Delete failed (${response.status})`);
+      }
 
       const data = await response.json();
 
@@ -67,6 +77,81 @@ const AdminUsers = () => {
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Network error. Please try again.');
+    }
+  };
+
+  const approveUser = async (userId) => {
+    try {
+      setApprovingIds(prev => [...prev, userId]);
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/approve-user/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `Approve failed (${response.status})`);
+      }
+      const data = await response.json();
+      if (data.success) {
+        // Optimistic update + full refresh to ensure consistency
+        setUsers(prev => prev.map(u => (u._id === userId || u.id === userId)
+          ? { ...u, isApproved: true, status: 'active' }
+          : u
+        ));
+        await fetchUsers();
+      } else {
+        alert(data.message || 'Failed to approve user');
+      }
+    } catch (e) {
+      console.error('Approve user error:', e);
+      alert(e.message || 'Network error. Please try again.');
+    } finally {
+      setApprovingIds(prev => prev.filter(id => id !== userId));
+    }
+  };
+
+  const rejectUser = async (userId) => {
+    try {
+      setRejectingIds(prev => [...prev, userId]);
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/reject-user/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUsers(prev => prev.filter(u => (u._id || u.id) !== userId));
+      } else {
+        alert(data.message || 'Failed to reject user');
+      }
+    } catch (e) {
+      console.error('Reject user error:', e);
+      alert('Network error. Please try again.');
+    } finally {
+      setRejectingIds(prev => prev.filter(id => id !== userId));
+    }
+  };
+
+  const approveAll = async () => {
+    const pending = users.filter(u => !u.isApproved).map(u => u._id || u.id);
+    if (pending.length === 0) return;
+    try {
+      for (const uid of pending) {
+        // Sequential to avoid rate limits
+        // Reuse single approve
+        // eslint-disable-next-line no-await-in-loop
+        await approveUser(uid);
+      }
+      await fetchUsers();
+    } catch (e) {
+      console.error('Approve all error:', e);
     }
   };
 
@@ -124,7 +209,23 @@ const AdminUsers = () => {
             <Users className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-          <p className="text-gray-600">View and manage all registered users</p>
+          <div className="flex items-center justify-center space-x-3">
+            <p className="text-gray-600">View and manage all registered users</p>
+            <button
+              onClick={approveAll}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              title="Approve All"
+            >
+              Approve All
+            </button>
+            <button
+              onClick={fetchUsers}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              title="Refresh"
+            >
+              Refresh
+            </button>
+          </div>
         </motion.div>
 
         {/* Stats */}
@@ -278,17 +379,44 @@ const AdminUsers = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.isVerified 
+                          user.isApproved 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {user.isVerified ? 'Verified' : 'Pending'}
+                          {user.isApproved ? 'Active' : 'Pending'}
                         </span>
                       </td>
                                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                          <div className="flex items-center justify-end space-x-2">
-                           <button 
-                             onClick={() => deleteUser(user._id)}
+                          {!user.isApproved && (
+                            <button
+                              onClick={() => approveUser(user._id || user.id)}
+                              disabled={approvingIds.includes(user._id || user.id)}
+                              className="text-green-600 hover:text-green-900 transition-colors p-1 rounded hover:bg-green-50 disabled:opacity-50"
+                              title="Approve user"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {!user.isApproved && (
+                            <button
+                              onClick={() => rejectUser(user._id || user.id)}
+                              disabled={rejectingIds.includes(user._id || user.id)}
+                              className="text-red-600 hover:text-red-900 transition-colors p-1 rounded hover:bg-red-50 disabled:opacity-50"
+                              title="Reject user"
+                            >
+                              Reject
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setViewUser(user)}
+                            className="text-blue-600 hover:text-blue-900 transition-colors p-1 rounded hover:bg-blue-50"
+                            title="View user"
+                          >
+                            View
+                          </button>
+                          <button 
+                            onClick={() => deleteUser(user._id || user.id)}
                              className="text-red-600 hover:text-red-900 transition-colors p-1 rounded hover:bg-red-50"
                              title="Delete user"
                            >
@@ -304,6 +432,27 @@ const AdminUsers = () => {
           )}
         </motion.div>
       </div>
+
+      {/* View User Modal */}
+      {viewUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black bg-opacity-40" onClick={() => setViewUser(null)} />
+          <div className="relative bg-white rounded-xl shadow-xl p-6 max-w-md w-full border border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">User Details</h3>
+            <div className="space-y-2 text-gray-800">
+              <div><strong>Name:</strong> {viewUser.firstName} {viewUser.lastName}</div>
+              <div><strong>Email:</strong> {viewUser.email}</div>
+              <div><strong>Company:</strong> {viewUser.company}</div>
+              <div><strong>Role:</strong> {viewUser.role}</div>
+              <div><strong>Status:</strong> {viewUser.isApproved ? 'Active' : 'Pending'}</div>
+              <div><strong>Created:</strong> {new Date(viewUser.createdAt).toLocaleString()}</div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => setViewUser(null)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

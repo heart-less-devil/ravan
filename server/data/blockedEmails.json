@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "email": "demo@bioping.com",
+    "blockedAt": "2025-10-31T12:18:10.012Z",
+    "blockedBy": "universalx0242@gmail.com",
+    "reason": "User account deleted by admin"
+  }
+]
