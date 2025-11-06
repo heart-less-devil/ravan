@@ -14,7 +14,9 @@ const getApiUrl = () => {
   
   // Development fallback only if explicitly in development mode
   if (process.env.NODE_ENV === 'development' && window.location.hostname.includes('localhost')) {
-    return 'http://localhost:3005';
+    // Use empty string for relative URLs - will work with proxy or same-origin
+    // If backend is on different port, use: 'http://localhost:3005'
+    return process.env.REACT_APP_API_BASE_URL || '';
   }
   
   // Production - always use live backend URL

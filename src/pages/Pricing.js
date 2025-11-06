@@ -40,20 +40,39 @@ const Pricing = () => {
       console.log('📡 Response status:', response.status);
       console.log('📡 Response ok:', response.ok);
       
-      if (response.ok) {
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
+      if (response.ok && isJson) {
         const data = await response.json();
         console.log('📊 Received pricing data:', data);
         console.log('📊 Plans count:', data.plans ? data.plans.length : 0);
         setPricingPlans(data.plans || []);
         setUsingFallback(false);
       } else {
-        console.error('❌ API response not ok:', response.status, response.statusText);
+        // Handle non-JSON responses (like 404 HTML pages) gracefully
+        if (!isJson) {
+          console.warn('⚠️ Server returned non-JSON response (likely HTML 404 page)');
+          if (response.status === 404) {
+            console.log('🔄 Endpoint not found (404), using fallback default plans');
+          }
+        } else {
+          console.error('❌ API response not ok:', response.status, response.statusText);
+        }
         console.log('🔄 Using fallback default plans');
         setPricingPlans(getDefaultPlans());
         setUsingFallback(true);
       }
     } catch (error) {
-      console.error('❌ Error fetching pricing plans:', error);
+      // Handle network errors, timeouts, and other exceptions
+      if (error.name === 'AbortError') {
+        console.error('❌ Request timeout while fetching pricing plans');
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('❌ Network error: Cannot connect to server');
+      } else {
+        console.error('❌ Error fetching pricing plans:', error);
+      }
       console.log('🔄 Using fallback default plans due to error');
       setPricingPlans(getDefaultPlans());
       setUsingFallback(true);
@@ -440,16 +459,6 @@ const Pricing = () => {
             </div>
           ) : (
             <div>
-              {usingFallback && (
-                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                    <p className="text-yellow-800 text-sm">
-                      <strong>Note:</strong> Using default pricing plans. Some features may not be available.
-                    </p>
-                  </div>
-                </div>
-              )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
                 {plans.map((plan, index) => (
                   <motion.div

@@ -2454,7 +2454,8 @@ app.post('/api/auth/login', [
       // Enforce admin approval and active status
       if (registeredUser.isApproved !== true || (registeredUser.status && registeredUser.status !== 'active')) {
         return res.status(403).json({
-          message: 'Aapka account admin approval ka intezar kar raha hai.'
+          message: 'We are reviewing your request and inform you by email once your account is confirmed for registration.',
+          awaitingApproval: true
         });
       }
       

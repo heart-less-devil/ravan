@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, User, Shield, CheckCircle, X, RefreshCw, AlertCircle, Clock } from 'lucide-react';
 import PasswordStrength from '../components/PasswordStrength';
 import { API_BASE_URL } from '../config';
 import { CompactSpinner } from '../components/LoadingSpinner';
@@ -16,6 +16,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isAdminAccess, setIsAdminAccess] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const navigate = useNavigate();
 
   // Forgot Password States
@@ -80,9 +81,14 @@ const Login = () => {
       clearTimeout(timeoutId);
 
       if (!healthCheck.ok) {
-        throw new Error('Server is not responding');
+        const healthText = await healthCheck.text();
+        console.error('❌ Health check failed:', healthCheck.status, healthText);
+        throw new Error('Server is not responding. Please check if the server is running on the correct port.');
       }
 
+      console.log('✅ Health check passed, attempting login...');
+      console.log('🔗 Login URL:', `${API_BASE_URL}/api/auth/login`);
+      
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -90,13 +96,35 @@ const Login = () => {
         },
         body: JSON.stringify(formData),
       });
+      
+      console.log('📡 Login response status:', response.status);
+      console.log('📡 Login response URL:', response.url);
 
       // Check if response is JSON before parsing
       const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
+      const isJson = contentType && contentType.includes('application/json');
+      
+      // Handle 404 errors (endpoint not found)
+      if (response.status === 404) {
+        if (!isJson) {
+          console.error('❌ Login endpoint not found (404). Server may not be running or endpoint is missing.');
+          throw new Error('Login service is currently unavailable. Please check if the server is running or contact support.');
+        }
+      }
+      
+      // Handle non-JSON responses gracefully
+      if (!isJson) {
         const textResponse = await response.text();
-        console.error('Non-JSON response received:', textResponse);
-        throw new Error(`Server returned non-JSON response (${response.status}): ${textResponse.substring(0, 100)}...`);
+        console.error('⚠️ Non-JSON response received:', textResponse.substring(0, 200));
+        
+        // Provide user-friendly error messages based on status code
+        if (response.status === 404) {
+          throw new Error('Login service is currently unavailable. Please check if the server is running or contact support.');
+        } else if (response.status >= 500) {
+          throw new Error('Server error. Please try again later or contact support.');
+        } else {
+          throw new Error('Server configuration error. Please contact support.');
+        }
       }
 
       const data = await response.json();
@@ -117,20 +145,34 @@ const Login = () => {
         // Redirect to dashboard
         navigate('/dashboard');
       } else {
-        setError(data.message || 'Login failed');
+        // Check if this is a pending approval error
+        if (data.awaitingApproval || (response.status === 403 && data.message && (data.message.includes('reviewing your request') || data.message.includes('admin approval')))) {
+          setError(''); // Clear any error - don't show in form
+          setShowApprovalModal(true); // Show modal popup instead
+        } else {
+          setError(data.message || 'Login failed');
+          setShowApprovalModal(false); // Make sure modal is closed for other errors
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      
+      // Handle different types of errors with user-friendly messages
+      if (err.name === 'AbortError') {
+        setError('Request timeout. Please check your connection and try again.');
+      } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
         setError('Network error: Cannot connect to server. Please check if the server is running. If this persists, please contact support.');
-      } else if (err.message.includes('Failed to fetch')) {
-        setError('Server is currently unavailable. Please try again in a few minutes.');
-      } else if (err.message.includes('Non-JSON response')) {
-        setError('Server configuration error. Please contact support or try again later.');
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        setError('Server is currently unavailable. Please check if the server is running or try again in a few minutes.');
+      } else if (err.message.includes('Login service is currently unavailable') || err.message.includes('endpoint not found')) {
+        setError(err.message); // Use the specific error message we created
+      } else if (err.message.includes('Server configuration error') || err.message.includes('Server error')) {
+        setError(err.message); // Use the specific error message we created
       } else if (err.message.includes('SyntaxError') && err.message.includes('JSON')) {
         setError('Server returned invalid response. Please contact support.');
       } else {
-        setError(err.message || 'Network error. Please try again.');
+        // For any other errors, show a generic but helpful message
+        setError(err.message || 'An error occurred during login. Please try again or contact support.');
       }
     } finally {
       setLoading(false);
@@ -379,7 +421,7 @@ const Login = () => {
                   onSubmit={handleSubmit}
                   className="bg-white/10 backdrop-blur-xl border border-black rounded-3xl p-8 shadow-2xl focus-within:border-purple-500 focus-within:shadow-purple-500/25 transition-all duration-300"
                 >
-                  {error && (
+                  {error && !showApprovalModal && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -792,6 +834,83 @@ const Login = () => {
                 </button>
               </motion.div>
             )}
+          </motion.div>
+        </div>
+      )}
+
+      {/* Admin Approval Modal - Overlay Popup */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black bg-opacity-70 backdrop-blur-md"
+            onClick={() => {
+              setShowApprovalModal(false);
+              setError(''); // Clear error when closing modal
+            }}
+          />
+          
+          {/* Modal Card - Floating above everything */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 30 }}
+            className="relative bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-200 z-[10000]"
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: 'relative', zIndex: 10000 }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setShowApprovalModal(false);
+                setError(''); // Clear error when closing
+              }}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 z-10"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            {/* Icon */}
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-lg">
+                <Clock className="w-10 h-10 text-white" />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Account Under Review
+              </h3>
+              <p className="text-gray-600 text-lg leading-relaxed mb-8">
+                We are reviewing your request and inform you by email once your account is confirmed for registration.
+              </p>
+              
+              {/* Info Box */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start">
+                  <Mail className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <p className="text-sm text-blue-800 text-left">
+                    Please check your email inbox for updates regarding your account approval status.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => {
+                  setShowApprovalModal(false);
+                  setError(''); // Clear error when closing
+                }}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Understood
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
