@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, Building2, AlertCircle, ArrowRight, X } from 'lucide-react';
@@ -26,6 +26,7 @@ const Signup = () => {
   const [countdown, setCountdown] = useState(0);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [pendingApprovalInfo, setPendingApprovalInfo] = useState(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [activeTab, setActiveTab] = useState('privacy'); // 'privacy' or 'terms'
   const [isEmailBlocked, setIsEmailBlocked] = useState(false);
@@ -258,9 +259,18 @@ const Signup = () => {
         const accountData = await accountResponse.json();
 
         if (accountData.success) {
+          const pendingInfo = {
+            email: formData.email,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            timestamp: Date.now()
+          };
+
           // Do not auto-login; show approval modal
           setShowVerificationModal(false);
           setVerificationError('');
+          setPendingApprovalInfo(pendingInfo);
+          stateManager.set('pendingApprovalInfo', pendingInfo, true);
           setShowApprovalModal(true);
         } else {
           setVerificationError(accountData.message || 'Failed to create account. Please try again.');
@@ -290,6 +300,32 @@ const Signup = () => {
     await sendVerificationCode();
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    stateManager.get('pendingApprovalInfo').then((info) => {
+      if (isMounted && info) {
+        setPendingApprovalInfo(info);
+      }
+    }).catch((error) => {
+      console.error('Error retrieving pending approval info:', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pendingApprovalInfo) {
+      setShowApprovalModal(true);
+    }
+  }, [pendingApprovalInfo]);
+
+  const clearPendingApproval = () => {
+    stateManager.remove('pendingApprovalInfo');
+    setPendingApprovalInfo(null);
+  };
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
@@ -399,6 +435,26 @@ const Signup = () => {
                   )}
                 </motion.p>
               </div>
+
+              {pendingApprovalInfo && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-6 shadow-sm"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="mt-1 h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                      <AlertCircle className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-orange-700">Account Pending Admin Approval</h3>
+                      <p className="text-sm text-orange-700/90 mt-1">
+                        Thanks for signing up{pendingApprovalInfo.firstName ? `, ${pendingApprovalInfo.firstName}` : ''}! Our team has received your request. We'll send you an email as soon as an admin approves your account.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Enhanced Form */}
               <motion.form
@@ -900,7 +956,10 @@ const Signup = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="absolute inset-0 bg-black bg-opacity-50"
-            onClick={() => setShowApprovalModal(false)}
+            onClick={() => {
+              clearPendingApproval();
+              setShowApprovalModal(false);
+            }}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -915,6 +974,7 @@ const Signup = () => {
               </p>
               <button
                 onClick={() => {
+                  clearPendingApproval();
                   setShowApprovalModal(false);
                   window.location.href = '/login';
                 }}

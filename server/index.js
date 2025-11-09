@@ -29,7 +29,7 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 
 // Initialize Stripe with proper configuration
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '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';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 let stripe = null;
 if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here') {
@@ -673,7 +673,6 @@ app.use((req, res, next) => {
     next();
   }
 });
-
 // Webhook for Stripe events - MUST BE BEFORE express.json() middleware
 app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -895,15 +894,15 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
                     Thank you for your payment! Your transaction has been processed successfully.
                   </p>
                   <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <div style="display: flex; justify-content-between; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: between; margin-bottom: 10px;">
                       <span style="font-weight: bold;">Amount:</span>
                       <span>$${(paymentIntent.amount / 100).toFixed(2)} USD</span>
                     </div>
-                    <div style="display: flex; justify-content-between; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: between; margin-bottom: 10px;">
                       <span style="font-weight: bold;">Transaction ID:</span>
                       <span style="font-family: monospace;">${paymentIntent.id}</span>
                     </div>
-                    <div style="display: flex; justify-content-between;">
+                    <div style="display: flex; justify-content: between;">
                       <span style="font-weight: bold;">Date:</span>
                       <span>${new Date().toLocaleDateString()}</span>
                     </div>
@@ -1470,7 +1469,6 @@ app.get('/api/pdf/:filename', (req, res) => {
     res.status(404).json({ error: 'PDF not found', filename });
   }
 });
-
 // Test endpoint
 app.get('/api/test', (req, res) => {
   const pdfDir = path.join(__dirname, '../public/pdf');
@@ -2222,7 +2220,6 @@ app.post('/api/auth/send-verification', async (req, res) => {
     });
   }
 });
-
 // Verify email code endpoint
 app.post('/api/auth/verify-email', [
   body('email').isEmail().normalizeEmail(),
@@ -2748,8 +2745,6 @@ app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
 // ============================================================================
 // AUTO-CUT SUBSCRIPTION ENDPOINT
 // ============================================================================
-
-
 // Create subscription with auto-cut functionality
 app.post('/api/create-subscription', async (req, res) => {
   try {
@@ -3356,7 +3351,6 @@ app.put('/api/admin/complete-session/:sessionId', authenticateAdmin, async (req,
 });
 
 // Pricing Analytics Backend Routes
-
 // In-memory data storage (in production, this would be a database)
 let pricingData = {
   plans: [
@@ -4116,7 +4110,6 @@ app.post('/api/debug-search', authenticateToken, (req, res) => {
     res.status(500).json({ success: false, message: 'Debug search failed' });
   }
 });
-
 // Search biotech data (public endpoint with limits)
 app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
   body('drugName').optional(),
@@ -4876,7 +4869,6 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       });
       console.log('After region filter, records found:', filteredData.length);
     }
-    
     // Function - only filter if user selected it
     if (contactFunction) {
       hasSearchCriteria = true;
@@ -5734,6 +5726,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
             email: user.email,
             company: user.company,
             role: user.role,
+            isApproved: user.isApproved,
             isVerified: user.isVerified,
             isActive: user.isActive,
             paymentCompleted: user.paymentCompleted,
@@ -6429,7 +6422,6 @@ app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
     });
   }
 });
-
 // Delete BD Tracker entry
 app.delete('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
   try {
@@ -7191,9 +7183,6 @@ app.post('/api/create-payment-intent', async (req, res) => {
     res.status(500).json({ error: 'Payment failed', details: error.message });
   }
 });
-
-
-
 // Fixed: Create 12-day $1/day subscription with proper auto-cut payment flow
 app.post('/api/subscription/create-daily-12', async (req, res) => {
   try {
@@ -7643,6 +7632,7 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
         totalUsers: users.length,
         activeUsers: users.filter(u => u.isActive).length,
         verifiedUsers: users.filter(u => u.isVerified).length,
+        pendingApprovals: users.filter(u => !u.isApproved).length,
         paidUsers: users.filter(u => u.paymentCompleted).length,
         testUsers: users.filter(u => u.currentPlan === 'test').length,
         trialUsers: trialUsers.length,
@@ -7659,6 +7649,7 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
         email: user.email,
         company: user.company,
         role: user.role,
+        isApproved: user.isApproved,
         isVerified: user.isVerified,
         isActive: user.isActive,
         paymentCompleted: user.paymentCompleted,
@@ -7901,7 +7892,6 @@ function getPlanDescription(planId) {
   
   return planDescriptions[planId] || 'BioPing Subscription';
 }
-
 // Function to generate PDF invoice
 const generatePDFInvoice = (invoice, user) => {
   return new Promise((resolve, reject) => {
@@ -8701,7 +8691,6 @@ app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) =
     res.status(500).json({ message: 'Error generating invoices PDF' });
   }
 });
-
 // Admin: Suspend user endpoint
 app.post('/api/admin/suspend-user', authenticateAdmin, async (req, res) => {
   try {
@@ -9377,7 +9366,6 @@ app.post('/api/auth/cancel-subscription', authenticateToken, async (req, res) =>
     });
   }
 });
-
 // Update user credits (when they use credits)
 app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
   try {
@@ -10091,7 +10079,6 @@ app.get('/api/admin/health', authenticateAdmin, async (req, res) => {
     res.status(500).json({ error: 'Admin health check failed' });
   }
 });
-
 // Pricing Management Routes
 app.get('/api/admin/pricing', authenticateAdmin, async (req, res) => {
   try {
@@ -10844,7 +10831,6 @@ async function processDailySubscriber(subscriber) {
     console.error(`❌ Error processing daily subscriber ${subscriber.email}:`, error);
   }
 }
-
 // Process daily payment and credit renewal
 async function processDailyPaymentAndCredits(subscriber) {
   console.log(`💳 Processing daily payment for: ${subscriber.email}`);

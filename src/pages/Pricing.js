@@ -4,6 +4,101 @@ import { Check, Star, ArrowRight, Building2, Users, Target, Zap, CreditCard, Cal
 import StripePayment from '../components/StripePayment';
 import { API_BASE_URL } from '../config';
 
+const CollapsibleFAQ = ({ question, answer, icon, category }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <motion.div
+      className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-500 group"
+      whileHover={{ y: -2 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-8 py-6 text-left bg-gradient-to-r from-white via-gray-50 to-white hover:from-blue-50 hover:via-indigo-50 hover:to-purple-50 transition-all duration-500 flex items-center justify-between focus:outline-none focus:ring-4 focus:ring-blue-200 focus:ring-inset relative overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+        <div className="relative z-10 flex items-center space-x-4">
+          {icon && (
+            <motion.div
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white shadow-lg"
+              animate={{
+                scale: isHovered ? 1.1 : 1,
+                rotate: isHovered ? 5 : 0
+              }}
+              transition={{ duration: 0.3 }}
+            >
+              {icon}
+            </motion.div>
+          )}
+          <div>
+            <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-300 mb-1">
+              {question}
+            </h3>
+            {category && (
+              <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                {category}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <motion.div
+          animate={{
+            rotate: isOpen ? 180 : 0,
+            scale: isHovered ? 1.1 : 1
+          }}
+          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          className="flex-shrink-0 p-2 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-blue-100 group-hover:to-purple-100 transition-all duration-300 shadow-md"
+        >
+          <svg
+            className="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors duration-300"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+          </svg>
+        </motion.div>
+      </button>
+
+      <motion.div
+        initial={false}
+        animate={{
+          height: isOpen ? 'auto' : 0,
+          opacity: isOpen ? 1 : 0
+        }}
+        transition={{
+          duration: 0.5,
+          ease: 'easeInOut',
+          type: 'spring',
+          stiffness: 100,
+          damping: 15
+        }}
+        className="overflow-hidden"
+      >
+        <div className="px-8 py-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-t border-blue-200 relative">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+          <div className="absolute top-4 right-4 w-2 h-2 bg-blue-400 rounded-full opacity-50"></div>
+          <div className="absolute bottom-4 left-4 w-1 h-1 bg-purple-400 rounded-full opacity-30"></div>
+
+          <motion.p
+            className="text-gray-700 leading-relaxed text-base relative z-10"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: isOpen ? 1 : 0, y: isOpen ? 0 : 10 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            {answer}
+          </motion.p>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const Pricing = () => {
   const [isAnnual, setIsAnnual] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -614,89 +709,22 @@ const Pricing = () => {
           </motion.div>
 
           <div className="max-w-4xl mx-auto space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Can I change my plan at any time?
-              </h3>
-              <p className="text-gray-600">
-                Yes, you can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                What payment methods do you accept?
-              </h3>
-              <p className="text-gray-600">
-                We accept all major credit cards, debit cards. All payments are processed securely.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                How do free credits work?
-              </h3>
-              <p className="text-gray-600">
-                Free plan users get 5 credits that expire after 5 days . This gives you a chance to test our platform before upgrading to a paid plan.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                How often is the database updated?
-              </h3>
-              <p className="text-gray-600">
-                We update contacts and BD insights regularly-at least once a month to keep information current and relevant.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                How accurate are the contacts?
-              </h3>
-              <p className="text-gray-600">
-                All contacts are verified, and if any email doesn't work, we credit it back to your account.
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="bg-white rounded-2xl p-6 shadow-soft border border-gray-100"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Is my data secure?
-              </h3>
-              <p className="text-gray-600">
-                Yes. We use secure, encrypted systems to protect your information and never share your activity with third parties.
-              </p>
-            </motion.div>
+            <CollapsibleFAQ
+              question="Can I change my plan anytime?"
+              answer="Yes, you can upgrade or downgrade your plan at any time. New plan starts and new charges activated for next 30 days."
+            />
+            <CollapsibleFAQ
+              question="What payment methods do you accept?"
+              answer="We accept all major credit and debit cards payments."
+            />
+            <CollapsibleFAQ
+              question="How do free credits work?"
+              answer="Free plan users get credits that expire after 5 days (including weekends). This gives you a chance to test our platform before upgrading to a paid plan."
+            />
+            <CollapsibleFAQ
+              question="What kind of support do you provide?"
+              answer="All plans include email and phone support during PST time hours in USA. Basic and Premium Plans have enhanced customer and BD support."
+            />
           </div>
         </div>
       </section>

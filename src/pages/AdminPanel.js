@@ -148,7 +148,35 @@ const AdminPanel = () => {
       const result = await response.json();
       
       if (result.success) {
-        setUsers(Array.isArray(result.data.users) ? result.data.users : []);
+        const fetchedUsers = Array.isArray(result.data.users) ? result.data.users : [];
+        setUsers(fetchedUsers);
+
+        setComprehensiveData(prev => {
+          if (prev) {
+            return {
+              ...prev,
+              users: fetchedUsers,
+              summary: {
+                ...prev.summary,
+                pendingApprovals: fetchedUsers.filter(u => !u.isApproved).length,
+                totalUsers: fetchedUsers.length,
+                activeUsers: fetchedUsers.filter(u => u.isActive).length,
+                verifiedUsers: fetchedUsers.filter(u => u.isVerified).length,
+                trialUsers: fetchedUsers.filter(u => u.currentPlan === 'trial' || u.plan === 'trial').length,
+              }
+            };
+          }
+          return {
+            users: fetchedUsers,
+            summary: {
+              pendingApprovals: fetchedUsers.filter(u => !u.isApproved).length,
+              totalUsers: fetchedUsers.length,
+              activeUsers: fetchedUsers.filter(u => u.isActive).length,
+              verifiedUsers: fetchedUsers.filter(u => u.isVerified).length,
+              trialUsers: fetchedUsers.filter(u => u.currentPlan === 'trial' || u.plan === 'trial').length,
+            }
+          };
+        });
       } else {
         throw new Error(result.message || 'Failed to fetch users');
       }
@@ -570,6 +598,7 @@ const AdminPanel = () => {
         return;
       }
 
+      const normalizedId = userId ? String(userId) : '';
       const token = sessionStorage.getItem('token');
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/approve-user/${userId}`, {
         method: 'POST',
@@ -581,6 +610,41 @@ const AdminPanel = () => {
 
       if (response.ok) {
         alert('User approved successfully');
+        setUsers(prevUsers => prevUsers.map(user => {
+          const candidateId = user.id || user._id;
+          if (candidateId && String(candidateId) === normalizedId) {
+            return { ...user, isApproved: true };
+          }
+          return user;
+        }));
+
+        setComprehensiveData(prev => {
+          if (!prev) return prev;
+
+          const updatedUsers = (prev.users || []).map(user => {
+            const candidateId = user.id || user._id;
+            if (candidateId && String(candidateId) === normalizedId) {
+              return { ...user, isApproved: true };
+            }
+            return user;
+          });
+
+          const pendingApprovals = updatedUsers.filter(u => !u.isApproved).length;
+
+          return {
+            ...prev,
+            users: updatedUsers,
+            summary: prev.summary ? {
+              ...prev.summary,
+              pendingApprovals,
+              totalUsers: updatedUsers.length,
+              activeUsers: updatedUsers.filter(u => u.isActive).length,
+              verifiedUsers: updatedUsers.filter(u => u.isVerified).length,
+              trialUsers: updatedUsers.filter(u => u.currentPlan === 'trial' || u.plan === 'trial').length,
+            } : prev.summary,
+          };
+        });
+
         fetchUsers(); // Refresh the users list
       } else {
         const error = await response.json();
@@ -598,6 +662,7 @@ const AdminPanel = () => {
         return;
       }
 
+      const normalizedId = userId ? String(userId) : '';
       const token = sessionStorage.getItem('token');
       const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/reject-user/${userId}`, {
         method: 'POST',
@@ -609,6 +674,35 @@ const AdminPanel = () => {
 
       if (response.ok) {
         alert('User rejected and account deleted');
+        setUsers(prevUsers => prevUsers.filter(user => {
+          const candidateId = user.id || user._id;
+          return !(candidateId && String(candidateId) === normalizedId);
+        }));
+
+        setComprehensiveData(prev => {
+          if (!prev) return prev;
+
+          const updatedUsers = (prev.users || []).filter(user => {
+            const candidateId = user.id || user._id;
+            return !(candidateId && String(candidateId) === normalizedId);
+          });
+
+          const pendingApprovals = updatedUsers.filter(u => !u.isApproved).length;
+
+          return {
+            ...prev,
+            users: updatedUsers,
+            summary: prev.summary ? {
+              ...prev.summary,
+              pendingApprovals,
+              totalUsers: updatedUsers.length,
+              activeUsers: updatedUsers.filter(u => u.isActive).length,
+              verifiedUsers: updatedUsers.filter(u => u.isVerified).length,
+              trialUsers: updatedUsers.filter(u => u.currentPlan === 'trial' || u.plan === 'trial').length,
+            } : prev.summary,
+          };
+        });
+
         fetchUsers(); // Refresh the users list
       } else {
         const error = await response.json();
@@ -1594,7 +1688,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                               const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
                               
                               return (
-                                <tr key={user.id} className="hover:bg-orange-50 transition-colors">
+                                <tr key={user.id || user._id} className="hover:bg-orange-50 transition-colors">
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
                                       <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
@@ -1627,14 +1721,14 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center space-x-2">
                                       <button
-                                        onClick={() => handleApproveUser(user.id)}
+                                        onClick={() => handleApproveUser(user.id || user._id)}
                                         className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-1"
                                       >
                                         <CheckCircle className="w-4 h-4" />
                                         <span>Approve</span>
                                       </button>
                                       <button
-                                        onClick={() => handleRejectUser(user.id)}
+                                        onClick={() => handleRejectUser(user.id || user._id)}
                                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-1"
                                       >
                                         <X className="w-4 h-4" />
@@ -2003,7 +2097,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                               const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U';
                               
                               return (
-                                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                                <tr key={user.id || user._id} className="hover:bg-gray-50 transition-colors">
                                   {/* User Profile */}
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
@@ -2135,14 +2229,14 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                       {isPendingApproval ? (
                                         <>
                                           <button
-                                            onClick={() => handleApproveUser(user.id)}
+                                            onClick={() => handleApproveUser(user.id || user._id)}
                                             className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
                                           >
                                             <CheckCircle className="w-3 h-3" />
                                             <span>Approve</span>
                                           </button>
                                           <button
-                                            onClick={() => handleRejectUser(user.id)}
+                                            onClick={() => handleRejectUser(user.id || user._id)}
                                             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
                                           >
                                             <X className="w-3 h-3" />
@@ -2160,7 +2254,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                           </button>
                                           {suspensionStatus && suspensionStatus.status === 'suspended' ? (
                                             <button
-                                              onClick={() => handleUnsuspendUser(user.id)}
+                                              onClick={() => handleUnsuspendUser(user.id || user._id)}
                                               className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
                                             >
                                               Unsuspend
@@ -2174,7 +2268,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                             </button>
                                           )}
                                           <button
-                                            onClick={() => handleDeleteUser(user.id)}
+                                            onClick={() => handleDeleteUser(user.id || user._id)}
                                             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium"
                                           >
                                             Delete
@@ -2424,229 +2518,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
             )}
           </div>
         </div>
-
-        {/* Pending Approvals Section */}
-        <div className="mt-8">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-orange-600 to-red-600 px-6 py-4">
-              <h2 className="text-2xl font-bold text-white flex items-center">
-                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Pending Approvals
-              </h2>
-              <p className="text-orange-100 mt-1">Review and approve new user registrations</p>
-            </div>
-            
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">New User Requests</h3>
-                  <p className="text-gray-600 text-sm">Users waiting for approval</p>
-                </div>
-                <div className="flex space-x-3">
-                  <button 
-                    onClick={async () => {
-                      // Approve all pending users
-                      if (window.confirm('Are you sure you want to approve all pending users?')) {
-                        try {
-                          const token = sessionStorage.getItem('token');
-                          console.log('API URL:', `${ADMIN_API_BASE_URL}/api/admin/approve-existing-users`);
-                          console.log('Token:', token ? 'Present' : 'Missing');
-                          
-                          const response = await fetch(`${ADMIN_API_BASE_URL}/api/admin/approve-existing-users`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`
-                            }
-                          });
-                          
-                          console.log('Response status:', response.status);
-                          
-                          if (response.ok) {
-                            const result = await response.json();
-                            console.log('Approval result:', result);
-                            alert(`Successfully approved ${result.approvedCount} existing users!`);
-                            // Refresh the page to show updated data
-                            window.location.reload();
-                          } else {
-                            const errorText = await response.text();
-                            console.error('Error response:', errorText);
-                            alert(`Failed to approve users: ${response.status} - ${errorText}`);
-                          }
-                        } catch (error) {
-                          console.error('Error approving users:', error);
-                          alert(`Error approving users: ${error.message}`);
-                        }
-                      }
-                    }}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    Approve All Existing
-                  </button>
-                  <button 
-                    onClick={() => {
-                      // Refresh pending users
-                      console.log('Refreshing pending users...');
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  >
-                    Refresh
-                  </button>
-                </div>
-              </div>
-
-              {/* Pending Users Table */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Registered
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {/* Sample pending users - replace with real data */}
-                    <tr className="hover:bg-orange-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-bold text-white">JD</span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">John Doe</div>
-                            <div className="text-sm text-gray-500">john.doe@company.com</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Tech Corp
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          Business Development
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        2 hours ago
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button 
-                          onClick={() => {
-                            if (window.confirm('Approve this user?')) {
-                              console.log('Approving user...');
-                            }
-                          }}
-                          className="text-green-600 hover:text-green-900 bg-green-100 px-3 py-1 rounded-lg text-xs font-medium"
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (window.confirm('Reject this user? This will delete their account.')) {
-                              console.log('Rejecting user...');
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-900 bg-red-100 px-3 py-1 rounded-lg text-xs font-medium"
-                        >
-                          Reject
-                        </button>
-                        <button 
-                          onClick={() => {
-                            console.log('Viewing user details...');
-                          }}
-                          className="text-blue-600 hover:text-blue-900 bg-blue-100 px-3 py-1 rounded-lg text-xs font-medium"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-
-                    <tr className="hover:bg-orange-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-bold text-white">AS</span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">Alice Smith</div>
-                            <div className="text-sm text-gray-500">alice.smith@startup.com</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Startup Inc
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                          Marketing
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        1 day ago
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button 
-                          onClick={() => {
-                            if (window.confirm('Approve this user?')) {
-                              console.log('Approving user...');
-                            }
-                          }}
-                          className="text-green-600 hover:text-green-900 bg-green-100 px-3 py-1 rounded-lg text-xs font-medium"
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          onClick={() => {
-                            if (window.confirm('Reject this user? This will delete their account.')) {
-                              console.log('Rejecting user...');
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-900 bg-red-100 px-3 py-1 rounded-lg text-xs font-medium"
-                        >
-                          Reject
-                        </button>
-                        <button 
-                          onClick={() => {
-                            console.log('Viewing user details...');
-                          }}
-                          className="text-blue-600 hover:text-blue-900 bg-blue-100 px-3 py-1 rounded-lg text-xs font-medium"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* No pending users message */}
-              <div className="text-center py-8 text-gray-500">
-                <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-lg font-medium">No pending approvals</p>
-                <p className="text-sm">All users have been approved</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-
   );
 };
 
