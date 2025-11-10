@@ -1813,6 +1813,10 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
     setFilteredSearchResults(null);
   }, [searchResults]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchResults, filteredSearchResults]);
+
   // Process search results to group by company
   useEffect(() => {
     console.log('Processing search results:', { searchResults: sortedSearchResults.length, isGlobalSearch, currentSearchType });
@@ -2012,8 +2016,40 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
   const currentResults = sortedSearchResults.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
-    setCurrentPage(page);
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
+
+  useEffect(() => {
+    if (totalPages === 0) {
+      return;
+    }
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    } else if (currentPage < 1) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const getVisiblePageNumbers = () => {
+    const totalVisible = 5;
+    if (totalPages <= totalVisible) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    const half = Math.floor(totalVisible / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, start + totalVisible - 1);
+
+    if (end - start + 1 < totalVisible) {
+      start = Math.max(1, end - totalVisible + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  };
+  
+  const visiblePageNumbers = getVisiblePageNumbers();
   
   const closeCreditPopup = () => {
     setShowCreditPopup(false);
@@ -2685,135 +2721,193 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
               </div>
             ) : (
               // CONTACT SEARCH OR DRUG SEARCH: Detailed contact table
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
-                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                  <tr>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title & Function</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
-                      <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {currentResults.map((result) => (
-                    <Fragment key={result.id}>
-                      <tr className="hover:bg-blue-50/30 transition-colors duration-200 border-b border-gray-100">
-                          <td className="px-3 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-2">
-                                <Building2 className="w-3 h-3 text-white" />
-                        </div>
-                        <div>
-                                <div className="text-sm font-medium text-gray-900 truncate">{result.companyName}</div>
-                              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">PUBLIC</div>
-                          </div>
-                      </div>
-                    </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-                                <span className="text-xs font-semibold text-blue-600">
-                            {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
-                          </span>
-                        </div>
-                        <div>
-                                <div className="text-sm font-medium text-gray-900 truncate">{result.contactPerson}</div>
-                        </div>
-                      </div>
-                    </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              <div className="font-medium">{result.contactTitle || 'N/A'}</div>
-                              {result.contactFunction && (
-                                <div className="text-xs text-gray-500 mt-1">{result.contactFunction}</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                                <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                                <span className="text-sm text-gray-900 truncate">
-                            {revealedEmails.has(result.id) 
-                              ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
-                              : `@${result.companyName?.toLowerCase()}.com`
-                            }
-                          </span>
-                          {revealedEmails.has(result.id) && (
-                            <button
-                              onClick={() => handleCopyEmail(result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)}
-                              className="ml-1 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200"
-                              title="Copy email"
-                            >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                              <div className="text-xs text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
-                          {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
-                          <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="flex items-center">
-                        <button
-                          type="button"
-                          onClick={(e) => handleRevealEmail(result.id, e)}
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm"
-                        >
-                          <Mail className="w-4 h-4" />
-                          <span>Get Contact Info</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                      {/* Expanded Details Section */}
-                      {expandedContactDetails.has(result.id) && (
-                        <tr className="bg-gray-50">
-                          <td colSpan="5" className="px-6 py-4">
-                            <div className="bg-white rounded-lg p-4 space-y-4">
-                              <h4 className="font-semibold text-gray-900 mb-3">Contact Details</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">TIER:</span>
-                                    <span className="text-sm text-gray-900">{result.tier || 'Large Pharma'}</span>
-          </div>
-            <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">MODALITY:</span>
-                                    <span className="text-sm text-gray-900">{result.modality || 'SM, LM, CT, GT, Bx, RNA'}</span>
-            </div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">BD FOCUS AREA:</span>
-                                    <span className="text-sm text-gray-900">{result.bdPersonTAFocus || 'NULL'}</span>
-            </div>
-          </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">HQ:</span>
-                                    <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
-        </div>
+              <div className="space-y-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full divide-y divide-gray-100 min-w-full rounded-lg overflow-hidden shadow-sm border border-gray-100">
+                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <tr>
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Company</th>
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact</th>
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Title & Function</th>
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Contact Info</th>
+                        <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 tracking-normal w-1/5">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {currentResults.map((result) => (
+                        <Fragment key={result.id}>
+                          <tr className="hover:bg-blue-50/30 transition-colors duration-200 border-b border-gray-100">
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-2">
+                                  <Building2 className="w-3 h-3 text-white" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900 truncate">{result.companyName}</div>
+                                  <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full inline-block">PUBLIC</div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                                             )}
-                     </Fragment>
-                  ))}
-                </tbody>
-                              </table>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                  <span className="text-xs font-semibold text-blue-600">
+                                    {result.contactPerson ? result.contactPerson.charAt(0).toUpperCase() : 'C'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900 truncate">{result.contactPerson}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                <div className="font-medium">{result.contactTitle || 'N/A'}</div>
+                                {result.contactFunction && (
+                                  <div className="text-xs text-gray-500 mt-1">{result.contactFunction}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                  <span className="text-sm text-gray-900 truncate">
+                                    {revealedEmails.has(result.id)
+                                      ? (result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)
+                                      : `@${result.companyName?.toLowerCase()}.com`}
+                                  </span>
+                                  {revealedEmails.has(result.id) && (
+                                    <button
+                                      onClick={() => handleCopyEmail(result.email || `${result.contactPerson?.toLowerCase().replace(' ', '.')}@${result.companyName?.toLowerCase()}.com`)}
+                                      className="ml-1 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200"
+                                      title="Copy email"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 underline decoration-dotted cursor-pointer" onClick={() => handleViewMoreDetails(result.id)}>
+                                  {expandedContactDetails.has(result.id) ? 'VIEW LESS' : 'VIEW MORE'}
+                                  <svg className={`w-3 h-3 inline ml-1 transition-transform ${expandedContactDetails.has(result.id) ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleRevealEmail(result.id, e)}
+                                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-all duration-200 text-sm"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                  <span>Get Contact Info</span>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {/* Expanded Details Section */}
+                          {expandedContactDetails.has(result.id) && (
+                            <tr className="bg-gray-50">
+                              <td colSpan="5" className="px-6 py-4">
+                                <div className="bg-white rounded-lg p-4 space-y-4">
+                                  <h4 className="font-semibold text-gray-900 mb-3">Contact Details</h4>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-500">TIER:</span>
+                                        <span className="text-sm text-gray-900">{result.tier || 'Large Pharma'}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-500">MODALITY:</span>
+                                        <span className="text-sm text-gray-900">{result.modality || 'SM, LM, CT, GT, Bx, RNA'}</span>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-500">BD FOCUS AREA:</span>
+                                        <span className="text-sm text-gray-900">{result.bdPersonTAFocus || 'NULL'}</span>
+                                      </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-500">HQ:</span>
+                                        <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 pt-4">
+                    <div className="text-sm text-gray-600">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        <span>Prev</span>
+                      </button>
+                      {visiblePageNumbers.length > 0 && visiblePageNumbers[0] > 1 && (
+                        <>
+                          <button
+                            onClick={() => handlePageChange(1)}
+                            className={`px-3 py-2 text-sm font-medium rounded-md ${currentPage === 1 ? 'bg-blue-600 text-white' : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50'}`}
+                          >
+                            1
+                          </button>
+                          {visiblePageNumbers[0] > 2 && <span className="px-2 text-gray-400">...</span>}
+                        </>
+                      )}
+                      {visiblePageNumbers.map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-2 text-sm font-medium rounded-md ${page === currentPage ? 'bg-blue-600 text-white' : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50'}`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      {visiblePageNumbers.length > 0 && visiblePageNumbers[visiblePageNumbers.length - 1] < totalPages && (
+                        <>
+                          {visiblePageNumbers[visiblePageNumbers.length - 1] < totalPages - 1 && <span className="px-2 text-gray-400">...</span>}
+                          <button
+                            onClick={() => handlePageChange(totalPages)}
+                            className={`px-3 py-2 text-sm font-medium rounded-md ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50'}`}
+                          >
+                            {totalPages}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              )}
+            )}
             </div>
             
           

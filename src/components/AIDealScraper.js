@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../config';
-import { 
-  Search, 
-  Globe, 
-  Calendar, 
-  DollarSign, 
-  Building2, 
-  Pill, 
+import {
+  Search,
+  Globe,
+  DollarSign,
+  Building2,
+  Pill,
   TrendingUp,
   Download,
   RefreshCw,
   Filter,
-  Eye,
   ExternalLink,
   AlertCircle,
   CheckCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  ArrowUpRight,
+  Activity,
+  Radar
 } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -26,11 +27,11 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
   const [selectedSources, setSelectedSources] = useState([]);
   const [dateRange, setDateRange] = useState('7'); // days
   const [isScraping, setIsScraping] = useState(false);
-  const [scrapingProgress, setScrapingProgress] = useState(0);
   const [scrapedDeals, setScrapedDeals] = useState([]);
   const [filteredDeals, setFilteredDeals] = useState([]);
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [lastRunMeta, setLastRunMeta] = useState(null);
   const [activeFilters, setActiveFilters] = useState({
     therapeuticArea: '',
     dealStage: '',
@@ -38,20 +39,29 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
     maxValue: ''
   });
 
+  const presetQueries = [
+    'Oncology licensing deal',
+    'Cell therapy partnership',
+    'Rare disease acquisition',
+    'mRNA collaboration',
+    'Biotech M&A'
+  ];
+
   // Available news sources for scraping
   const newsSources = [
-    { id: 'biospace', name: 'BioSpace', url: 'https://www.biospace.com', enabled: true },
-    { id: 'fiercebiotech', name: 'Fierce Biotech', url: 'https://www.fiercebiotech.com', enabled: true },
-    { id: 'biotechnetworks', name: 'Biotech Networks', url: 'https://biotechnetworks.org', enabled: true },
-    { id: 'biocom', name: 'Biocom California', url: 'https://www.biocom.org', enabled: true },
-    { id: 'lifescivc', name: 'LifeSci VC', url: 'https://lifescivc.com', enabled: true },
-    { id: 'sdbn', name: 'San Diego Biotech', url: 'https://sdbn.org', enabled: true },
-    { id: 'cellandgene', name: 'Cell & Gene', url: 'https://www.cellandgene.com', enabled: true },
-    { id: 'emjreviews', name: 'EU Medical Journal', url: 'https://www.emjreviews.com', enabled: true },
-    { id: 'biocentury', name: 'Biocentury', url: 'https://www.biocentury.com/home', enabled: true },
-    { id: 'bioxconomy', name: 'Bio Xconomy', url: 'https://www.bioxconomy.com', enabled: true },
-    { id: 'pullanconsulting', name: 'Pullan Consulting', url: 'https://www.pullanconsulting.com', enabled: true },
-    { id: 'prnewswire', name: 'PR Newswire', url: 'https://www.prnewswire.com', enabled: true }
+    { id: 'global_news', name: 'Global News Search (AI Aggregator)', description: 'Searches across hundreds of biotech news outlets', enabled: true, hidden: true },
+    { id: 'biospace', name: 'BioSpace', url: 'https://www.biospace.com', enabled: true, hidden: true },
+    { id: 'fiercebiotech', name: 'Fierce Biotech', url: 'https://www.fiercebiotech.com', enabled: true, hidden: true },
+    { id: 'biotechnetworks', name: 'Biotech Networks', url: 'https://biotechnetworks.org', enabled: true, hidden: true },
+    { id: 'biocom', name: 'Biocom California', url: 'https://www.biocom.org', enabled: true, hidden: true },
+    { id: 'lifescivc', name: 'LifeSci VC', url: 'https://lifescivc.com', enabled: true, hidden: true },
+    { id: 'sdbn', name: 'San Diego Biotech', url: 'https://sdbn.org', enabled: true, hidden: true },
+    { id: 'cellandgene', name: 'Cell & Gene', url: 'https://www.cellandgene.com', enabled: true, hidden: true },
+    { id: 'emjreviews', name: 'EU Medical Journal', url: 'https://www.emjreviews.com', enabled: true, hidden: true },
+    { id: 'biocentury', name: 'Biocentury', url: 'https://www.biocentury.com/home', enabled: true, hidden: true },
+    { id: 'bioxconomy', name: 'Bio Xconomy', url: 'https://www.bioxconomy.com', enabled: true, hidden: true },
+    { id: 'pullanconsulting', name: 'Pullan Consulting', url: 'https://www.pullanconsulting.com', enabled: true, hidden: true },
+    { id: 'prnewswire', name: 'PR Newswire', url: 'https://www.prnewswire.com', enabled: true, hidden: true }
   ];
 
   // Therapeutic areas for filtering
@@ -66,7 +76,11 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
 
   useEffect(() => {
     // Set default sources
-    setSelectedSources(newsSources.filter(source => source.enabled).map(source => source.id));
+    const defaultSources = newsSources.filter(source => source.enabled).map(source => source.id);
+    if (!defaultSources.includes('global_news')) {
+      defaultSources.unshift('global_news');
+    }
+    setSelectedSources(defaultSources);
   }, []);
 
   useEffect(() => {
@@ -110,6 +124,26 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
     );
   };
 
+  const handlePresetClick = (term) => {
+    setSearchQuery(term);
+  };
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return '—';
+    try {
+      const date = new Date(isoString);
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }).format(date);
+    } catch (error) {
+      return isoString;
+    }
+  };
+
   const handleScrapeDeals = async () => {
     if (!searchQuery.trim()) {
       setError('Please enter a search query');
@@ -122,7 +156,6 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
     }
 
     setIsScraping(true);
-    setScrapingProgress(0);
     setError(null);
 
     try {
@@ -155,9 +188,17 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
       const result = await response.json();
       
       if (result.success) {
-        setScrapedDeals(result.data.deals || []);
-        setFilteredDeals(result.data.deals || []);
-        
+        const incomingDeals = Array.isArray(result.data?.deals) ? result.data.deals : [];
+
+        setScrapedDeals(incomingDeals);
+        setFilteredDeals(incomingDeals);
+        setLastRunMeta({
+          fetchedAt: new Date().toISOString(),
+          totalFound: result.data?.totalFound ?? incomingDeals.length,
+          returned: incomingDeals.length,
+          sources: result.data?.sources ?? selectedSources
+        });
+
         // Update user credits if consumed
         if (result.creditsUsed) {
           setUserCredits(prev => Math.max(0, prev - result.creditsUsed));
@@ -170,7 +211,6 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
       setError('Failed to scrape deals. Please try again.');
     } finally {
       setIsScraping(false);
-      setScrapingProgress(0);
     }
   };
 
@@ -213,351 +253,430 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
     window.URL.revokeObjectURL(url);
   };
 
+  const totalDeals = filteredDeals.length;
+  const hasResults = totalDeals > 0;
+  const sourcesCount = lastRunMeta?.sources?.length || selectedSources.length;
+  const lastRunTime = lastRunMeta ? formatDateTime(lastRunMeta.fetchedAt) : null;
+  const topTherapeuticAreas = Array.from(
+    new Set(filteredDeals.map(deal => deal.therapeuticArea).filter(Boolean))
+  ).slice(0, 3);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container-custom py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-12 space-y-10">
+        {/* Hero & Metrics */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-7xl mx-auto"
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8 sm:p-10 shadow-[0_40px_120px_-40px_rgba(59,130,246,0.35)]"
         >
-          {/* Header */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                  <Sparkles className="w-8 h-8 text-blue-600 mr-3" />
-                  AI Deal Scraper
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  Automatically scrape and analyze drug licensing and acquisition deals from biotech news sources
-                </p>
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-40 -right-20 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl" />
+            <div className="absolute -bottom-24 -left-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
+          </div>
+
+          <div className="relative z-10 grid lg:grid-cols-[1.6fr,1fr] gap-12">
+            <div>
+              <div className="flex items-center gap-3 text-sm font-medium text-indigo-200/80">
+                <span className="inline-flex items-center gap-2 rounded-full bg-indigo-500/20 px-3 py-1">
+                  <Sparkles className="w-4 h-4 text-indigo-200" /> Live Beta
+                </span>
+                <span className="hidden sm:block text-indigo-200/70">Real-time biotech licensing & deal radar</span>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Credits Available</div>
-                <div className="text-2xl font-bold text-blue-600">{userCredits}</div>
+
+              <h1 className="mt-6 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white">
+                Discover fresh <span className="text-indigo-300">biotech deals</span> the moment they break
+              </h1>
+              <p className="mt-5 max-w-2xl text-lg text-slate-200/80">
+                We monitor premium newsrooms, industry blogs, and filings to highlight who is buying, partnering, and financing.
+                Focus on qualified opportunities—not manual research.
+              </p>
+
+              <div className="mt-8 grid sm:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-transparent p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wide text-indigo-200/70">Latest Refresh</span>
+                    <Clock className="w-4 h-4 text-indigo-200/80" />
+                  </div>
+                  <div className="mt-3 text-2xl font-semibold text-white">{lastRunTime || 'Awaiting first run'}</div>
+                  <p className="mt-1 text-xs text-slate-300/70">Use the discovery panel to trigger live aggregation.</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-blue-500/10 to-transparent p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wide text-blue-200/70">Curated Briefs</span>
+                    <Activity className="w-4 h-4 text-blue-200/80" />
+                  </div>
+                  <div className="mt-3 text-2xl font-semibold text-white">{hasResults ? totalDeals : 0}</div>
+                  <p className="mt-1 text-xs text-slate-300/70">
+                    {lastRunMeta?.totalFound ? `${lastRunMeta.totalFound} headlines analyzed` : 'Automatic dedupe removes syndicated repeats'}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-transparent p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase tracking-wide text-emerald-200/70">Credits Remaining</span>
+                    <TrendingUp className="w-4 h-4 text-emerald-200/80" />
+                  </div>
+                  <div className="mt-3 text-2xl font-semibold text-white">{userCredits}</div>
+                  <p className="mt-1 text-xs text-slate-300/70">1 credit per discovery. Auto-logged to BD Tracker.</p>
+                </div>
               </div>
             </div>
 
-            {/* Search Form */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Search Query <span className="text-red-500">*</span>
-                  </label>
+            <div className="relative">
+              <div className="rounded-3xl bg-white/5 border border-white/10 p-6 shadow-[0_25px_45px_-20px_rgba(0,0,0,0.55)]">
+                <div className="flex items-center justify-between text-sm text-slate-200/80">
+                  <span className="font-semibold">Jumpstart Queries</span>
+                  <Radar className="w-4 h-4 text-indigo-200/80" />
+                </div>
+                <p className="mt-2 text-xs text-slate-300/70">
+                  Launch with curated prompts. We enrich hits with deal terms, financing, and stage.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {presetQueries.map((query) => (
+                    <button
+                      key={query}
+                      type="button"
+                      onClick={() => handlePresetClick(query)}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100 hover:border-indigo-300/60 hover:bg-indigo-500/20 transition-colors duration-200"
+                    >
+                      {query}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-6 space-y-3 text-xs text-slate-300/70">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-300/80" />
+                    AI summaries highlight buyer, seller, and dollars on every hit.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-300/80" />
+                    Broad coverage via global aggregator + curated industry sources.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-300/80" />
+                    Export or sync to BD Tracker to launch outreach instantly.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Discovery form */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8 shadow-[0_25px_60px_-30px_rgba(37,99,235,0.4)]"
+        >
+          <form onSubmit={(e) => { e.preventDefault(); handleScrapeDeals(); }} className="space-y-6">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_auto_auto] gap-4">
+              <div className="relative">
+                <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
+                  Search any therapeutic area, modality, or company
+                </label>
+                <div className="mt-2 relative">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., oncology deals, cardiovascular partnerships, drug licensing"
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-5 py-4 pr-12 text-base text-white placeholder:text-slate-400 focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
+                    placeholder="Ex: oncology licensing, CAR-T partnership, Alzheimer’s acquisition"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Date Range (Days)
-                  </label>
-                  <select
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="1">Last 24 hours</option>
-                    <option value="3">Last 3 days</option>
-                    <option value="7">Last 7 days</option>
-                    <option value="14">Last 14 days</option>
-                    <option value="30">Last 30 days</option>
-                  </select>
+                  <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 </div>
               </div>
 
-              {/* News Sources Selection */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  News Sources <span className="text-red-500">*</span>
+                <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
+                  Published within
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {newsSources.map((source) => (
-                    <label key={source.id} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedSources.includes(source.id)}
-                        onChange={() => handleSourceToggle(source.id)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{source.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handleScrapeDeals}
-                    disabled={isScraping || !searchQuery.trim() || selectedSources.length === 0}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 flex items-center space-x-2"
-                  >
-                    {isScraping ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        <span>Scraping...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Search className="w-5 h-5" />
-                        <span>Scrape Deals</span>
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center space-x-2"
-                  >
-                    <Filter className="w-5 h-5" />
-                    <span>Filters</span>
-                  </button>
-                </div>
-
-                {scrapedDeals.length > 0 && (
-                  <button
-                    onClick={exportDeals}
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center space-x-2"
-                  >
-                    <Download className="w-5 h-5" />
-                    <span>Export CSV</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Filters Panel */}
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Therapeutic Area
-                  </label>
-                  <select
-                    value={activeFilters.therapeuticArea}
-                    onChange={(e) => handleFilterChange('therapeuticArea', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Areas</option>
-                    {therapeuticAreas.map(area => (
-                      <option key={area} value={area}>{area}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Deal Stage
-                  </label>
-                  <select
-                    value={activeFilters.dealStage}
-                    onChange={(e) => handleFilterChange('dealStage', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Stages</option>
-                    {dealStages.map(stage => (
-                      <option key={stage} value={stage}>{stage}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Min Value ($M)
-                  </label>
-                  <input
-                    type="number"
-                    value={activeFilters.minValue}
-                    onChange={(e) => handleFilterChange('minValue', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Max Value ($M)
-                  </label>
-                  <input
-                    type="number"
-                    value={activeFilters.maxValue}
-                    onChange={(e) => handleFilterChange('maxValue', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="No limit"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-4">
-                <button
-                  onClick={clearFilters}
-                  className="text-gray-600 hover:text-gray-800 font-medium"
+                <select
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-base text-white focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
                 >
-                  Clear Filters
+                  <option value="1">Last 24 hours</option>
+                  <option value="3">Last 3 days</option>
+                  <option value="7">Last 7 days</option>
+                  <option value="14">Last 14 days</option>
+                  <option value="30">Last 30 days</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col justify-end gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((prev) => !prev)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 transition-all duration-200 hover:border-indigo-300/60 hover:bg-indigo-500/20"
+                >
+                  <Filter className="w-4 h-4" />
+                  {showFilters ? 'Hide Filters' : 'Advanced Filters'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isScraping}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-400 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_45px_-25px_rgba(79,70,229,0.7)] transition-all duration-200 hover:shadow-[0_20px_60px_-25px_rgba(56,189,248,0.65)] disabled:from-slate-500 disabled:via-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed"
+                >
+                  {isScraping ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Scraping…
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="w-4 h-4" />
+                      Run Deal Discovery
+                    </>
+                  )}
                 </button>
               </div>
-            </motion.div>
-          )}
-
-          {/* Error Display */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-                <p className="text-red-800">{error}</p>
-              </div>
             </div>
-          )}
 
-          {/* Loading State */}
-          {isScraping && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
-              <div className="text-center">
-                <LoadingSpinner
-                  size="large"
-                  message="AI SCRAPING IN PROGRESS..."
-                  subMessage="Analyzing biotech news sources and extracting deal information"
-                  color="cyber"
+            {error && (
+              <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                <div className="flex items-center gap-2 font-medium">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </div>
+              </div>
+            )}
+          </form>
+        </motion.div>
+
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8"
+          >
+            <div className="grid gap-6 md:grid-cols-4">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
+                  Therapeutic Area
+                </label>
+                <select
+                  value={activeFilters.therapeuticArea}
+                  onChange={(e) => handleFilterChange('therapeuticArea', e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-300/40"
+                >
+                  <option value="">All Areas</option>
+                  {therapeuticAreas.map((area) => (
+                    <option key={area} value={area}>{area}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
+                  Deal Stage
+                </label>
+                <select
+                  value={activeFilters.dealStage}
+                  onChange={(e) => handleFilterChange('dealStage', e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-300/40"
+                >
+                  <option value="">All Stages</option>
+                  {dealStages.map((stage) => (
+                    <option key={stage} value={stage}>{stage}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
+                  Min Value ($M)
+                </label>
+                <input
+                  type="number"
+                  value={activeFilters.minValue}
+                  onChange={(e) => handleFilterChange('minValue', e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-300/40"
+                  placeholder="0"
                 />
-                <div className="mt-4">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${scrapingProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-2">{scrapingProgress}% Complete</p>
-                </div>
               </div>
+
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
+                  Max Value ($M)
+                </label>
+                <input
+                  type="number"
+                  value={activeFilters.maxValue}
+                  onChange={(e) => handleFilterChange('maxValue', e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-300/40"
+                  placeholder="Any"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-slate-100 hover:border-indigo-300/60 hover:bg-indigo-500/20 transition-colors duration-200"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="relative">
+          {isScraping && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl border border-indigo-400/20 bg-slate-950/80 backdrop-blur">
+              <LoadingSpinner size="large" color="cyber" />
+              <p className="mt-4 text-sm text-slate-200/80">
+                Scanning premium biotech outlets and filings…
+              </p>
             </div>
           )}
 
-          {/* Results */}
-          {scrapedDeals.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="bg-white rounded-lg shadow-sm border border-gray-200"
-            >
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    Scraped Deals ({filteredDeals.length})
-                  </h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span>AI Analysis Complete</span>
+          <div className={`${isScraping ? 'opacity-20 pointer-events-none' : 'opacity-100'} space-y-6`}>
+            {hasResults ? (
+              <>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">
+                      {totalDeals} curated deal brief{totalDeals !== 1 ? 's' : ''}
+                    </h2>
+                    <p className="text-sm text-slate-300/70">
+                      Covering {sourcesCount} tracked sources · Updated {lastRunTime || 'just now'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {topTherapeuticAreas.map((area) => (
+                      <span key={area} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-indigo-100">
+                        <Pill className="w-3.5 h-3.5 text-indigo-200" />
+                        {area}
+                      </span>
+                    ))}
+                    <button
+                      onClick={exportDeals}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs font-semibold text-emerald-100 hover:border-emerald-300/60 hover:bg-emerald-500/10 transition-colors duration-200"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Export CSV
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Deal Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Buyer/Licensor
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Seller/Licensee
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Drug Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Disease/Therapeutic Area
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Stage
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Financials
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Source
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredDeals.map((deal, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {deal.dealDate || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {deal.buyer || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {deal.seller || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {deal.drugName || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {deal.therapeuticArea || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {deal.stage || '-'}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {filteredDeals.map((deal, idx) => (
+                    <motion.div
+                      key={`${deal.sourceUrl || deal.title || idx}`}
+                      initial={{ opacity: 0, y: 18 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_60px_-35px_rgba(56,189,248,0.55)] transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300/40 hover:bg-white/10"
+                    >
+                      <div className="absolute inset-x-0 -top-40 h-72 bg-gradient-to-br from-indigo-500/15 via-cyan-400/10 to-transparent blur-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                      <div className="relative z-10 flex flex-col gap-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-indigo-100">
+                              <Building2 className="w-3.5 h-3.5" />
+                              {deal.buyer || 'Buyer not disclosed'}
+                            </span>
+                            <ArrowUpRight className="w-4 h-4 text-indigo-200/70" />
+                            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100/90">
+                              <Globe className="w-3.5 h-3.5" />
+                              {deal.seller || 'Counterparty pending'}
+                            </span>
+                          </div>
+                          <span className="text-xs font-semibold uppercase tracking-wide text-slate-300/70">
+                            {deal.dealDate || 'Date tbc'}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {deal.financials || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        </div>
+
+                        <div>
+                          <h3 className="text-lg font-semibold text-white">
+                            {deal.title || `${deal.buyer || 'Unknown Buyer'} · ${deal.drugName || 'Transaction'}`}
+                          </h3>
+                          <p className="mt-2 text-sm text-slate-200/80">
+                            {deal.summary || 'AI summary coming soon. Open the source to review the full transaction.'}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {deal.therapeuticArea && (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-1 text-xs text-indigo-100">
+                              <Pill className="w-3.5 h-3.5" />
+                              {deal.therapeuticArea}
+                            </span>
+                          )}
+                          {deal.stage && (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs text-blue-100">
+                              <Activity className="w-3.5 h-3.5" />
+                              {deal.stage}
+                            </span>
+                          )}
+                          {deal.financials && (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
+                              <DollarSign className="w-3.5 h-3.5" />
+                              {deal.financials}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-slate-200/80">
+                            <Globe className="w-3.5 h-3.5" />
+                            {deal.source || 'Source'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="text-xs text-slate-300/60 line-clamp-1">
+                            {deal.drugName || 'Asset undisclosed'}
+                          </div>
                           {deal.sourceUrl && (
                             <a
                               href={deal.sourceUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100 transition-all duration-200 hover:border-indigo-300/60 hover:bg-indigo-500/20"
                             >
-                              <span>View</span>
-                              <ExternalLink className="w-3 h-3" />
+                              View Source <ExternalLink className="w-3.5 h-3.5" />
                             </a>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
+            ) : lastRunMeta ? (
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500/15 text-indigo-200">
+                  <Globe className="h-6 w-6" />
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-white">No matching deals yet</h3>
+                <p className="mt-2 text-sm text-slate-300/70">
+                  Try broadening your keywords, selecting a longer date window, or refining later with filters.
+                </p>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  {presetQueries.slice(0, 3).map((query) => (
+                    <button
+                      key={query}
+                      onClick={() => handlePresetClick(query)}
+                      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100 hover:border-indigo-300/60 hover:bg-indigo-500/20 transition-colors duration-200"
+                    >
+                      {query}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </motion.div>
-          )}
-
-          {/* No Results */}
-          {!isScraping && scrapedDeals.length === 0 && searchQuery && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-gray-400" />
+            ) : (
+              <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center text-slate-300/80">
+                <h3 className="text-xl font-semibold text-white">Run your first discovery</h3>
+                <p className="mt-2 text-sm">
+                  Enter a topic like “oncology licensing” or “CAR-T partnership” to see live deal coverage.
+                </p>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Deals Found</h3>
-              <p className="text-gray-600">
-                Try adjusting your search query or date range to find more deals.
-              </p>
-            </div>
-          )}
-        </motion.div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

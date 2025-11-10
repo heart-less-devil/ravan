@@ -49,6 +49,8 @@ if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here'
 const cheerio = require('cheerio');
 const axios = require('axios');
 
+const NEWS_API_KEY = process.env.NEWS_API_KEY;
+
 // News sources configuration
 const NEWS_SOURCES = {
   biospace: {
@@ -388,6 +390,73 @@ async function scrapeNewsSource(sourceId, searchQuery, dateRange) {
       sourceUrl: NEWS_SOURCES[sourceId]?.url || '',
       title: 'Novartis and Shanghai Argo Announce RNAi Collaboration'
     }];
+  }
+}
+
+async function fetchDealsFromNewsAPI(searchQuery, dateRangeDays, userEmail) {
+  try {
+    if (!NEWS_API_KEY) {
+      console.log('⚠️ NEWS_API_KEY not provided. Skipping NewsAPI fetch.');
+      return [];
+    }
+
+    const now = new Date();
+    const fromDate = new Date(now.getTime() - Math.max(1, dateRangeDays) * 24 * 60 * 60 * 1000);
+
+    const queryTerms = `${searchQuery} AND (deal OR partnership OR license OR acquisition OR collaboration)`;
+
+    const response = await axios.get('https://newsapi.org/v2/everything', {
+      params: {
+        q: queryTerms,
+        from: fromDate.toISOString().split('T')[0],
+        sortBy: 'publishedAt',
+        language: 'en',
+        pageSize: 30,
+        apiKey: NEWS_API_KEY
+      }
+    });
+
+    const articles = response.data?.articles || [];
+    console.log(`📰 NewsAPI returned ${articles.length} articles for ${userEmail}`);
+
+    const deals = [];
+    for (const article of articles) {
+      const combinedText = [article.title, article.description, article.content]
+        .filter(Boolean)
+        .join(' ');
+
+      let extracted = null;
+      if (combinedText) {
+        extracted = await extractDealInformation(combinedText, article.url);
+      }
+
+      const publishedDate = article.publishedAt
+        ? article.publishedAt.split('T')[0]
+        : (extracted?.dealDate || new Date().toISOString().split('T')[0]);
+
+      deals.push({
+        buyer: extracted?.buyer || '',
+        seller: extracted?.seller || '',
+        drugName: extracted?.drugName || '',
+        therapeuticArea: extracted?.therapeuticArea || '',
+        stage: extracted?.stage || '',
+        financials: extracted?.financials || '',
+        totalValue: extracted?.financials || '',
+        dealDate: publishedDate,
+        source: article.source?.name || 'Global News Search',
+        sourceId: 'global_news',
+        sourceUrl: article.url,
+        title: article.title || searchQuery,
+        summary: article.description || (combinedText ? combinedText.slice(0, 200) : ''),
+        rawText: combinedText,
+        tags: []
+      });
+    }
+
+    return deals;
+  } catch (error) {
+    console.error('Error fetching NewsAPI articles:', error.response?.data || error.message);
+    return [];
   }
 }
 
@@ -4337,6 +4406,37 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       hasSearchCriteria = true;
       searchCriteria.push('Region');
       console.log('Filtering by region:', region);
+      
+      const regionAliasMap = {
+        'apac': 'Asia-Pacific',
+        'asia pac': 'Asia-Pacific',
+        'asia-pacific': 'Asia-Pacific',
+        'asia pacific': 'Asia-Pacific',
+        'oceania': 'Oceania',
+        'australia / nz': 'Oceania',
+        'australia/nz': 'Oceania',
+        'australia - nz': 'Oceania',
+        'australia nz': 'Oceania',
+        'australia and nz': 'Oceania',
+        'australia & nz': 'Oceania',
+        'australia new zealand': 'Oceania',
+        'australia/new zealand': 'Oceania',
+        'australia / new zealand': 'Oceania',
+        'australia & new zealand': 'Oceania',
+        'australia - new zealand': 'Oceania',
+        'australia-nz': 'Oceania',
+        'australia nz (oceania)': 'Oceania',
+        'australia / nz (oceania)': 'Oceania',
+        'australia / new zealand (oceania)': 'Oceania',
+        'middle east and africa': 'Middle East & Africa',
+        'middle east & africa': 'Middle East & Africa'
+      };
+
+      const normalizedRegionInput = region.trim().toLowerCase();
+      const regionFilterValue = regionAliasMap[normalizedRegionInput] || region;
+      if (regionFilterValue !== region) {
+        console.log(`Normalized region value for filtering: ${region} -> ${regionFilterValue}`);
+      }
       filteredData = filteredData.filter(item => {
         const itemRegion = item.region || '';
         let isMatch = false;
@@ -4345,9 +4445,11 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
         
         // Use continent field for better matching
         const itemContinent = item.continent || '';
+        const itemRegionLower = itemRegion.toLowerCase();
+        const itemContinentLower = itemContinent.toLowerCase();
         
         // Handle region variations and abbreviations
-        if (region === 'North America') {
+        if (regionFilterValue === 'North America') {
           // Exclude Australia and other non-North American countries explicitly
           const isAustralia = itemRegion.toLowerCase().includes('australia');
           const isNewZealand = itemRegion.toLowerCase().includes('new zealand');
@@ -4399,7 +4501,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('canada') ||
                    itemRegion.toLowerCase().includes('mexico')
           );
-        } else if (region === 'Europe') {
+        } else if (regionFilterValue === 'Europe') {
           // Exclude non-European countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4457,7 +4559,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('slovakia') ||
                    itemRegion.toLowerCase().includes('lithuania')
           );
-        } else if (region === 'Asia-Pacific') {
+        } else if (regionFilterValue === 'Asia-Pacific') {
           // Exclude non-Asian countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4515,7 +4617,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('saudi arabia') ||
                    itemRegion.toLowerCase().includes('turkey')
           );
-        } else if (region === 'Asia') {
+        } else if (regionFilterValue === 'Asia') {
           // Exclude non-Asian countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4573,65 +4675,75 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('saudi arabia') ||
                    itemRegion.toLowerCase().includes('turkey')
           );
-        } else if (region === 'Oceania') {
+        } else if (regionFilterValue === 'Oceania') {
           // Exclude non-Oceania countries explicitly
-          const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
-                                itemRegion.toLowerCase().includes('united states') ||
-                                itemRegion.toLowerCase().includes('us') ||
-                                itemRegion.toLowerCase().includes('canada') ||
-                                itemRegion.toLowerCase().includes('mexico');
-          const isEuropean = itemRegion.toLowerCase().includes('germany') || 
-                           itemRegion.toLowerCase().includes('france') ||
-                           itemRegion.toLowerCase().includes('uk') ||
-                           itemRegion.toLowerCase().includes('spain') ||
-                           itemRegion.toLowerCase().includes('italy') ||
-                           itemRegion.toLowerCase().includes('netherlands') ||
-                           itemRegion.toLowerCase().includes('belgium') ||
-                           itemRegion.toLowerCase().includes('austria') ||
-                           itemRegion.toLowerCase().includes('finland') ||
-                           itemRegion.toLowerCase().includes('poland') ||
-                           itemRegion.toLowerCase().includes('norway') ||
-                           itemRegion.toLowerCase().includes('hungary') ||
-                           itemRegion.toLowerCase().includes('sweden') ||
-                           itemRegion.toLowerCase().includes('iceland') ||
-                           itemRegion.toLowerCase().includes('greece') ||
-                           itemRegion.toLowerCase().includes('switzerland') ||
-                           itemRegion.toLowerCase().includes('denmark') ||
-                           itemRegion.toLowerCase().includes('ireland') ||
-                           itemRegion.toLowerCase().includes('czech republic') ||
-                           itemRegion.toLowerCase().includes('czech') ||
-                           itemRegion.toLowerCase().includes('portugal') ||
-                           itemRegion.toLowerCase().includes('estonia') ||
-                           itemRegion.toLowerCase().includes('luxembourg') ||
-                           itemRegion.toLowerCase().includes('malta') ||
-                           itemRegion.toLowerCase().includes('slovenia') ||
-                           itemRegion.toLowerCase().includes('romania') ||
-                           itemRegion.toLowerCase().includes('slovakia') ||
-                           itemRegion.toLowerCase().includes('lithuania');
-          const isAsian = itemRegion.toLowerCase().includes('japan') || 
-                         itemRegion.toLowerCase().includes('china') ||
-                         itemRegion.toLowerCase().includes('india') ||
-                         itemRegion.toLowerCase().includes('south korea') ||
-                         itemRegion.toLowerCase().includes('israel') ||
-                         itemRegion.toLowerCase().includes('taiwan') ||
-                         itemRegion.toLowerCase().includes('uae') ||
-                         itemRegion.toLowerCase().includes('singapore') ||
-                         itemRegion.toLowerCase().includes('hong kong') ||
-                         itemRegion.toLowerCase().includes('saudi arabia') ||
-                         itemRegion.toLowerCase().includes('turkey');
-          const isAfrican = itemRegion.toLowerCase().includes('egypt') ||
-                           itemRegion.toLowerCase().includes('south africa');
-          const isSouthAmerican = itemRegion.toLowerCase().includes('brazil') ||
-                                 itemRegion.toLowerCase().includes('chile') ||
-                                 itemRegion.toLowerCase().includes('colombia') ||
-                                 itemRegion.toLowerCase().includes('uruguay');
+          const isNorthAmerican = itemRegionLower.includes('usa') || 
+                                itemRegionLower.includes('united states') ||
+                                itemRegionLower.includes('us') ||
+                                itemRegionLower.includes('canada') ||
+                                itemRegionLower.includes('mexico');
+          const isEuropean = itemRegionLower.includes('germany') || 
+                           itemRegionLower.includes('france') ||
+                           itemRegionLower.includes('uk') ||
+                           itemRegionLower.includes('spain') ||
+                           itemRegionLower.includes('italy') ||
+                           itemRegionLower.includes('netherlands') ||
+                           itemRegionLower.includes('belgium') ||
+                           itemRegionLower.includes('austria') ||
+                           itemRegionLower.includes('finland') ||
+                           itemRegionLower.includes('poland') ||
+                           itemRegionLower.includes('norway') ||
+                           itemRegionLower.includes('hungary') ||
+                           itemRegionLower.includes('sweden') ||
+                           itemRegionLower.includes('iceland') ||
+                           itemRegionLower.includes('greece') ||
+                           itemRegionLower.includes('switzerland') ||
+                           itemRegionLower.includes('denmark') ||
+                           itemRegionLower.includes('ireland') ||
+                           itemRegionLower.includes('czech republic') ||
+                           itemRegionLower.includes('czech') ||
+                           itemRegionLower.includes('portugal') ||
+                           itemRegionLower.includes('estonia') ||
+                           itemRegionLower.includes('luxembourg') ||
+                           itemRegionLower.includes('malta') ||
+                           itemRegionLower.includes('slovenia') ||
+                           itemRegionLower.includes('romania') ||
+                           itemRegionLower.includes('slovakia') ||
+                           itemRegionLower.includes('lithuania');
+          const isAsian = itemRegionLower.includes('japan') || 
+                         itemRegionLower.includes('china') ||
+                         itemRegionLower.includes('india') ||
+                         itemRegionLower.includes('south korea') ||
+                         itemRegionLower.includes('israel') ||
+                         itemRegionLower.includes('taiwan') ||
+                         itemRegionLower.includes('uae') ||
+                         itemRegionLower.includes('singapore') ||
+                         itemRegionLower.includes('hong kong') ||
+                         itemRegionLower.includes('saudi arabia') ||
+                         itemRegionLower.includes('turkey');
+          const isAfrican = itemRegionLower.includes('egypt') ||
+                           itemRegionLower.includes('south africa');
+          const isSouthAmerican = itemRegionLower.includes('brazil') ||
+                                 itemRegionLower.includes('chile') ||
+                                 itemRegionLower.includes('colombia') ||
+                                 itemRegionLower.includes('uruguay');
+          const containsNZVariant = itemRegionLower.includes('new zealand') ||
+                                   itemRegionLower.includes('new-zealand') ||
+                                   itemRegionLower.includes('newzealand') ||
+                                   itemRegionLower.includes('australia / nz') ||
+                                   itemRegionLower.includes('australia & nz') ||
+                                   itemRegionLower.includes('australia-nz') ||
+                                   itemRegionLower.includes('australia nz') ||
+                                   itemRegionLower.includes(' nz ') ||
+                                   itemRegionLower.endsWith(' nz');
           
           isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAfrican && !isSouthAmerican && (
-                   itemContinent === 'Oceania' ||
-                   itemRegion.toLowerCase().includes('australia') ||
-                   itemRegion.toLowerCase().includes('new zealand')
+                   itemContinentLower === 'oceania' ||
+                   itemRegionLower.includes('australia') ||
+                   containsNZVariant ||
+                   itemRegionLower.includes('oceania')
           );
-        } else if (region === 'Middle East & Africa') {
+        } else if (regionFilterValue === 'Middle East & Africa') {
           // Exclude non-Middle East & African countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4685,7 +4797,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('israel') ||
                    itemRegion.toLowerCase().includes('turkey')
           );
-        } else if (region === 'Africa') {
+        } else if (regionFilterValue === 'Africa') {
           // Exclude non-African countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4742,7 +4854,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemContinent === 'Africa' ||
                    itemRegion.toLowerCase().includes('egypt')
           );
-        } else if (region === 'Latin America') {
+        } else if (regionFilterValue === 'Latin America') {
           // Exclude non-South American countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4800,7 +4912,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('colombia') ||
                    itemRegion.toLowerCase().includes('uruguay')
           );
-        } else if (region === 'South America') {
+        } else if (regionFilterValue === 'South America') {
           // Exclude non-South American countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
                                 itemRegion.toLowerCase().includes('united states') ||
@@ -4860,8 +4972,9 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
           );
         } else {
           // Fallback to general search for specific countries
-          isMatch = itemRegion.toLowerCase().includes(region.toLowerCase()) ||
-                   itemContinent.toLowerCase().includes(region.toLowerCase());
+          const fallbackRegionValue = regionFilterValue.toLowerCase();
+          isMatch = itemRegionLower.includes(fallbackRegionValue) ||
+                   itemContinentLower.includes(fallbackRegionValue);
         }
         
         console.log('Region match result:', isMatch, 'for company:', item.companyName);
@@ -5088,53 +5201,59 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     user.credits -= 1;
     await user.save();
 
-    // For now, return mock data to test the functionality
-    // TODO: Implement actual web scraping once dependencies are installed
-    const mockDeals = [
-      {
-        buyer: 'Novartis',
-        seller: 'Shanghai Argo',
-        drugName: 'RNAi Therapeutics',
-        therapeuticArea: 'Cardiovascular and Metabolic',
-        stage: 'Phase I/II',
-        financials: '$185M upfront, $4.165B Total Value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: 'PR Newswire',
-        sourceUrl: 'https://www.prnewswire.com/news-releases/shanghai-argo-announces-multi-program-rnai-licenses-and-strategic-collaborations-with-novartis-302027699.html',
-        title: 'Shanghai Argo Announces Multi-Program RNAi Licenses and Strategic Collaborations with Novartis'
-      },
-      {
-        buyer: 'Pfizer',
-        seller: 'BioNTech',
-        drugName: 'mRNA Vaccine Platform',
-        therapeuticArea: 'Infectious Diseases',
-        stage: 'Marketed',
-        financials: '$2.8B total potential value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: 'BioSpace',
-        sourceUrl: 'https://www.biospace.com',
-        title: 'Pfizer and BioNTech Expand mRNA Collaboration'
-      },
-      {
-        buyer: 'Merck',
-        seller: 'Moderna',
-        drugName: 'Personalized Cancer Vaccine',
-        therapeuticArea: 'Oncology',
-        stage: 'Phase II',
-        financials: '$250M upfront, $1.2B total value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: 'Fierce Biotech',
-        sourceUrl: 'https://www.fiercebiotech.com',
-        title: 'Merck and Moderna Partner on Personalized Cancer Vaccines'
-      }
-    ];
+    const rangeInDays = parseInt(dateRange, 10) || 7;
+    let aggregatedDeals = [];
 
-    console.log(`🎯 Returning ${mockDeals.length} mock deals for testing`);
+    if (sources.includes('global_news')) {
+      const newsDeals = await fetchDealsFromNewsAPI(searchQuery, rangeInDays, userEmail);
+      aggregatedDeals = aggregatedDeals.concat(newsDeals);
+    }
+
+    const traditionalSources = sources.filter(sourceId => sourceId !== 'global_news');
+    for (const sourceId of traditionalSources) {
+      const sourceDeals = await scrapeNewsSource(sourceId, searchQuery, rangeInDays);
+      aggregatedDeals = aggregatedDeals.concat(sourceDeals);
+    }
+
+    if (aggregatedDeals.length === 0) {
+      console.log('⚠️ No deals found, using fallback mock data');
+      aggregatedDeals = await scrapeNewsSource(traditionalSources[0] || 'biospace', searchQuery, rangeInDays);
+    }
+
+    // Deduplicate by URL/title combo
+    const seenKeys = new Set();
+    const uniqueDeals = [];
+    for (const deal of aggregatedDeals) {
+      const key = `${deal.sourceUrl || ''}-${deal.title || ''}`.toLowerCase();
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueDeals.push({
+          buyer: deal.buyer || '',
+          seller: deal.seller || '',
+          drugName: deal.drugName || '',
+          therapeuticArea: deal.therapeuticArea || '',
+          stage: deal.stage || '',
+          financials: deal.financials || '',
+          totalValue: deal.totalValue || deal.financials || '',
+          dealDate: deal.dealDate || new Date().toISOString().split('T')[0],
+          source: deal.source || NEWS_SOURCES[deal.sourceId]?.name || 'Global News Search',
+          sourceId: deal.sourceId || 'global_news',
+          sourceUrl: deal.sourceUrl || '',
+          title: deal.title || searchQuery,
+          summary: deal.summary || '',
+          rawText: deal.rawText || '',
+          tags: deal.tags || [],
+          searchQuery,
+          userEmail
+        });
+      }
+    }
+
+    const responseDeals = uniqueDeals.slice(0, 25);
 
     // Store deals in MongoDB for future reference
     try {
-      // Create a new collection for deals or use existing one
-      const Deal = mongoose.model('Deal', new mongoose.Schema({
+      const dealSchema = new mongoose.Schema({
         searchQuery: String,
         buyer: String,
         seller: String,
@@ -5142,38 +5261,43 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
         therapeuticArea: String,
         stage: String,
         financials: String,
+        totalValue: String,
         dealDate: String,
         source: String,
+        sourceId: String,
         sourceUrl: String,
         title: String,
+        summary: String,
+        rawText: String,
+        tags: [String],
         scrapedAt: { type: Date, default: Date.now },
         userEmail: String
-      }));
+      }, { timestamps: true });
 
-      // Save deals to database
-      await Deal.insertMany(mockDeals.map(deal => ({
-        ...deal,
-        searchQuery,
-        userEmail
-      })));
+      const Deal = mongoose.models.Deal || mongoose.model('Deal', dealSchema);
 
-      console.log(`💾 Saved ${mockDeals.length} deals to database`);
+      if (responseDeals.length > 0) {
+        await Deal.insertMany(responseDeals.map(deal => ({
+          ...deal,
+          scrapedAt: new Date()
+        })));
+        console.log(`💾 Saved ${responseDeals.length} deals to database`);
+      }
     } catch (dbError) {
       console.error('Error saving deals to database:', dbError);
-      // Continue even if database save fails
     }
 
     res.json({
       success: true,
       data: {
-        deals: mockDeals,
-        totalFound: mockDeals.length,
-        sources: sources,
-        searchQuery: searchQuery,
-        dateRange: dateRange
+        deals: responseDeals,
+        totalFound: uniqueDeals.length,
+        sources,
+        searchQuery,
+        dateRange: rangeInDays
       },
       creditsUsed: 1,
-      message: `Successfully scraped ${mockDeals.length} deals from ${sources.length} sources`
+      message: `Collected ${responseDeals.length} deals from ${uniqueDeals.length} unique hits`
     });
 
   } catch (error) {
