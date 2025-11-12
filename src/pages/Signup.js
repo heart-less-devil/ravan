@@ -970,7 +970,7 @@ const Signup = () => {
             <div className="text-center">
               <h3 className="text-2xl font-bold text-black mb-3">Request Sent</h3>
               <p className="text-black mb-6">
-                Aapki request admin ke paas chali gayi hai. Admin approve karega tabhi aap login kar paoge.
+                We are reviewing your request and will notify you by email as soon as your account is approved.
               </p>
               <button
                 onClick={() => {
