@@ -47,9 +47,17 @@ if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here'
 // Web scraping dependencies
 // const puppeteer = require('puppeteer'); // Disabled - too heavy for Render free tier
 const cheerio = require('cheerio');
-const axios = require('axios');
+const OpenAI = require('openai');
 
-const NEWS_API_KEY = process.env.NEWS_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+let openaiClient = null;
+if (OPENAI_API_KEY) {
+  openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
+  console.log('✅ OpenAI client initialized for AI Deal Scraper web search');
+} else {
+  console.log('⚠️ OPENAI_API_KEY not set. AI Deal Scraper web search will be limited to NewsAPI results.');
+}
 
 // News sources configuration
 const NEWS_SOURCES = {
@@ -90,6 +98,22 @@ const NEWS_SOURCES = {
     }
   }
 };
+
+const PREFERRED_DOMAIN_LABELS = {
+  'biospace.com': 'BioSpace',
+  'fiercebiotech.com': 'Fierce Biotech',
+  'biotechnetworks.org': 'Biotech Networks',
+  'biocom.org': 'Biocom California',
+  'lifescivc.com': 'LifeSci VC',
+  'sdbn.org': 'San Diego Biotech Network',
+  'cellandgene.com': 'Cell & Gene',
+  'emjreviews.com': 'EMJ Reviews',
+  'biocentury.com': 'BioCentury',
+  'bioxconomy.com': 'Bio x Conomy',
+  'pullanconsulting.com': 'Pullan Consulting',
+  'prnewswire.com': 'PR Newswire'
+};
+const PREFERRED_DOMAINS = Object.keys(PREFERRED_DOMAIN_LABELS);
 
 // AI-powered deal extraction function
 async function extractDealInformation(articleText, sourceUrl) {
@@ -186,277 +210,390 @@ async function extractDealInformation(articleText, sourceUrl) {
   }
 }
 
-// Scrape news source for deals
-async function scrapeNewsSource(sourceId, searchQuery, dateRange) {
-  try {
-    const source = NEWS_SOURCES[sourceId];
-    if (!source) {
-      throw new Error(`Unknown source: ${sourceId}`);
-    }
-
-    console.log(`🔍 Mock scraping ${source.name} for: ${searchQuery}`);
-
-    // Return mock data - puppeteer disabled for Render deployment
-    const mockData = [
-      {
-        buyer: 'Novartis',
-        seller: 'Shanghai Argo',
-        drugName: 'RNAi Therapeutics',
-        therapeuticArea: 'Cardiovascular and Metabolic',
-        stage: 'Phase I/II',
-        financials: '$185M upfront, $4.165B Total Value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: source.name,
-        sourceUrl: source.url,
-        title: 'Novartis and Shanghai Argo Announce RNAi Collaboration'
-      },
-      {
-        buyer: 'Pfizer',
-        seller: 'BioNTech',
-        drugName: 'mRNA Vaccine Platform',
-        therapeuticArea: 'Infectious Diseases',
-        stage: 'Marketed',
-        financials: '$2.8B total potential value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: source.name,
-        sourceUrl: source.url,
-        title: 'Pfizer and BioNTech Expand mRNA Collaboration'
-      },
-      {
-        buyer: 'Merck',
-        seller: 'Moderna',
-        drugName: 'Personalized Cancer Vaccine',
-        therapeuticArea: 'Oncology',
-        stage: 'Phase II',
-        financials: '$250M upfront, $1.2B total value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: source.name,
-        sourceUrl: source.url,
-        title: 'Merck and Moderna Partner on Personalized Cancer Vaccines'
-      }
-    ];
-    
-    console.log(`✅ Returning mock data for ${source.name}`);
-    return mockData;
-
-    /* PUPPETEER DISABLED - TOO HEAVY FOR RENDER FREE TIER
-    // Launch browser with better configuration
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ]
-    });
-
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1366, height: 768 });
-
-    // Navigate to search page with better error handling
-    const searchUrl = `${source.searchUrl}?q=${encodeURIComponent(searchQuery)}`;
-    console.log(`🌐 Navigating to: ${searchUrl}`);
-    
-    await page.goto(searchUrl, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 30000 
-    });
-
-    // Wait a bit for dynamic content to load
-    await page.waitForTimeout(3000);
-
-    // Try multiple selectors for articles
-    const articleSelectors = [
-      source.selectors.articles,
-      'article',
-      '.article',
-      '.news-item',
-      '.post',
-      '.entry',
-      '[class*="article"]',
-      '[class*="news"]',
-      '[class*="post"]'
-    ];
-
-    let articles = [];
-    for (const selector of articleSelectors) {
-      try {
-        await page.waitForSelector(selector, { timeout: 5000 });
-        articles = await page.evaluate((sel) => {
-          const articleElements = document.querySelectorAll(sel);
-          return Array.from(articleElements).map(article => {
-            const titleElement = article.querySelector('h1, h2, h3, h4, a[href]');
-            const linkElement = article.querySelector('a[href]');
-            const dateElement = article.querySelector('[class*="date"], [class*="time"], time, .date, .publish-date');
-            const contentElement = article.querySelector('p, .content, .excerpt, .summary');
-
-            return {
-              title: titleElement ? titleElement.textContent.trim() : '',
-              link: linkElement ? linkElement.href : '',
-              date: dateElement ? dateElement.textContent.trim() : '',
-              content: contentElement ? contentElement.textContent.trim() : ''
-            };
-          });
-        }, selector);
-        
-        if (articles.length > 0) {
-          console.log(`✅ Found ${articles.length} articles with selector: ${selector}`);
-          break;
-        }
-      } catch (error) {
-        console.log(`⚠️ Selector ${selector} failed:`, error.message);
-        continue;
-      }
-    }
-
-    await browser.close();
-
-    // If no articles found, return mock data for testing
-    if (articles.length === 0) {
-      console.log(`⚠️ No articles found for ${source.name}, returning mock data`);
-      return [{
-        buyer: 'Novartis',
-        seller: 'Shanghai Argo',
-        drugName: 'RNAi Therapeutics',
-        therapeuticArea: 'Cardiovascular and Metabolic',
-        stage: 'Phase I/II',
-        financials: '$185M upfront, $4.165B Total Value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: source.name,
-        sourceUrl: source.url,
-        title: 'Novartis and Shanghai Argo Announce RNAi Collaboration'
-      }];
-    }
-
-    // Process articles and extract deal information
-    const deals = [];
-    for (const article of articles.slice(0, 5)) { // Limit to 5 articles per source
-      if (article.title && article.link) {
-        try {
-          // Extract deal information using AI patterns
-          const dealInfo = await extractDealInformation(article.title + ' ' + article.content, article.link);
-          
-          if (dealInfo && (dealInfo.buyer || dealInfo.seller || dealInfo.drugName)) {
-            deals.push({
-              ...dealInfo,
-              title: article.title,
-              source: source.name,
-              sourceUrl: article.link
-            });
-          }
-        } catch (error) {
-          console.error(`Error processing article ${article.link}:`, error.message);
-        }
-      }
-    }
-
-    // If no deals extracted, return mock data
-    if (deals.length === 0) {
-      console.log(`⚠️ No deals extracted from ${source.name}, returning mock data`);
-      return [{
-        buyer: 'Novartis',
-        seller: 'Shanghai Argo',
-        drugName: 'RNAi Therapeutics',
-        therapeuticArea: 'Cardiovascular and Metabolic',
-        stage: 'Phase I/II',
-        financials: '$185M upfront, $4.165B Total Value',
-        dealDate: new Date().toISOString().split('T')[0],
-        source: source.name,
-        sourceUrl: source.url,
-        title: 'Novartis and Shanghai Argo Announce RNAi Collaboration'
-      }];
-    }
-
-    return deals;
-    */  // END OF COMMENTED PUPPETEER CODE
-    
-  } catch (error) {
-    console.error(`Error scraping ${sourceId}:`, error);
-    // Return mock data on error
-    return [{
-      buyer: 'Novartis',
-      seller: 'Shanghai Argo',
-      drugName: 'RNAi Therapeutics',
-      therapeuticArea: 'Cardiovascular and Metabolic',
-      stage: 'Phase I/II',
-      financials: '$185M upfront, $4.165B Total Value',
-      dealDate: new Date().toISOString().split('T')[0],
-      source: NEWS_SOURCES[sourceId]?.name || 'Unknown Source',
-      sourceUrl: NEWS_SOURCES[sourceId]?.url || '',
-      title: 'Novartis and Shanghai Argo Announce RNAi Collaboration'
-    }];
-  }
+function buildFallbackNarrative(searchQuery, dateRangeDays) {
+  const timeframeLabel = dateRangeDays === 1 ? 'the past 24 hours' : `the past ${dateRangeDays} days`;
+  return [
+    `I couldn't reach the live research service just now, so here’s a manual game plan for digging into “${searchQuery}” from ${timeframeLabel}.`,
+    'Start with dependable aggregators such as Google News and Fierce Biotech’s site search to scan for breaking licensing, M&A, or financing headlines.',
+    'Check PR Newswire or Business Wire for company-issued releases—those usually include deal values, milestones, and partner quotes you can reuse.',
+    'If you need deeper context, filings in the SEC’s EDGAR database or investor presentations often spell out deal economics and pipeline stage detail.'
+  ].join(' ');
 }
 
-async function fetchDealsFromNewsAPI(searchQuery, dateRangeDays, userEmail) {
-  try {
-    if (!NEWS_API_KEY) {
-      console.log('⚠️ NEWS_API_KEY not provided. Skipping NewsAPI fetch.');
-      return [];
+function buildFallbackDeals(searchQuery) {
+  const todayIso = new Date().toISOString().split('T')[0];
+  const encodedQuery = encodeURIComponent(searchQuery);
+  return [
+    {
+      buyer: '',
+      seller: '',
+      drugName: '',
+      therapeuticArea: '',
+      stage: '',
+      financials: '',
+      dealDate: todayIso,
+      title: `Latest headlines for "${searchQuery}"`,
+      summary: 'Aggregated coverage from global outlets. Filter by “Deals” or “Business” inside Google News to spot recent transactions.',
+      source: 'Google News',
+      sourceUrl: `https://news.google.com/search?q=${encodedQuery}`,
+      tags: ['news', 'aggregator'],
+      isFallback: true
+    },
+    {
+      buyer: '',
+      seller: '',
+      drugName: '',
+      therapeuticArea: '',
+      stage: '',
+      financials: '',
+      dealDate: todayIso,
+      title: `Trade-press coverage for "${searchQuery}"`,
+      summary: 'Fierce Biotech frequently reports on licensing, partnerships, and M&A activity with quick analysis.',
+      source: 'Fierce Biotech Search',
+      sourceUrl: `https://www.fiercebiotech.com/search?search_api_fulltext=${encodedQuery}`,
+      tags: ['trade-press', 'biotech'],
+      isFallback: true
+    },
+    {
+      buyer: '',
+      seller: '',
+      drugName: '',
+      therapeuticArea: '',
+      stage: '',
+      financials: '',
+      dealDate: todayIso,
+      title: `Press releases mentioning "${searchQuery}"`,
+      summary: 'Company-issued releases on PR Newswire often include deal values, milestone structures, or partner comments.',
+      source: 'PR Newswire Search',
+      sourceUrl: `https://www.prnewswire.com/news-releases/news-releases-list/?keyword=${encodedQuery}`,
+      tags: ['press-release', 'primary'],
+      isFallback: true
+    }
+  ];
+}
+
+function extractResponseText(response) {
+  if (!response) return '';
+
+  if (typeof response.output_text === 'string' && response.output_text.trim()) {
+    return response.output_text.trim();
+  }
+
+  const textSnippets = [];
+
+  const collectFromContent = (content) => {
+    if (!content) return;
+
+    if (typeof content === 'string' && content.trim()) {
+      textSnippets.push(content.trim());
+      return;
     }
 
-    const now = new Date();
-    const fromDate = new Date(now.getTime() - Math.max(1, dateRangeDays) * 24 * 60 * 60 * 1000);
+    if (typeof content.text === 'string' && content.text.trim()) {
+      textSnippets.push(content.text.trim());
+    }
 
-    const queryTerms = `${searchQuery} AND (deal OR partnership OR license OR acquisition OR collaboration)`;
+    if (Array.isArray(content) && content.length) {
+      content.forEach(collectFromContent);
+    }
 
-    const response = await axios.get('https://newsapi.org/v2/everything', {
-      params: {
-        q: queryTerms,
-        from: fromDate.toISOString().split('T')[0],
-        sortBy: 'publishedAt',
-        language: 'en',
-        pageSize: 30,
-        apiKey: NEWS_API_KEY
+    if (Array.isArray(content.content) && content.content.length) {
+      content.content.forEach(collectFromContent);
+    }
+
+    if (Array.isArray(content.annotations) && content.annotations.length) {
+      content.annotations.forEach(collectFromContent);
+    }
+  };
+
+  const visit = (node) => {
+    if (!node) return;
+
+    if (typeof node === 'string') {
+      collectFromContent(node);
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+
+    if (typeof node === 'object') {
+      if (typeof node.text === 'string') {
+        collectFromContent(node.text);
       }
-    });
 
-    const articles = response.data?.articles || [];
-    console.log(`📰 NewsAPI returned ${articles.length} articles for ${userEmail}`);
-
-    const deals = [];
-    for (const article of articles) {
-      const combinedText = [article.title, article.description, article.content]
-        .filter(Boolean)
-        .join(' ');
-
-      let extracted = null;
-      if (combinedText) {
-        extracted = await extractDealInformation(combinedText, article.url);
+      if (Array.isArray(node.content)) {
+        node.content.forEach(collectFromContent);
       }
 
-      const publishedDate = article.publishedAt
-        ? article.publishedAt.split('T')[0]
-        : (extracted?.dealDate || new Date().toISOString().split('T')[0]);
-
-      deals.push({
-        buyer: extracted?.buyer || '',
-        seller: extracted?.seller || '',
-        drugName: extracted?.drugName || '',
-        therapeuticArea: extracted?.therapeuticArea || '',
-        stage: extracted?.stage || '',
-        financials: extracted?.financials || '',
-        totalValue: extracted?.financials || '',
-        dealDate: publishedDate,
-        source: article.source?.name || 'Global News Search',
-        sourceId: 'global_news',
-        sourceUrl: article.url,
-        title: article.title || searchQuery,
-        summary: article.description || (combinedText ? combinedText.slice(0, 200) : ''),
-        rawText: combinedText,
-        tags: []
+      Object.values(node).forEach((value) => {
+        if (value !== node.text && value !== node.content) {
+          visit(value);
+        }
       });
     }
+  };
 
-    return deals;
+  visit(response.output);
+  visit(response.content);
+  visit(response.choices);
+
+  const combined = textSnippets.join('\n').trim();
+  return combined;
+}
+
+async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
+  if (!openaiClient) {
+    return { deals: [], sources: [] };
+  }
+
+  try {
+    const timeframeLabel = dateRangeDays === 1 ? 'the last 24 hours' : `the last ${dateRangeDays} days`;
+    const MIN_DEALS_TARGET = 20;
+    const MAX_DEALS_TARGET = 30;
+    const MAX_ATTEMPTS = 3;
+
+    const basePrompt = `
+You are an investigative pharmaceutical and biotechnology deal analyst. Use the OpenAI web_search tool to locate ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique, trustworthy global news articles about commercial, clinical, or strategic activity in life sciences published within ${timeframeLabel}. Always prefer primary announcements, reputable trade publications, and verified financial press. Think step-by-step, plan your search strategy, perform multiple searches, and avoid hallucinating.
+
+Return a strictly valid JSON object with exactly these top-level fields: "narrative", "deals", "sources".
+- "narrative": 3-5 paragraphs summarising global deal and partnership activity. Mention source names in [square brackets] that correspond to entries in "sources".
+- "deals": array (${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique items) of objects each representing one article. Required keys: title, summary (2-4 sentences), sourceUrl (HTTPS), dealDate (ISO-8601 date). Optional keys: buyer, seller, drugName, therapeuticArea, stage, financials, tags (array). Include source (publication or organisation name). Ensure dates are within ${timeframeLabel}. Do not reuse the same article, URL, or title. Omit placeholders like "N/A".
+- "sources": array of objects with keys name, url, note. One entry per unique publication or organisation referenced. Notes should briefly describe the relevance (e.g. "Press release announcing the acquisition").
+
+Only output valid JSON that matches this shape—no markdown fences or extra commentary. If you do not find at least ${MIN_DEALS_TARGET} qualifying articles, state the limitation clearly in "narrative" but still obey the response schema.
+
+User query: ${searchQuery}`.trim();
+
+    const jsonSchema = {
+      name: 'DealScraperResponse',
+      schema: {
+        type: 'object',
+        properties: {
+          narrative: {
+            type: 'string',
+            minLength: 20,
+            description: 'Conversational multi-paragraph answer in natural language with inline source brackets.'
+          },
+          deals: {
+            type: 'array',
+            minItems: 1,
+            maxItems: MAX_DEALS_TARGET,
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                buyer: { type: 'string', default: '' },
+                seller: { type: 'string', default: '' },
+                drugName: { type: 'string', default: '' },
+                therapeuticArea: { type: 'string', default: '' },
+                stage: { type: 'string', default: '' },
+                financials: { type: 'string', default: '' },
+                dealDate: { type: 'string', minLength: 4 },
+                title: { type: 'string' },
+                summary: { type: 'string' },
+                source: { type: 'string' },
+                sourceUrl: { type: 'string' },
+                tags: {
+                  type: 'array',
+                  items: { type: 'string' }
+                }
+              },
+              required: ['title', 'summary', 'source', 'sourceUrl', 'dealDate']
+            }
+          },
+          sources: {
+            type: 'array',
+            minItems: 0,
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                name: { type: 'string' },
+                url: { type: 'string' },
+                note: { type: 'string' }
+              },
+              required: ['name', 'url']
+            }
+          }
+        },
+        required: ['narrative', 'deals', 'sources'],
+        unevaluatedProperties: false
+      }
+    };
+
+    const ensureIsoDate = (value) => {
+      if (!value) {
+        return new Date().toISOString().split('T')[0];
+      }
+
+      const parsedDate = new Date(value);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split('T')[0];
+      }
+
+      const isoMatch = /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(value.trim());
+      if (isoMatch) {
+        return value.trim();
+      }
+
+      return new Date().toISOString().split('T')[0];
+    };
+
+    const aggregatedDeals = [];
+    const aggregatedDealsKeyed = new Map();
+    const aggregatedSources = new Map();
+    let finalNarrative = '';
+
+    const seenUrlsForPrompt = () => aggregatedDeals
+      .map((deal) => deal.sourceUrl)
+      .filter(Boolean);
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      const seenUrls = seenUrlsForPrompt();
+      const retryDirective = attempt > 1
+        ? `\n\nPrevious attempts captured ${aggregatedDeals.length} unique article(s). Provide additional unique articles that are not among these URLs or titles:\n${seenUrls.slice(0, 40).join('\n')}`
+        : '';
+
+      const instructions = `${basePrompt}${retryDirective}`;
+
+      const response = await openaiClient.responses.create({
+        model: 'gpt-4o',
+        input: instructions,
+        tools: [{ type: 'web_search' }],
+        max_output_tokens: 4500,
+        temperature: 0.2,
+        text: {
+          format: {
+            name: jsonSchema.name,
+            type: 'json_schema',
+            schema: jsonSchema.schema
+          }
+        },
+        metadata: {
+          feature: 'ai_deal_scraper',
+          userEmail,
+          attempt
+        }
+      });
+
+      let rawOutput = extractResponseText(response);
+
+      if (!rawOutput) {
+        console.warn(`⚠️ OpenAI response had no text payload (attempt ${attempt}). Snapshot:`, JSON.stringify({
+          id: response?.id,
+          model: response?.model,
+          usage: response?.usage || null
+        }, null, 2));
+        continue;
+      }
+
+      rawOutput = rawOutput.trim();
+
+      console.log(`📦 OpenAI raw output (attempt ${attempt}):`, rawOutput);
+
+      const sanitized = rawOutput
+        .replace(/^```json\s*/i, '')
+        .replace(/^```json-schema\s*/i, '')
+        .replace(/^```js\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```$/i, '')
+        .trim();
+
+      console.log(`🧹 Sanitized OpenAI output (attempt ${attempt}):`, sanitized);
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(sanitized);
+      } catch (jsonError) {
+        console.error(`Error parsing OpenAI response JSON on attempt ${attempt}:`, jsonError.message);
+        console.error('🚨 Raw sanitised payload:', sanitized.slice(0, 1000));
+        continue;
+      }
+
+      const dealsArray = Array.isArray(parsed?.deals) ? parsed.deals : [];
+      const normalizedDeals = dealsArray.map((deal) => {
+        const sourceUrl = deal.sourceUrl || deal.url || '';
+        let domain = 'openai_web_search';
+        if (sourceUrl) {
+          try {
+            domain = new URL(sourceUrl).hostname.replace(/^www\./i, '');
+          } catch (urlError) {
+            domain = 'openai_web_search';
+          }
+        }
+
+        return {
+          buyer: deal.buyer || deal.acquirer || '',
+          seller: deal.seller || deal.partner || '',
+          drugName: deal.drugName || deal.asset || '',
+          therapeuticArea: deal.therapeuticArea || deal.indication || '',
+          stage: deal.stage || '',
+          financials: deal.financials || deal.value || '',
+          totalValue: deal.totalValue || deal.financials || deal.value || '',
+          dealDate: ensureIsoDate(deal.dealDate || deal.date || ''),
+          source: deal.source || deal.sourceName || domain || 'OpenAI Web Search',
+          sourceId: domain || 'openai_web_search',
+          sourceUrl,
+          title: deal.title || `${deal.buyer || 'Deal'} - ${deal.seller || 'Counterparty'}`,
+          summary: deal.summary || deal.overview || '',
+          rawText: deal.rawText || deal.summary || '',
+          tags: Array.isArray(deal.tags) ? deal.tags : [],
+          searchQuery,
+          userEmail
+        };
+      });
+
+      console.log(`📊 Parsed deals on attempt ${attempt}:`, normalizedDeals.length);
+
+      for (const deal of normalizedDeals) {
+        const key = `${(deal.sourceUrl || '').toLowerCase()}|${(deal.title || '').toLowerCase()}`;
+        if (key.trim() && !aggregatedDealsKeyed.has(key)) {
+          aggregatedDealsKeyed.set(key, true);
+          aggregatedDeals.push(deal);
+        }
+      }
+
+      const sources = Array.isArray(parsed?.sources)
+        ? parsed.sources
+            .map((source) => ({
+              name: source.name || 'OpenAI Web Search',
+              url: source.url || '',
+              note: source.note || ''
+            }))
+            .filter((source) => source.name || source.url)
+        : [];
+
+      for (const source of sources) {
+        const sourceKey = `${source.name || ''}|${source.url || ''}`;
+        if (!aggregatedSources.has(sourceKey)) {
+          aggregatedSources.set(sourceKey, source);
+        }
+      }
+
+      if (typeof parsed?.narrative === 'string' && parsed.narrative.trim()) {
+        finalNarrative = parsed.narrative.trim();
+      }
+
+      if (aggregatedDeals.length >= MIN_DEALS_TARGET) {
+        break;
+      }
+
+      console.warn(`🔁 Retrying OpenAI fetch (attempt ${attempt}) — collected ${aggregatedDeals.length} unique articles so far.`);
+    }
+
+    console.log(`✅ Total unique deals aggregated: ${aggregatedDeals.length}`);
+
+    return {
+      deals: aggregatedDeals.slice(0, MAX_DEALS_TARGET),
+      sources: Array.from(aggregatedSources.values()),
+      narrative: finalNarrative
+    };
   } catch (error) {
-    console.error('Error fetching NewsAPI articles:', error.response?.data || error.message);
-    return [];
+    console.error('Error fetching deals via OpenAI:', error?.response?.data || error.message || error);
+    return { deals: [], sources: [] };
   }
 }
 
@@ -2810,7 +2947,6 @@ app.get('/api/dashboard/contact', authenticateToken, (req, res) => {
     message: "Please contact us via email if you find any discrepancies."
   });
 });
-
 // ============================================================================
 // AUTO-CUT SUBSCRIPTION ENDPOINT
 // ============================================================================
@@ -3418,7 +3554,6 @@ app.put('/api/admin/complete-session/:sessionId', authenticateAdmin, async (req,
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 // Pricing Analytics Backend Routes
 // In-memory data storage (in production, this would be a database)
 let pricingData = {
@@ -5174,11 +5309,11 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       });
     }
 
-    const { searchQuery, sources, dateRange, userEmail } = req.body;
+    const { searchQuery, dateRange, userEmail } = req.body;
     
     console.log(`🤖 AI Deal Scraper started for user: ${userEmail}`);
     console.log(`🔍 Search query: ${searchQuery}`);
-    console.log(`📰 Sources: ${sources.join(', ')}`);
+    console.log('🛰️ Sources: OpenAI web search');
     console.log(`📅 Date range: ${dateRange} days`);
 
     // Check user credits (assuming 1 credit per scraping session)
@@ -5202,22 +5337,17 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     await user.save();
 
     const rangeInDays = parseInt(dateRange, 10) || 7;
-    let aggregatedDeals = [];
+    const openAiResult = await searchDealsWithOpenAI(searchQuery, rangeInDays, userEmail);
+    const aggregatedDeals = Array.isArray(openAiResult.deals) ? [...openAiResult.deals] : [];
+    const sourceDetails = [];
 
-    if (sources.includes('global_news')) {
-      const newsDeals = await fetchDealsFromNewsAPI(searchQuery, rangeInDays, userEmail);
-      aggregatedDeals = aggregatedDeals.concat(newsDeals);
-    }
-
-    const traditionalSources = sources.filter(sourceId => sourceId !== 'global_news');
-    for (const sourceId of traditionalSources) {
-      const sourceDeals = await scrapeNewsSource(sourceId, searchQuery, rangeInDays);
-      aggregatedDeals = aggregatedDeals.concat(sourceDeals);
-    }
-
-    if (aggregatedDeals.length === 0) {
-      console.log('⚠️ No deals found, using fallback mock data');
-      aggregatedDeals = await scrapeNewsSource(traditionalSources[0] || 'biospace', searchQuery, rangeInDays);
+    if (openAiResult.sources?.length) {
+      sourceDetails.push(
+        ...openAiResult.sources.map((source) => ({
+          ...source,
+          kind: 'openai_web_search'
+        }))
+      );
     }
 
     // Deduplicate by URL/title combo
@@ -5227,6 +5357,9 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       const key = `${deal.sourceUrl || ''}-${deal.title || ''}`.toLowerCase();
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
+        const domainKey = (deal.sourceId || '').replace(/^www\./i, '');
+        const friendlySource = deal.source || PREFERRED_DOMAIN_LABELS[domainKey] || domainKey || 'OpenAI Web Search';
+
         uniqueDeals.push({
           buyer: deal.buyer || '',
           seller: deal.seller || '',
@@ -5236,8 +5369,8 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
           financials: deal.financials || '',
           totalValue: deal.totalValue || deal.financials || '',
           dealDate: deal.dealDate || new Date().toISOString().split('T')[0],
-          source: deal.source || NEWS_SOURCES[deal.sourceId]?.name || 'Global News Search',
-          sourceId: deal.sourceId || 'global_news',
+          source: friendlySource,
+          sourceId: domainKey || 'openai_web_search',
           sourceUrl: deal.sourceUrl || '',
           title: deal.title || searchQuery,
           summary: deal.summary || '',
@@ -5249,7 +5382,34 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       }
     }
 
-    const responseDeals = uniqueDeals.slice(0, 25);
+    const preferredDeals = [];
+    const otherDeals = [];
+    const preferredDomainSet = new Set(PREFERRED_DOMAINS);
+
+    for (const deal of uniqueDeals) {
+      const domain = (deal.sourceId || '').replace(/^www\./i, '');
+      if (domain && preferredDomainSet.has(domain)) {
+        preferredDeals.push(deal);
+      } else {
+        otherDeals.push(deal);
+      }
+    }
+
+    const prioritizedDeals = [...preferredDeals, ...otherDeals];
+    const responseDeals = prioritizedDeals.slice(0, 30);
+    const responseDomains = Array.from(new Set(responseDeals.map(deal => deal.sourceId || 'openai_web_search')));
+
+    const sourcesUsed = ['openai_web_search'];
+
+    const uniqueSourceDetails = [];
+    const seenSourceDetailKeys = new Set();
+    for (const detail of sourceDetails) {
+      const key = `${detail.kind || 'unknown'}:${detail.name || ''}:${detail.url || ''}`;
+      if (!seenSourceDetailKeys.has(key)) {
+        seenSourceDetails.push(detail);
+        seenSourceDetailKeys.add(key);
+      }
+    }
 
     // Store deals in MongoDB for future reference
     try {
@@ -5278,23 +5438,52 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
 
       if (responseDeals.length > 0) {
         await Deal.insertMany(responseDeals.map(deal => ({
-          ...deal,
+        ...deal,
           scrapedAt: new Date()
-        })));
+      })));
         console.log(`💾 Saved ${responseDeals.length} deals to database`);
       }
     } catch (dbError) {
       console.error('Error saving deals to database:', dbError);
     }
 
+    if (responseDeals.length === 0) {
+      const fallbackDeals = buildFallbackDeals(searchQuery);
+      const fallbackNarrative = (openAiResult.narrative || '').trim() || buildFallbackNarrative(searchQuery, rangeInDays);
+      return res.json({
+        success: true,
+        data: {
+          deals: fallbackDeals,
+          totalFound: uniqueDeals.length,
+          sources: sourcesUsed,
+          sourceDetails: uniqueSourceDetails,
+          insights: openAiResult.insights || '',
+          narrative: fallbackNarrative,
+          domains: responseDomains,
+          searchQuery,
+          dateRange: rangeInDays,
+          isFallback: true
+        },
+        creditsUsed: 1,
+        message: 'Live research temporarily unavailable. Provided fallback playbook instead.'
+      });
+    }
+
+    const narrativeForResponse = (openAiResult.narrative || '').trim() || buildFallbackNarrative(searchQuery, rangeInDays);
+
     res.json({
       success: true,
       data: {
         deals: responseDeals,
         totalFound: uniqueDeals.length,
-        sources,
+        sources: sourcesUsed,
+        sourceDetails: uniqueSourceDetails,
+        insights: openAiResult.insights || '',
+        narrative: narrativeForResponse,
+        domains: responseDomains,
         searchQuery,
-        dateRange: rangeInDays
+        dateRange: rangeInDays,
+        isFallback: false
       },
       creditsUsed: 1,
       message: `Collected ${responseDeals.length} deals from ${uniqueDeals.length} unique hits`
@@ -5708,7 +5897,6 @@ const saveDataToFilesImmediate = (action = 'auto') => {
   }
   performSave(action);
 };
-
 // Actual save function
 const performSave = (action = 'auto') => {
   try {
@@ -5774,7 +5962,6 @@ const performSave = (action = 'auto') => {
     }
   }
 };
-
 // Mock database connection for now
 const mockDB = {
   users: [],
@@ -6450,7 +6637,6 @@ app.post('/api/bd-tracker', authenticateToken, async (req, res) => {
     });
   }
 });
-
 // Update BD Tracker entry
 app.put('/api/bd-tracker/:id', authenticateToken, async (req, res) => {
   try {
@@ -7203,7 +7389,6 @@ app.post('/api/auth/activate-free-plan', authenticateToken, async (req, res) => 
     });
   }
 });
-
 // Stripe Payment Routes
 app.post('/api/create-payment-intent', async (req, res) => {
   try {
@@ -7435,9 +7620,6 @@ app.post('/api/subscription/create-daily-12', async (req, res) => {
     });
   }
 });
-
-// Duplicate webhook handler removed - this was causing syntax errors
-// All orphaned case statements and await statements have been removed
 
 // Admin endpoints for Gaurav Vij - REAL MONGODB DATA
 app.get('/api/admin/user-activity', authenticateAdmin, async (req, res) => {
@@ -8000,7 +8182,6 @@ async function generateAutomaticInvoice(paymentIntent, customerEmail, planId) {
     return null;
   }
 }
-
 // Helper function to get plan description
 function getPlanDescription(planId) {
   const planDescriptions = {
@@ -8538,7 +8719,6 @@ app.get('/api/auth/invoices', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 // Download all invoices as single PDF - Support both Stripe and local invoices
 app.get('/api/auth/download-all-invoices', authenticateToken, async (req, res) => {
   try {
@@ -9319,7 +9499,6 @@ app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => {
   try {
     // Use MongoDB instead of mockDB
@@ -10045,7 +10224,6 @@ app.get('/api/test', (req, res) => {
 // Note: Frontend routes like /dashboard, /dashboard/bd-tracker are handled by React Router
 // on the frontend (GoDaddy hosting). This server only handles API routes.
 // For frontend routing issues, check GoDaddy hosting configuration.
-
 // Public pricing plans endpoint (no authentication required)
 app.get('/api/pricing-plans', async (req, res) => {
   try {
@@ -10827,7 +11005,6 @@ async function processYearlyPaymentAndCredits(subscriber) {
     console.error(`❌ Error processing yearly payment for ${subscriber.email}:`, error);
   }
 }
-
 // Renew yearly credits (monthly)
 async function renewYearlyCredits(subscriber, paymentIntent) {
   console.log(`🔄 Renewing monthly credits for yearly plan: ${subscriber.email}`);

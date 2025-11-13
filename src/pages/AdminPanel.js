@@ -2518,7 +2518,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
             )}
           </div>
         </div>
-      </div>
+            </div>
   );
 };
 
