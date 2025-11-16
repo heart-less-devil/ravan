@@ -213,10 +213,10 @@ async function extractDealInformation(articleText, sourceUrl) {
 function buildFallbackNarrative(searchQuery, dateRangeDays) {
   const timeframeLabel = dateRangeDays === 1 ? 'the past 24 hours' : `the past ${dateRangeDays} days`;
   return [
-    `I couldn't reach the live research service just now, so here’s a manual game plan for digging into “${searchQuery}” from ${timeframeLabel}.`,
-    'Start with dependable aggregators such as Google News and Fierce Biotech’s site search to scan for breaking licensing, M&A, or financing headlines.',
+    `I couldn't reach the live research service just now, so here's a manual game plan for digging into "${searchQuery}" from ${timeframeLabel}.`,
+    'Start with dependable aggregators such as Google News and Fierce Biotech\'s site search to scan for breaking licensing, M&A, or financing headlines.',
     'Check PR Newswire or Business Wire for company-issued releases—those usually include deal values, milestones, and partner quotes you can reuse.',
-    'If you need deeper context, filings in the SEC’s EDGAR database or investor presentations often spell out deal economics and pipeline stage detail.'
+    'If you need deeper context, filings in the SEC\'s EDGAR database or investor presentations often spell out deal economics and pipeline stage detail.'
   ].join(' ');
 }
 
@@ -233,7 +233,7 @@ function buildFallbackDeals(searchQuery) {
       financials: '',
       dealDate: todayIso,
       title: `Latest headlines for "${searchQuery}"`,
-      summary: 'Aggregated coverage from global outlets. Filter by “Deals” or “Business” inside Google News to spot recent transactions.',
+      summary: 'Aggregated coverage from global outlets. Filter by "Deals" or "Business" inside Google News to spot recent transactions.',
       source: 'Google News',
       sourceUrl: `https://news.google.com/search?q=${encodedQuery}`,
       tags: ['news', 'aggregator'],
@@ -371,6 +371,7 @@ User query: ${searchQuery}`.trim();
       name: 'DealScraperResponse',
       schema: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           narrative: {
             type: 'string',
@@ -383,7 +384,7 @@ User query: ${searchQuery}`.trim();
             maxItems: MAX_DEALS_TARGET,
             items: {
               type: 'object',
-              additionalProperties: true,
+              additionalProperties: false,
               properties: {
                 buyer: { type: 'string', default: '' },
                 seller: { type: 'string', default: '' },
@@ -398,10 +399,11 @@ User query: ${searchQuery}`.trim();
                 sourceUrl: { type: 'string' },
                 tags: {
                   type: 'array',
-                  items: { type: 'string' }
+                  items: { type: 'string' },
+                  default: []
                 }
               },
-              required: ['title', 'summary', 'source', 'sourceUrl', 'dealDate']
+              required: ['buyer', 'seller', 'drugName', 'therapeuticArea', 'stage', 'financials', 'dealDate', 'title', 'summary', 'source', 'sourceUrl', 'tags']
             }
           },
           sources: {
@@ -409,18 +411,17 @@ User query: ${searchQuery}`.trim();
             minItems: 0,
             items: {
               type: 'object',
-              additionalProperties: true,
+              additionalProperties: false,
               properties: {
                 name: { type: 'string' },
                 url: { type: 'string' },
                 note: { type: 'string' }
               },
-              required: ['name', 'url']
+              required: ['name', 'url', 'note']
             }
           }
         },
-        required: ['narrative', 'deals', 'sources'],
-        unevaluatedProperties: false
+        required: ['narrative', 'deals', 'sources']
       }
     };
 
@@ -475,7 +476,7 @@ User query: ${searchQuery}`.trim();
         metadata: {
           feature: 'ai_deal_scraper',
           userEmail,
-          attempt
+          attempt: String(attempt)
         }
       });
 
@@ -704,7 +705,6 @@ async function completeSubscriptionSetup(subscriptionId) {
     throw error;
   }
 }
-
 // 5. MAIN FUNCTION - COMPLETE AUTO-CUT SETUP
 async function setupAutoCutSubscription(userData, paymentMethodId, priceId) {
   try {
@@ -827,20 +827,43 @@ console.log('  - Secret key available:', !!stripeSecretKey);
 console.log('  - Stripe initialized:', !!stripe);
 console.log('  - Using live key:', stripeSecretKey.includes('sk_live_'));
 
+const RAW_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3005',
+  'http://localhost:3006',
+  'null',
+  'https://thebioping.com',
+  'https://www.thebioping.com'
+];
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  if (RAW_ALLOWED_ORIGINS.includes(origin)) return true;
+
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname === 'localhost') return true;
+    if (hostname.endsWith('.onrender.com')) return true;
+    if (hostname.endsWith('.render.com')) return true;
+    if (hostname.endsWith('thebioping.com')) return true;
+  } catch (error) {
+    console.warn('⚠️ Unable to parse origin for CORS check:', origin, error.message);
+  }
+
+  return false;
+};
+
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001',
-    'http://localhost:3002',
-    'http://localhost:3005',
-    'http://localhost:3006',
-    'null', // Allow file:// protocol for local testing
-    'https://thebioping.com',
-    'https://www.thebioping.com',
-    'https://*.render.com',
-    'https://*.onrender.com'
-  ],
+  origin(origin, callback) {
+    if (isAllowedOrigin(origin)) {
+      return callback(null, true);
+    }
+    console.warn('🚫 Blocked CORS origin:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'Pragma']
@@ -849,23 +872,8 @@ app.use(cors({
 // Additional CORS headers for preflight requests
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001', 
-    'http://localhost:3002',
-    'http://localhost:3005',
-    'http://localhost:3006',
-    'https://thebioping.com',
-    'https://www.thebioping.com',
-    'https://*.render.com',
-    'https://*.onrender.com'
-  ];
-  
-  // More permissive CORS for thebioping.com
-  if (allowedOrigins.includes(origin) || 
-      origin?.includes('render.com') || 
-      origin?.includes('onrender.com') ||
-      origin?.includes('thebioping.com')) {
+
+  if (isAllowedOrigin(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
   
@@ -875,9 +883,10 @@ app.use((req, res, next) => {
   
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
-  } else {
-    next();
+    return;
   }
+  
+  next();
 });
 // Webhook for Stripe events - MUST BE BEFORE express.json() middleware
 app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -1494,7 +1503,6 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, 
         }
       }
       break;
-      
     case 'customer.subscription.deleted':
       console.log('❌ Customer subscription deleted');
       
@@ -2267,7 +2275,6 @@ app.post('/api/test-email-send', [
     });
   }
 });
-
 // Test email configuration
 app.get('/api/test-email', async (req, res) => {
   try {
@@ -5295,7 +5302,7 @@ app.get('/api/ai-deal-scraper-test', (req, res) => {
 // AI Deal Scraper endpoint
 app.post('/api/ai-deal-scraper', authenticateToken, [
   body('searchQuery').notEmpty().trim(),
-  body('sources').isArray(),
+  body('sources').optional().isArray(),
   body('dateRange').isInt({ min: 1, max: 365 }),
   body('userEmail').isEmail()
 ], async (req, res) => {
@@ -5337,11 +5344,20 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     await user.save();
 
     const rangeInDays = parseInt(dateRange, 10) || 7;
-    const openAiResult = await searchDealsWithOpenAI(searchQuery, rangeInDays, userEmail);
-    const aggregatedDeals = Array.isArray(openAiResult.deals) ? [...openAiResult.deals] : [];
+    
+    let openAiResult;
+    try {
+      openAiResult = await searchDealsWithOpenAI(searchQuery, rangeInDays, userEmail);
+    } catch (openAiError) {
+      console.error('❌ OpenAI API call failed:', openAiError);
+      // Return fallback instead of crashing
+      openAiResult = { deals: [], sources: [], narrative: '' };
+    }
+    
+    const aggregatedDeals = Array.isArray(openAiResult?.deals) ? [...openAiResult.deals] : [];
     const sourceDetails = [];
 
-    if (openAiResult.sources?.length) {
+    if (openAiResult?.sources?.length) {
       sourceDetails.push(
         ...openAiResult.sources.map((source) => ({
           ...source,
@@ -5406,7 +5422,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     for (const detail of sourceDetails) {
       const key = `${detail.kind || 'unknown'}:${detail.name || ''}:${detail.url || ''}`;
       if (!seenSourceDetailKeys.has(key)) {
-        seenSourceDetails.push(detail);
+        uniqueSourceDetails.push(detail);
         seenSourceDetailKeys.add(key);
       }
     }
@@ -5449,7 +5465,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
 
     if (responseDeals.length === 0) {
       const fallbackDeals = buildFallbackDeals(searchQuery);
-      const fallbackNarrative = (openAiResult.narrative || '').trim() || buildFallbackNarrative(searchQuery, rangeInDays);
+      const fallbackNarrative = (openAiResult?.narrative || '').trim() || buildFallbackNarrative(searchQuery, rangeInDays);
       return res.json({
         success: true,
         data: {
@@ -5457,7 +5473,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
           totalFound: uniqueDeals.length,
           sources: sourcesUsed,
           sourceDetails: uniqueSourceDetails,
-          insights: openAiResult.insights || '',
+          insights: openAiResult?.insights || '',
           narrative: fallbackNarrative,
           domains: responseDomains,
           searchQuery,
@@ -5469,7 +5485,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       });
     }
 
-    const narrativeForResponse = (openAiResult.narrative || '').trim() || buildFallbackNarrative(searchQuery, rangeInDays);
+    const narrativeForResponse = (openAiResult?.narrative || '').trim() || buildFallbackNarrative(searchQuery, rangeInDays);
 
     res.json({
       success: true,
@@ -5478,7 +5494,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
         totalFound: uniqueDeals.length,
         sources: sourcesUsed,
         sourceDetails: uniqueSourceDetails,
-        insights: openAiResult.insights || '',
+        insights: openAiResult?.insights || '',
         narrative: narrativeForResponse,
         domains: responseDomains,
         searchQuery,
@@ -5490,10 +5506,17 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     });
 
   } catch (error) {
-    console.error('Error in AI Deal Scraper:', error);
+    console.error('❌ Error in AI Deal Scraper:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', {
+      message: error.message,
+      status: error.status,
+      response: error.response?.data
+    });
     res.status(500).json({ 
       success: false, 
-      message: 'Error scraping deals. Please try again.' 
+      message: 'Error scraping deals. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -10220,7 +10243,6 @@ app.get('/api/test', (req, res) => {
     pdfDirExists: fs.existsSync(path.join(__dirname, '../public/pdf'))
   });
 });
-
 // Note: Frontend routes like /dashboard, /dashboard/bd-tracker are handled by React Router
 // on the frontend (GoDaddy hosting). This server only handles API routes.
 // For frontend routing issues, check GoDaddy hosting configuration.
