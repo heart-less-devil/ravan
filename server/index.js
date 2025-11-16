@@ -4869,6 +4869,9 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                                  itemRegionLower.includes('chile') ||
                                  itemRegionLower.includes('colombia') ||
                                  itemRegionLower.includes('uruguay');
+          
+          // Check for Oceania countries - Australia and New Zealand variants
+          const isAustralia = itemRegionLower.includes('australia');
           const containsNZVariant = itemRegionLower.includes('new zealand') ||
                                    itemRegionLower.includes('new-zealand') ||
                                    itemRegionLower.includes('newzealand') ||
@@ -4876,15 +4879,41 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                                    itemRegionLower.includes('australia & nz') ||
                                    itemRegionLower.includes('australia-nz') ||
                                    itemRegionLower.includes('australia nz') ||
+                                   itemRegionLower.includes('australia/nz') ||
+                                   itemRegionLower.includes('australia&nz') ||
                                    itemRegionLower.includes(' nz ') ||
-                                   itemRegionLower.endsWith(' nz');
+                                   itemRegionLower.endsWith(' nz') ||
+                                   itemRegionLower === 'nz' ||
+                                   itemRegionLower.startsWith('nz ') ||
+                                   itemRegionLower.endsWith('/nz') ||
+                                   itemRegionLower.endsWith('&nz') ||
+                                   (itemRegionLower.includes('nz') && !itemRegionLower.includes('brazil') && !itemRegionLower.includes('switzerland'));
           
+          // Match if it's Oceania (Australia or NZ) and not from other regions
           isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAfrican && !isSouthAmerican && (
                    itemContinentLower === 'oceania' ||
-                   itemRegionLower.includes('australia') ||
+                   isAustralia ||
                    containsNZVariant ||
                    itemRegionLower.includes('oceania')
           );
+          
+          console.log('Oceania filter check:', {
+            companyName: item.companyName,
+            itemRegion: itemRegion,
+            itemRegionLower: itemRegionLower,
+            itemContinent: itemContinent,
+            itemContinentLower: itemContinentLower,
+            isAustralia: isAustralia,
+            containsNZVariant: containsNZVariant,
+            isMatch: isMatch,
+            exclusions: {
+              isNorthAmerican,
+              isEuropean,
+              isAsian,
+              isAfrican,
+              isSouthAmerican
+            }
+          });
         } else if (regionFilterValue === 'Middle East & Africa') {
           // Exclude non-Middle East & African countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
