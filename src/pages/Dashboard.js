@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment, useCallback } from 'react';
+import React, { useState, useEffect, Fragment, useCallback, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
@@ -1806,7 +1806,10 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
   };
 
   // Sort search results (use filtered results if available, otherwise original)
-  const sortedSearchResults = sortSearchResults(filteredSearchResults || searchResults);
+  // Use useMemo to prevent recalculation on every render
+  const sortedSearchResults = useMemo(() => {
+    return sortSearchResults(filteredSearchResults || searchResults);
+  }, [filteredSearchResults, searchResults]);
 
   // Clear filtered results when search results change
   useEffect(() => {
@@ -1848,19 +1851,25 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
       // Auto-populate Contact Name field with first contact when searching by company
       if (currentSearchType === 'Company Name' && sortedSearchResults.length > 0 && !hasAutoPopulated) {
         const firstContact = sortedSearchResults[0];
-        if (firstContact.contactPerson && formData.contactPerson !== firstContact.contactPerson) {
+        if (firstContact.contactPerson) {
           console.log('Auto-populated Contact Name field with:', firstContact.contactPerson);
-          setFormData(prev => ({
-            ...prev,
-            contactPerson: firstContact.contactPerson
-          }));
+          setFormData(prev => {
+            // Only update if different to prevent unnecessary re-renders
+            if (prev.contactPerson !== firstContact.contactPerson) {
+              return {
+                ...prev,
+                contactPerson: firstContact.contactPerson
+              };
+            }
+            return prev;
+          });
           setHasAutoPopulated(true);
         }
       }
     } else {
       setGroupedResults({});
     }
-  }, [sortedSearchResults, currentSearchType, isGlobalSearch]);
+  }, [sortedSearchResults, currentSearchType, isGlobalSearch, hasAutoPopulated]);
 
   const handleChange = (e) => {
     setFormData({

@@ -353,17 +353,121 @@ async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
     const timeframeLabel = dateRangeDays === 1 ? 'the last 24 hours' : `the last ${dateRangeDays} days`;
     const MIN_DEALS_TARGET = 20;
     const MAX_DEALS_TARGET = 30;
-    const MAX_ATTEMPTS = 3;
+    const MAX_ATTEMPTS = 1; // Single attempt to save credits
+    
+    // Get current date for context
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.toLocaleString('en-US', { month: 'long' });
+    const currentDateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Calculate minimum date (dateRangeDays ago)
+    const minDate = new Date(today);
+    minDate.setDate(today.getDate() - dateRangeDays);
+    const minDateStr = minDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Get month names for the date range
+    const monthsInRange = [];
+    for (let i = 0; i < Math.min(dateRangeDays / 30, 3); i++) {
+      const date = new Date(today);
+      date.setMonth(today.getMonth() - i);
+      monthsInRange.push(date.toLocaleString('en-US', { month: 'long', year: 'numeric' }));
+    }
 
     const basePrompt = `
-You are an investigative pharmaceutical and biotechnology deal analyst. Use the OpenAI web_search tool to locate ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique, trustworthy global news articles about commercial, clinical, or strategic activity in life sciences published within ${timeframeLabel}. Always prefer primary announcements, reputable trade publications, and verified financial press. Think step-by-step, plan your search strategy, perform multiple searches, and avoid hallucinating.
+You are a pharmaceutical and biotechnology deal analyst. You MUST find EXACTLY ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique DRUG DEALS (licensing, M&A, partnerships, acquisitions) published within ${timeframeLabel}.
+
+USER QUERY: "${searchQuery}"
+${searchQuery && searchQuery.trim() ? `The user is searching for deals related to: "${searchQuery}". Adapt your searches to find deals matching this query - it could be a drug name, condition/disease, company name, therapeutic area, or any related term. If the query is specific, prioritize deals related to it. If the query is generic or empty, search broadly for all drug deals.` : 'The user has not specified a particular search term, so search broadly for all drug deals within the timeframe.'} 
+
+CURRENT DATE CONTEXT: Today is ${currentDateStr} (${currentMonth} ${currentYear}). 
+
+CRITICAL DATE FILTERING:
+- ONLY include deals with publication dates between ${minDateStr} and ${currentDateStr} (${timeframeLabel})
+- EXCLUDE any deals older than ${minDateStr}
+- EXCLUDE deals from 2024, 2023, or any year before ${currentYear} unless they fall within ${timeframeLabel}
+- PRIORITIZE deals from ${monthsInRange.join(', ')} - these are the months within ${timeframeLabel}
+- Do NOT include deals from months outside this range
+
+CRITICAL: You MUST return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals. Do NOT stop at 5-10 deals. Search ONLY within ${timeframeLabel} (${minDateStr} to ${currentDateStr}), and PRIORITIZE THE LATEST DEALS FIRST.
+
+MANDATORY SEARCH STRATEGY - Perform AT LEAST 10-12 different web searches based on the user's query "${searchQuery}":
+IMPORTANT: Include date range "${minDateStr} to ${currentDateStr}" or "${timeframeLabel}" in your searches to ensure you only get recent deals.
+
+DYNAMIC SEARCHES BASED ON USER QUERY:
+1. If user query mentions a specific drug/condition/company, search for: "${searchQuery} drug deals ${timeframeLabel}"
+2. If user query mentions a therapeutic area, search for: "${searchQuery} licensing deals ${currentYear}"
+3. If user query mentions a company, search for: "${searchQuery} pharmaceutical deals ${timeframeLabel}"
+4. Search variations: "${searchQuery} biotech deals", "${searchQuery} M&A", "${searchQuery} partnerships"
+
+GENERAL COMPREHENSIVE SEARCHES (to find all relevant deals):
+5. "latest pharmaceutical licensing deals ${currentMonth} ${currentYear} ${timeframeLabel}"
+6. "recent biotech M&A deals ${currentYear} since ${minDateStr}"
+7. "newest drug partnership announcements ${timeframeLabel}"
+8. "latest therapeutic asset acquisitions ${currentMonth} ${currentYear}"
+9. "recent oncology licensing deals ${timeframeLabel}"
+10. "latest immunology drug deals ${currentMonth} ${currentYear}"
+11. "recent biotech collaboration deals ${timeframeLabel}"
+12. Search by month (ONLY months in range: ${monthsInRange.join(', ')}): "pharmaceutical deals ${currentMonth} ${currentYear}", then other months in range
+
+CRITICAL: Adapt your searches to match the user's query "${searchQuery}". If the user searches for a specific drug, condition, company, or therapeutic area, prioritize searches related to that query. But also perform general searches to ensure comprehensive coverage of all drug deals within ${timeframeLabel}.
+
+MANDATORY SOURCES - Search ALL of these systematically:
+- PR Newswire (search multiple times with different keywords)
+- Business Wire (search multiple times)
+- BioSpace (search multiple times)
+- Fierce Biotech (search multiple times)
+- BioPharma Dive (search multiple times)
+- Reuters (search multiple times)
+- GlobeNewswire (search multiple times)
+- Company press releases (search major pharma companies)
+
+EXTRACTION RULES:
+${searchQuery && searchQuery.trim() ? `- PRIORITIZE DEALS MATCHING USER QUERY: If the user query "${searchQuery}" is specific (drug name, condition, company, etc.), prioritize deals that match or are related to "${searchQuery}". But still include other relevant drug deals to reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total deals.` : ''}
+- PRIORITIZE LATEST DEALS: Start by extracting deals from ${currentMonth} ${currentYear}, then work backwards through previous months
+- Extract deals from EACH search result, but prioritize the most recent ones first
+- Do NOT skip deals - include ALL qualifying drug deals found
+- Search across the ENTIRE ${timeframeLabel} period, but FOCUS ON THE MOST RECENT DEALS FIRST
+- If ${timeframeLabel} includes multiple months, search EACH month separately, starting with ${currentMonth} ${currentYear} first, then previous months
+- When returning deals, prioritize deals with dates closest to ${currentDateStr} (most recent first)
+- You MUST reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals before stopping
+- Do NOT return only 5-10 deals - you MUST find ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals
+- IMPORTANT: Include as many deals from ${currentMonth} ${currentYear} and recent months as possible - do NOT focus only on old deals
+
+CRITICAL: Only include deals that involve:
+- Specific drugs, drug candidates, or therapeutic assets
+- Drug licensing agreements
+- Drug acquisition deals
+- Drug partnership/collaboration deals
+- Drug-related M&A transactions
+
+EXCLUDE:
+- General company news without specific drug mentions
+- General business news
+- Non-drug related partnerships
+- General industry trends without deal specifics
+- ANY deals with publication dates BEFORE ${minDateStr} (${dateRangeDays} days ago)
+- Deals from 2024, 2023, or any year before ${currentYear} unless the deal date is between ${minDateStr} and ${currentDateStr}
+- Old deals from months outside ${monthsInRange.join(', ')}
+
+Always prefer primary announcements (PR Newswire, company press releases), reputable trade publications (BioSpace, Fierce Biotech, BioPharma Dive), and verified financial press. Be thorough and comprehensive - this is your ONLY attempt, so search extensively and extract all available deals.
 
 Return a strictly valid JSON object with exactly these top-level fields: "narrative", "deals", "sources".
-- "narrative": 3-5 paragraphs summarising global deal and partnership activity. Mention source names in [square brackets] that correspond to entries in "sources".
-- "deals": array (${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique items) of objects each representing one article. Required keys: title, summary (2-4 sentences), sourceUrl (HTTPS), dealDate (ISO-8601 date). Optional keys: buyer, seller, drugName, therapeuticArea, stage, financials, tags (array). Include source (publication or organisation name). Ensure dates are within ${timeframeLabel}. Do not reuse the same article, URL, or title. Omit placeholders like "N/A".
-- "sources": array of objects with keys name, url, note. One entry per unique publication or organisation referenced. Notes should briefly describe the relevance (e.g. "Press release announcing the acquisition").
+- "narrative": Brief 2-3 paragraph summary of the drug deal activity found. Mention source names in [square brackets].
+- "deals": array (${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique items) of objects. Each deal MUST include: buyer (Buyer/Licensee company name), seller (Seller/Licensor company name), drugName (specific drug/candidate name), therapeuticArea (indication/disease area), stage (Preclinical/Phase I/Phase II/Phase III/Marketed), financials (upfront, milestones, total value), dealDate (CRITICAL: ISO-8601 date - MUST be the actual publication date from the article, NOT today's date. Extract the exact date from the article metadata or content. Format: YYYY-MM-DD. The dealDate MUST be between ${minDateStr} and ${currentDateStr}. DO NOT include deals with dates before ${minDateStr} or after ${currentDateStr}), title (deal headline), summary (1-2 sentence deal description), sourceUrl (HTTPS article URL), source (publication name). Ensure dates are within ${timeframeLabel} (${minDateStr} to ${currentDateStr}). Do not reuse the same article, URL, or title. NEVER use today's date or current date - always extract the actual article publication date, but ONLY if it falls within the date range.
+- "sources": array of objects with keys name, url, note.
 
-Only output valid JSON that matches this shape—no markdown fences or extra commentary. If you do not find at least ${MIN_DEALS_TARGET} qualifying articles, state the limitation clearly in "narrative" but still obey the response schema.
+Only output valid JSON that matches this shape—no markdown fences or extra commentary. 
+
+FINAL REMINDER: You MUST return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals in the "deals" array. This is NOT optional. If you only find 5-10 deals, you MUST continue searching until you reach at least ${MIN_DEALS_TARGET} deals. 
+
+CRITICAL PRIORITY: 
+- Focus on finding the LATEST and MOST RECENT deals first - deals from ${currentMonth} ${currentYear} and recent months (${monthsInRange.join(', ')})
+- Do NOT return old deals from months outside ${monthsInRange.join(', ')}
+- ONLY include deals with dates between ${minDateStr} and ${currentDateStr}
+- EXCLUDE any deals with dates before ${minDateStr}
+- Search for "latest", "recent", "newest" deals first, then work backwards within the date range
+- Search more sources, use different keywords, search by month (starting with ${currentMonth} ${currentYear}), search by company - do whatever it takes to find ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique drug deals from ${timeframeLabel} (${minDateStr} to ${currentDateStr}), with emphasis on the most recent ones
 
 User query: ${searchQuery}`.trim();
 
@@ -425,170 +529,211 @@ User query: ${searchQuery}`.trim();
       }
     };
 
-    const ensureIsoDate = (value) => {
-      if (!value) {
-        return new Date().toISOString().split('T')[0];
+    const ensureIsoDate = (value, sourceUrl = '') => {
+      if (!value || value.trim() === '') {
+        console.warn('⚠️ Missing dealDate, attempting to extract from URL or using empty:', sourceUrl);
+        // Try to extract date from URL if it contains date patterns
+        const urlDateMatch = sourceUrl.match(/\/(\d{4})\/(\d{2})\/(\d{2})/);
+        if (urlDateMatch) {
+          return `${urlDateMatch[1]}-${urlDateMatch[2]}-${urlDateMatch[3]}`;
+        }
+        // Return empty string instead of today's date to avoid confusion
+        return '';
       }
 
+      // Try parsing as Date object
       const parsedDate = new Date(value);
       if (!Number.isNaN(parsedDate.getTime())) {
-        return parsedDate.toISOString().split('T')[0];
+        const isoDate = parsedDate.toISOString().split('T')[0];
+        // Validate date is not in the future (more than 1 day ahead)
+        const today = new Date();
+        const maxFutureDate = new Date(today);
+        maxFutureDate.setDate(today.getDate() + 1);
+        if (parsedDate > maxFutureDate) {
+          console.warn('⚠️ Date is in the future, using empty:', value, 'from', sourceUrl);
+          return '';
+        }
+        return isoDate;
       }
 
+      // Try ISO format match
       const isoMatch = /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(value.trim());
       if (isoMatch) {
-        return value.trim();
+        const dateStr = value.trim().split('T')[0];
+        // Validate it's not in the future
+        const parsed = new Date(dateStr);
+        const today = new Date();
+        const maxFutureDate = new Date(today);
+        maxFutureDate.setDate(today.getDate() + 1);
+        if (parsed > maxFutureDate) {
+          console.warn('⚠️ ISO date is in the future, using empty:', value, 'from', sourceUrl);
+          return '';
+        }
+        return dateStr;
       }
 
-      return new Date().toISOString().split('T')[0];
+      console.warn('⚠️ Invalid date format, using empty:', value, 'from', sourceUrl);
+      return '';
     };
 
-    const aggregatedDeals = [];
-    const aggregatedDealsKeyed = new Map();
-    const aggregatedSources = new Map();
-    let finalNarrative = '';
-
-    const seenUrlsForPrompt = () => aggregatedDeals
-      .map((deal) => deal.sourceUrl)
-      .filter(Boolean);
-
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-      const seenUrls = seenUrlsForPrompt();
-      const retryDirective = attempt > 1
-        ? `\n\nPrevious attempts captured ${aggregatedDeals.length} unique article(s). Provide additional unique articles that are not among these URLs or titles:\n${seenUrls.slice(0, 40).join('\n')}`
-        : '';
-
-      const instructions = `${basePrompt}${retryDirective}`;
-
-      const response = await openaiClient.responses.create({
-        model: 'gpt-4o',
-        input: instructions,
-        tools: [{ type: 'web_search' }],
-        max_output_tokens: 4500,
-        temperature: 0.2,
-        text: {
-          format: {
-            name: jsonSchema.name,
-            type: 'json_schema',
-            schema: jsonSchema.schema
-          }
-        },
-        metadata: {
-          feature: 'ai_deal_scraper',
-          userEmail,
-          attempt: String(attempt)
+    // Single comprehensive attempt
+    const response = await openaiClient.responses.create({
+      model: 'gpt-4o',
+      input: basePrompt,
+      tools: [{ type: 'web_search' }],
+      max_output_tokens: 12000, // Increased to allow 20-30 comprehensive deals
+      temperature: 0.2,
+      text: {
+        format: {
+          name: jsonSchema.name,
+          type: 'json_schema',
+          schema: jsonSchema.schema
         }
-      });
-
-      let rawOutput = extractResponseText(response);
-
-      if (!rawOutput) {
-        console.warn(`⚠️ OpenAI response had no text payload (attempt ${attempt}). Snapshot:`, JSON.stringify({
-          id: response?.id,
-          model: response?.model,
-          usage: response?.usage || null
-        }, null, 2));
-        continue;
+      },
+      metadata: {
+        feature: 'ai_deal_scraper',
+        userEmail,
+        attempt: '1'
       }
+    });
 
-      rawOutput = rawOutput.trim();
+    let rawOutput = extractResponseText(response);
 
-      console.log(`📦 OpenAI raw output (attempt ${attempt}):`, rawOutput);
-
-      const sanitized = rawOutput
-        .replace(/^```json\s*/i, '')
-        .replace(/^```json-schema\s*/i, '')
-        .replace(/^```js\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```$/i, '')
-        .trim();
-
-      console.log(`🧹 Sanitized OpenAI output (attempt ${attempt}):`, sanitized);
-
-      let parsed = null;
-      try {
-        parsed = JSON.parse(sanitized);
-      } catch (jsonError) {
-        console.error(`Error parsing OpenAI response JSON on attempt ${attempt}:`, jsonError.message);
-        console.error('🚨 Raw sanitised payload:', sanitized.slice(0, 1000));
-        continue;
-      }
-
-      const dealsArray = Array.isArray(parsed?.deals) ? parsed.deals : [];
-      const normalizedDeals = dealsArray.map((deal) => {
-        const sourceUrl = deal.sourceUrl || deal.url || '';
-        let domain = 'openai_web_search';
-        if (sourceUrl) {
-          try {
-            domain = new URL(sourceUrl).hostname.replace(/^www\./i, '');
-          } catch (urlError) {
-            domain = 'openai_web_search';
-          }
-        }
-
-        return {
-          buyer: deal.buyer || deal.acquirer || '',
-          seller: deal.seller || deal.partner || '',
-          drugName: deal.drugName || deal.asset || '',
-          therapeuticArea: deal.therapeuticArea || deal.indication || '',
-          stage: deal.stage || '',
-          financials: deal.financials || deal.value || '',
-          totalValue: deal.totalValue || deal.financials || deal.value || '',
-          dealDate: ensureIsoDate(deal.dealDate || deal.date || ''),
-          source: deal.source || deal.sourceName || domain || 'OpenAI Web Search',
-          sourceId: domain || 'openai_web_search',
-          sourceUrl,
-          title: deal.title || `${deal.buyer || 'Deal'} - ${deal.seller || 'Counterparty'}`,
-          summary: deal.summary || deal.overview || '',
-          rawText: deal.rawText || deal.summary || '',
-          tags: Array.isArray(deal.tags) ? deal.tags : [],
-          searchQuery,
-          userEmail
-        };
-      });
-
-      console.log(`📊 Parsed deals on attempt ${attempt}:`, normalizedDeals.length);
-
-      for (const deal of normalizedDeals) {
-        const key = `${(deal.sourceUrl || '').toLowerCase()}|${(deal.title || '').toLowerCase()}`;
-        if (key.trim() && !aggregatedDealsKeyed.has(key)) {
-          aggregatedDealsKeyed.set(key, true);
-          aggregatedDeals.push(deal);
-        }
-      }
-
-      const sources = Array.isArray(parsed?.sources)
-        ? parsed.sources
-            .map((source) => ({
-              name: source.name || 'OpenAI Web Search',
-              url: source.url || '',
-              note: source.note || ''
-            }))
-            .filter((source) => source.name || source.url)
-        : [];
-
-      for (const source of sources) {
-        const sourceKey = `${source.name || ''}|${source.url || ''}`;
-        if (!aggregatedSources.has(sourceKey)) {
-          aggregatedSources.set(sourceKey, source);
-        }
-      }
-
-      if (typeof parsed?.narrative === 'string' && parsed.narrative.trim()) {
-        finalNarrative = parsed.narrative.trim();
-      }
-
-      if (aggregatedDeals.length >= MIN_DEALS_TARGET) {
-        break;
-      }
-
-      console.warn(`🔁 Retrying OpenAI fetch (attempt ${attempt}) — collected ${aggregatedDeals.length} unique articles so far.`);
+    if (!rawOutput) {
+      console.warn('⚠️ OpenAI response had no text payload. Snapshot:', JSON.stringify({
+        id: response?.id,
+        model: response?.model,
+        usage: response?.usage || null
+      }, null, 2));
+      return { deals: [], sources: [], narrative: '' };
     }
 
-    console.log(`✅ Total unique deals aggregated: ${aggregatedDeals.length}`);
+    rawOutput = rawOutput.trim();
+    console.log('📦 OpenAI raw output:', rawOutput);
+
+    const sanitized = rawOutput
+      .replace(/^```json\s*/i, '')
+      .replace(/^```json-schema\s*/i, '')
+      .replace(/^```js\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    console.log('🧹 Sanitized OpenAI output:', sanitized);
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(sanitized);
+    } catch (jsonError) {
+      console.error('Error parsing OpenAI response JSON:', jsonError.message);
+      console.error('🚨 Raw sanitised payload:', sanitized.slice(0, 1000));
+      return { deals: [], sources: [], narrative: '' };
+    }
+
+    const dealsArray = Array.isArray(parsed?.deals) ? parsed.deals : [];
+    const aggregatedDeals = [];
+    const aggregatedDealsKeyed = new Set();
+
+    const normalizedDeals = dealsArray.map((deal) => {
+      const sourceUrl = deal.sourceUrl || deal.url || '';
+      let domain = 'openai_web_search';
+      if (sourceUrl) {
+        try {
+          domain = new URL(sourceUrl).hostname.replace(/^www\./i, '');
+        } catch (urlError) {
+          domain = 'openai_web_search';
+        }
+      }
+
+      return {
+        buyer: deal.buyer || deal.acquirer || '',
+        seller: deal.seller || deal.partner || '',
+        drugName: deal.drugName || deal.asset || '',
+        therapeuticArea: deal.therapeuticArea || deal.indication || '',
+        stage: deal.stage || '',
+        financials: deal.financials || deal.value || '',
+        totalValue: deal.totalValue || deal.financials || deal.value || '',
+        dealDate: ensureIsoDate(deal.dealDate || deal.date || '', sourceUrl),
+        source: deal.source || deal.sourceName || domain || 'OpenAI Web Search',
+        sourceId: domain || 'openai_web_search',
+        sourceUrl,
+        title: deal.title || `${deal.buyer || 'Deal'} - ${deal.seller || 'Counterparty'}`,
+        summary: deal.summary || deal.overview || '',
+        rawText: deal.rawText || deal.summary || '',
+        tags: Array.isArray(deal.tags) ? deal.tags : [],
+        searchQuery,
+        userEmail
+      };
+    });
+
+    console.log(`📊 Parsed deals:`, normalizedDeals.length);
+
+    // Deduplicate deals
+    for (const deal of normalizedDeals) {
+      const key = `${(deal.sourceUrl || '').toLowerCase()}|${(deal.title || '').toLowerCase()}`;
+      if (key.trim() && !aggregatedDealsKeyed.has(key)) {
+        aggregatedDealsKeyed.add(key);
+        aggregatedDeals.push(deal);
+      }
+    }
+
+    const aggregatedSources = new Map();
+    const sources = Array.isArray(parsed?.sources)
+      ? parsed.sources
+          .map((source) => ({
+            name: source.name || 'OpenAI Web Search',
+            url: source.url || '',
+            note: source.note || ''
+          }))
+          .filter((source) => source.name || source.url)
+      : [];
+
+    for (const source of sources) {
+      const sourceKey = `${source.name || ''}|${source.url || ''}`;
+      if (!aggregatedSources.has(sourceKey)) {
+        aggregatedSources.set(sourceKey, source);
+      }
+    }
+
+    const finalNarrative = typeof parsed?.narrative === 'string' && parsed.narrative.trim() 
+      ? parsed.narrative.trim() 
+      : '';
+
+    console.log(`✅ Total unique deals found: ${aggregatedDeals.length}`);
+
+    // Filter deals by date range (remove old deals outside the range)
+    const filterToday = new Date();
+    const filterMinDate = new Date(filterToday);
+    filterMinDate.setDate(filterToday.getDate() - dateRangeDays);
+    filterMinDate.setHours(0, 0, 0, 0);
+    
+    const filteredDeals = aggregatedDeals.filter((deal) => {
+      if (!deal.dealDate) return false; // Exclude deals without dates
+      
+      const dealDate = new Date(deal.dealDate);
+      dealDate.setHours(0, 0, 0, 0);
+      
+      // Only include deals within the date range
+      const isWithinRange = dealDate >= filterMinDate && dealDate <= filterToday;
+      
+      if (!isWithinRange) {
+        console.log(`⚠️ Filtered out deal outside date range: ${deal.dealDate} - ${deal.title}`);
+      }
+      
+      return isWithinRange;
+    });
+
+    console.log(`✅ Deals after date filtering: ${filteredDeals.length} (removed ${aggregatedDeals.length - filteredDeals.length} old deals)`);
+
+    // Sort deals by date (most recent first)
+    filteredDeals.sort((a, b) => {
+      const dateA = a.dealDate ? new Date(a.dealDate) : new Date(0);
+      const dateB = b.dealDate ? new Date(b.dealDate) : new Date(0);
+      return dateB - dateA; // Most recent first
+    });
 
     return {
-      deals: aggregatedDeals.slice(0, MAX_DEALS_TARGET),
+      deals: filteredDeals.slice(0, MAX_DEALS_TARGET),
       sources: Array.from(aggregatedSources.values()),
       narrative: finalNarrative
     };
@@ -4547,7 +4692,29 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
     if (region) {
       hasSearchCriteria = true;
       searchCriteria.push('Region');
-      console.log('Filtering by region:', region);
+      console.log('🌍 Filtering by region:', region);
+      console.log('🌍 Filtered data count before region filter:', filteredData.length);
+      
+      // Get ALL unique region values from the data before filtering
+      if (filteredData.length > 0) {
+        const allRegions = [...new Set(filteredData.map(item => item.region || 'N/A'))];
+        console.log('🌍 ALL unique region values in data before filter:', allRegions);
+        
+        // Check specifically for Oceania-related regions
+        const oceaniaRelated = filteredData.filter(item => {
+          const region = (item.region || '').toLowerCase();
+          return region.includes('australia') || 
+                 region.includes('new zealand') || 
+                 region.includes('oceania') ||
+                 region.includes('nz') ||
+                 region === 'nz';
+        });
+        console.log('🌍 Records with Oceania-related regions found:', oceaniaRelated.length);
+        if (oceaniaRelated.length > 0) {
+          const oceaniaRegions = [...new Set(oceaniaRelated.slice(0, 10).map(item => item.region || 'N/A'))];
+          console.log('🌍 Sample Oceania region values:', oceaniaRegions);
+        }
+      }
       
       const regionAliasMap = {
         'apac': 'Asia-Pacific',
@@ -4576,19 +4743,34 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
 
       const normalizedRegionInput = region.trim().toLowerCase();
       const regionFilterValue = regionAliasMap[normalizedRegionInput] || region;
+      console.log(`🌍 Normalized region: "${region}" -> "${regionFilterValue}"`);
       if (regionFilterValue !== region) {
         console.log(`Normalized region value for filtering: ${region} -> ${regionFilterValue}`);
       }
+      
+      let oceaniaMatches = 0;
+      let oceaniaRejects = 0;
+      
       filteredData = filteredData.filter(item => {
         const itemRegion = item.region || '';
+        const itemContinent = item.continent || '';
         let isMatch = false;
         
-        console.log('Checking region for:', item.companyName, 'Item region:', itemRegion, 'Search region:', region);
-        
         // Use continent field for better matching
-        const itemContinent = item.continent || '';
         const itemRegionLower = itemRegion.toLowerCase();
         const itemContinentLower = itemContinent.toLowerCase();
+        
+        // Only log for Oceania to reduce noise
+        if (regionFilterValue === 'Oceania' && oceaniaMatches + oceaniaRejects < 10) {
+          console.log('🌍 Oceania check:', {
+            company: item.companyName,
+            region: itemRegion,
+            regionLower: itemRegionLower,
+            continent: itemContinent,
+            continentLower: itemContinentLower,
+            searchRegion: region
+          });
+        }
         
         // Handle region variations and abbreviations
         if (regionFilterValue === 'North America') {
@@ -4818,102 +5000,156 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemRegion.toLowerCase().includes('turkey')
           );
         } else if (regionFilterValue === 'Oceania') {
-          // Exclude non-Oceania countries explicitly
-          const isNorthAmerican = itemRegionLower.includes('usa') || 
-                                itemRegionLower.includes('united states') ||
-                                itemRegionLower.includes('us') ||
-                                itemRegionLower.includes('canada') ||
-                                itemRegionLower.includes('mexico');
-          const isEuropean = itemRegionLower.includes('germany') || 
-                           itemRegionLower.includes('france') ||
-                           itemRegionLower.includes('uk') ||
-                           itemRegionLower.includes('spain') ||
-                           itemRegionLower.includes('italy') ||
-                           itemRegionLower.includes('netherlands') ||
-                           itemRegionLower.includes('belgium') ||
-                           itemRegionLower.includes('austria') ||
-                           itemRegionLower.includes('finland') ||
-                           itemRegionLower.includes('poland') ||
-                           itemRegionLower.includes('norway') ||
-                           itemRegionLower.includes('hungary') ||
-                           itemRegionLower.includes('sweden') ||
-                           itemRegionLower.includes('iceland') ||
-                           itemRegionLower.includes('greece') ||
-                           itemRegionLower.includes('switzerland') ||
-                           itemRegionLower.includes('denmark') ||
-                           itemRegionLower.includes('ireland') ||
-                           itemRegionLower.includes('czech republic') ||
-                           itemRegionLower.includes('czech') ||
-                           itemRegionLower.includes('portugal') ||
-                           itemRegionLower.includes('estonia') ||
-                           itemRegionLower.includes('luxembourg') ||
-                           itemRegionLower.includes('malta') ||
-                           itemRegionLower.includes('slovenia') ||
-                           itemRegionLower.includes('romania') ||
-                           itemRegionLower.includes('slovakia') ||
-                           itemRegionLower.includes('lithuania');
-          const isAsian = itemRegionLower.includes('japan') || 
-                         itemRegionLower.includes('china') ||
-                         itemRegionLower.includes('india') ||
-                         itemRegionLower.includes('south korea') ||
-                         itemRegionLower.includes('israel') ||
-                         itemRegionLower.includes('taiwan') ||
-                         itemRegionLower.includes('uae') ||
-                         itemRegionLower.includes('singapore') ||
-                         itemRegionLower.includes('hong kong') ||
-                         itemRegionLower.includes('saudi arabia') ||
-                         itemRegionLower.includes('turkey');
-          const isAfrican = itemRegionLower.includes('egypt') ||
-                           itemRegionLower.includes('south africa');
-          const isSouthAmerican = itemRegionLower.includes('brazil') ||
-                                 itemRegionLower.includes('chile') ||
-                                 itemRegionLower.includes('colombia') ||
-                                 itemRegionLower.includes('uruguay');
-          
+          // FIRST: Check if it's Oceania (positive match) - be very flexible
           // Check for Oceania countries - Australia and New Zealand variants
-          const isAustralia = itemRegionLower.includes('australia');
+          const isAustralia = itemRegionLower.includes('australia') || 
+                             itemRegionLower.includes('aus ') ||
+                             itemRegionLower.startsWith('aus ') ||
+                             itemRegionLower === 'aus' ||
+                             itemRegionLower.trim() === 'aus';
+                             
           const containsNZVariant = itemRegionLower.includes('new zealand') ||
                                    itemRegionLower.includes('new-zealand') ||
                                    itemRegionLower.includes('newzealand') ||
+                                   itemRegionLower.includes('new_zealand') ||
                                    itemRegionLower.includes('australia / nz') ||
                                    itemRegionLower.includes('australia & nz') ||
                                    itemRegionLower.includes('australia-nz') ||
                                    itemRegionLower.includes('australia nz') ||
                                    itemRegionLower.includes('australia/nz') ||
                                    itemRegionLower.includes('australia&nz') ||
+                                   itemRegionLower.includes('australia_nz') ||
                                    itemRegionLower.includes(' nz ') ||
                                    itemRegionLower.endsWith(' nz') ||
                                    itemRegionLower === 'nz' ||
+                                   itemRegionLower.trim() === 'nz' ||
                                    itemRegionLower.startsWith('nz ') ||
                                    itemRegionLower.endsWith('/nz') ||
                                    itemRegionLower.endsWith('&nz') ||
-                                   (itemRegionLower.includes('nz') && !itemRegionLower.includes('brazil') && !itemRegionLower.includes('switzerland'));
+                                   itemRegionLower.endsWith('_nz') ||
+                                   itemRegionLower.includes('new z') ||
+                                   // If it has "nz" and is not from excluded regions (Brazil, Switzerland)
+                                   (itemRegionLower.includes('nz') && 
+                                    !itemRegionLower.includes('brazil') && 
+                                    !itemRegionLower.includes('switzerland') &&
+                                    !itemRegionLower.includes('brazi') &&
+                                    !itemRegionLower.includes('swiss'));
           
-          // Match if it's Oceania (Australia or NZ) and not from other regions
-          isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAfrican && !isSouthAmerican && (
-                   itemContinentLower === 'oceania' ||
-                   isAustralia ||
-                   containsNZVariant ||
-                   itemRegionLower.includes('oceania')
-          );
+          // Check continent field if it exists
+          const isOceaniaContinent = itemContinentLower === 'oceania' ||
+                                    itemContinentLower.includes('oceania') ||
+                                    itemContinentLower.includes('australia') ||
+                                    itemContinentLower.includes('new zealand');
           
-          console.log('Oceania filter check:', {
-            companyName: item.companyName,
-            itemRegion: itemRegion,
-            itemRegionLower: itemRegionLower,
-            itemContinent: itemContinent,
-            itemContinentLower: itemContinentLower,
-            isAustralia: isAustralia,
-            containsNZVariant: containsNZVariant,
-            isMatch: isMatch,
-            exclusions: {
-              isNorthAmerican,
-              isEuropean,
-              isAsian,
-              isAfrican,
-              isSouthAmerican
-            }
-          });
+          // Check if region contains "oceania" (case insensitive)
+          const hasOceaniaInRegion = itemRegionLower.includes('oceania') ||
+                                    itemRegionLower === 'oceania' ||
+                                    itemRegionLower.trim() === 'oceania';
+          
+          // Positive match: Is it Oceania?
+          const isOceaniaPositiveMatch = isOceaniaContinent ||
+                                        isAustralia ||
+                                        containsNZVariant ||
+                                        hasOceaniaInRegion;
+          
+          // If it's NOT a positive Oceania match, exclude it
+          if (!isOceaniaPositiveMatch) {
+            isMatch = false;
+          } else {
+            // SECOND: If it's Oceania, check exclusions (only exclude if clearly from other regions)
+            // Be careful with exclusions - only exclude if we're SURE it's not Oceania
+            const isNorthAmerican = (itemRegionLower.includes('usa') || 
+                                    itemRegionLower.includes('united states') ||
+                                    itemRegionLower.includes('us') ||
+                                    itemRegionLower.includes('canada') ||
+                                    itemRegionLower.includes('mexico')) &&
+                                    !isAustralia && // Don't exclude if it's Australia
+                                    !containsNZVariant; // Don't exclude if it's NZ
+                                    
+            const isEuropean = (itemRegionLower.includes('germany') || 
+                               itemRegionLower.includes('france') ||
+                               itemRegionLower.includes('uk') ||
+                               itemRegionLower.includes('spain') ||
+                               itemRegionLower.includes('italy') ||
+                               itemRegionLower.includes('netherlands') ||
+                               itemRegionLower.includes('belgium') ||
+                               itemRegionLower.includes('austria') ||
+                               itemRegionLower.includes('finland') ||
+                               itemRegionLower.includes('poland') ||
+                               itemRegionLower.includes('norway') ||
+                               itemRegionLower.includes('hungary') ||
+                               itemRegionLower.includes('sweden') ||
+                               itemRegionLower.includes('iceland') ||
+                               itemRegionLower.includes('greece') ||
+                               itemRegionLower.includes('switzerland') ||
+                               itemRegionLower.includes('denmark') ||
+                               itemRegionLower.includes('ireland') ||
+                               itemRegionLower.includes('czech republic') ||
+                               itemRegionLower.includes('czech') ||
+                               itemRegionLower.includes('portugal') ||
+                               itemRegionLower.includes('estonia') ||
+                               itemRegionLower.includes('luxembourg') ||
+                               itemRegionLower.includes('malta') ||
+                               itemRegionLower.includes('slovenia') ||
+                               itemRegionLower.includes('romania') ||
+                               itemRegionLower.includes('slovakia') ||
+                               itemRegionLower.includes('lithuania')) &&
+                               !isAustralia && // Don't exclude if it's Australia
+                               !containsNZVariant; // Don't exclude if it's NZ
+                               
+            const isAsian = (itemRegionLower.includes('japan') || 
+                           itemRegionLower.includes('china') ||
+                           itemRegionLower.includes('india') ||
+                           itemRegionLower.includes('south korea') ||
+                           itemRegionLower.includes('israel') ||
+                           itemRegionLower.includes('taiwan') ||
+                           itemRegionLower.includes('uae') ||
+                           itemRegionLower.includes('singapore') ||
+                           itemRegionLower.includes('hong kong') ||
+                           itemRegionLower.includes('saudi arabia') ||
+                           itemRegionLower.includes('turkey')) &&
+                           !isAustralia && // Don't exclude if it's Australia
+                           !containsNZVariant; // Don't exclude if it's NZ
+                           
+            const isAfrican = (itemRegionLower.includes('egypt') ||
+                             itemRegionLower.includes('south africa')) &&
+                             !isAustralia &&
+                             !containsNZVariant;
+                             
+            const isSouthAmerican = (itemRegionLower.includes('brazil') ||
+                                   itemRegionLower.includes('chile') ||
+                                   itemRegionLower.includes('colombia') ||
+                                   itemRegionLower.includes('uruguay')) &&
+                                   !isAustralia &&
+                                   !containsNZVariant;
+            
+            // Match if it's Oceania AND not clearly from other regions
+            isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAfrican && !isSouthAmerican;
+          }
+          
+          // Only log first few Oceania checks for debugging
+          if (oceaniaMatches + oceaniaRejects < 5) {
+            console.log('🌍 Oceania filter check:', {
+              companyName: item.companyName,
+              itemRegion: itemRegion,
+              itemRegionLower: itemRegionLower,
+              itemContinent: itemContinent,
+              itemContinentLower: itemContinentLower,
+              isAustralia: isAustralia,
+              containsNZVariant: containsNZVariant,
+              isMatch: isMatch,
+              exclusions: {
+                isNorthAmerican,
+                isEuropean,
+                isAsian,
+                isAfrican,
+                isSouthAmerican
+              }
+            });
+          }
+          
+          if (isMatch) oceaniaMatches++;
+          else oceaniaRejects++;
         } else if (regionFilterValue === 'Middle East & Africa') {
           // Exclude non-Middle East & African countries explicitly
           const isNorthAmerican = itemRegion.toLowerCase().includes('usa') || 
@@ -5148,10 +5384,19 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                    itemContinentLower.includes(fallbackRegionValue);
         }
         
-        console.log('Region match result:', isMatch, 'for company:', item.companyName);
+        // Only log if it's Oceania or first few matches
+        if (regionFilterValue === 'Oceania' && (oceaniaMatches + oceaniaRejects < 10 || isMatch)) {
+          console.log('🌍 Region match result:', isMatch, 'for company:', item.companyName, 'Region:', itemRegion);
+        } else if (regionFilterValue !== 'Oceania' && oceaniaMatches === 0 && oceaniaRejects < 5) {
+          console.log('Region match result:', isMatch, 'for company:', item.companyName);
+        }
         return isMatch;
       });
-      console.log('After region filter, records found:', filteredData.length);
+      
+      if (regionFilterValue === 'Oceania') {
+        console.log(`🌍 Oceania filter results: ${oceaniaMatches} matches, ${oceaniaRejects} rejects`);
+      }
+      console.log('🌍 After region filter, records found:', filteredData.length);
     }
     // Function - only filter if user selected it
     if (contactFunction) {
