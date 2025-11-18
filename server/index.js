@@ -375,10 +375,62 @@ async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
     }
 
     const basePrompt = `
-You are a pharmaceutical and biotechnology deal analyst. You MUST find EXACTLY ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique DRUG DEALS (licensing, M&A, partnerships, acquisitions) published within ${timeframeLabel}.
+You are a pharmaceutical and biotechnology deal analyst. You MUST find AT LEAST ${MIN_DEALS_TARGET} unique DRUG DEALS (ideally ${MAX_DEALS_TARGET}, but minimum ${MIN_DEALS_TARGET}) (licensing, M&A, partnerships, acquisitions) published within ${timeframeLabel}.
+
+🚨 CRITICAL REQUIREMENT: YOU MUST RETURN AT LEAST ${MIN_DEALS_TARGET} DEALS. RETURNING ONLY 3-5 DEALS IS NOT ACCEPTABLE. YOU MUST SEARCH EXTENSIVELY AND FIND ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} DEALS.
+
+🚫 ABSOLUTE PROHIBITION - THESE DEALS MUST NEVER APPEAR IN RESULTS (COMPLETELY FORBIDDEN):
+- Energy/oil/gas deals - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
+- Automotive deals - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
+- Food/beverage deals - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW (including nutraceutical deals)
+These three categories are STRICTLY PROHIBITED and must NEVER appear in your results. If you encounter any deals from these industries, IMMEDIATELY EXCLUDE them and DO NOT include them in the output.
+
+🚫 CRITICAL: ONLY ACTUAL DRUG DEAL ANNOUNCEMENTS - EXCLUDE ALL GENERAL NEWS ARTICLES:
+You MUST ONLY include actual DRUG DEAL announcements (licensing agreements, M&A transactions, partnerships, acquisitions). 
+DO NOT include general medical news articles, health articles, or educational content. Examples of what to EXCLUDE:
+- General health news articles (e.g., "cancer symptoms", "disease prevention tips", "health advice")
+- Educational articles (e.g., "medical education", "exam information", "training programs")
+- Lists and rankings (e.g., "influential people in oncology", "top doctors", "key opinion leaders")
+- Conference presentations or research updates (unless they specifically announce a deal)
+- General disease information articles
+- News about medical procedures or treatments (unless it's part of a deal announcement)
+- Articles about medical conferences or events (unless they announce a deal)
+- Any article that does NOT specifically announce a drug deal, licensing agreement, partnership, M&A, or acquisition
+
+ONLY include articles that specifically announce:
+- Drug licensing agreements between companies
+- Drug acquisition deals
+- Pharmaceutical M&A transactions
+- Drug partnership/collaboration announcements
+- Biotech deal announcements
+- Therapeutic asset transactions
+
+If an article is just general news about a disease, health information, education, or people - EXCLUDE IT COMPLETELY. Only actual deal announcements are acceptable.
+
+CRITICAL RESTRICTION: ONLY MEDICAL/PHARMACEUTICAL/BIOTECH FIELD DEALS ARE ALLOWED. 
+- You MUST ONLY return deals from pharmaceutical, biotech, or medical fields
+- DO NOT include any deals from technology, finance, retail, manufacturing, energy, automotive, or any other non-medical industries
+- Every deal MUST involve drugs, drug candidates, pharmaceutical products, or medical/biotech companies
+- If a deal is not clearly from the medical/pharmaceutical/biotech field, EXCLUDE it completely
 
 USER QUERY: "${searchQuery}"
-${searchQuery && searchQuery.trim() ? `The user is searching for deals related to: "${searchQuery}". Adapt your searches to find deals matching this query - it could be a drug name, condition/disease, company name, therapeutic area, or any related term. If the query is specific, prioritize deals related to it. If the query is generic or empty, search broadly for all drug deals.` : 'The user has not specified a particular search term, so search broadly for all drug deals within the timeframe.'} 
+${searchQuery && searchQuery.trim() ? `The user is searching for DRUG DEALS related to: "${searchQuery}". 
+
+🚨 ABSOLUTE CRITICAL: "${searchQuery}" IS ALWAYS A DISEASE/CONDITION, NEVER A DRUG NAME.
+
+The user can search for ANY DISEASE in the world (e.g., pain, oncology, cancer, inflammation, autoimmune, diabetes, Alzheimer's, Parkinson's, COVID-19, arthritis, lupus, MS, etc.). 
+You MUST ALWAYS treat "${searchQuery}" as a DISEASE or MEDICAL CONDITION, NOT as a drug name.
+
+CRITICAL SEARCH PRIORITY - DISEASE-BASED SEARCH ONLY:
+- "${searchQuery}" = DISEASE/CONDITION (e.g., if user searches "pain", search for drug deals related to pain treatment, NOT a drug named "pain")
+- "${searchQuery}" = DISEASE/CONDITION (e.g., if user searches "oncology", search for oncology/cancer drug deals, NOT a drug named "oncology")
+- "${searchQuery}" = DISEASE/CONDITION (e.g., if user searches "inflammation", search for inflammation/autoimmune drug deals, NOT a drug named "inflammation")
+- ALWAYS assume "${searchQuery}" is a disease/condition - this applies to ANY search term the user enters
+- PRIORITIZE disease-focused searches: "${searchQuery} drug deals", "drugs for ${searchQuery} deals", "${searchQuery} treatment deals", "${searchQuery} pharmaceutical licensing deals"
+- Focus on finding DRUG DEALS for drugs targeting "${searchQuery}" disease/condition
+- Search for deals where the therapeutic area/disease indication matches "${searchQuery}"
+- DO NOT search for a drug named "${searchQuery}" - "${searchQuery}" is ALWAYS a disease/condition
+- Always return DRUG DEALS as results, prioritizing deals where the disease/condition matches "${searchQuery}"` : 'The user has not specified a particular search term, so search broadly for all drug deals within the timeframe.'} 
 
 CURRENT DATE CONTEXT: Today is ${currentDateStr} (${currentMonth} ${currentYear}). 
 
@@ -389,77 +441,249 @@ CRITICAL DATE FILTERING:
 - PRIORITIZE deals from ${monthsInRange.join(', ')} - these are the months within ${timeframeLabel}
 - Do NOT include deals from months outside this range
 
-CRITICAL: You MUST return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals. Do NOT stop at 5-10 deals. Search ONLY within ${timeframeLabel} (${minDateStr} to ${currentDateStr}), and PRIORITIZE THE LATEST DEALS FIRST.
+🚨 CRITICAL: You MUST return AT LEAST ${MIN_DEALS_TARGET} deals (ideally ${MAX_DEALS_TARGET}). 
+- DO NOT stop at 3-5 deals - this is NOT ACCEPTABLE
+- DO NOT stop at 10 deals - you MUST find MORE
+- You MUST search EXTENSIVELY across MULTIPLE sources
+- Search ONLY within ${timeframeLabel} (${minDateStr} to ${currentDateStr}), and PRIORITIZE THE LATEST DEALS FIRST
+- If you only find a few deals, EXPAND your search - try different keywords, different companies, different therapeutic areas
+- Search EACH source MULTIPLE times with DIFFERENT search terms
+- Return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals - this is MANDATORY
 
 MANDATORY SEARCH STRATEGY - Perform AT LEAST 10-12 different web searches based on the user's query "${searchQuery}":
 IMPORTANT: Include date range "${minDateStr} to ${currentDateStr}" or "${timeframeLabel}" in your searches to ensure you only get recent deals.
 
-DYNAMIC SEARCHES BASED ON USER QUERY:
-1. If user query mentions a specific drug/condition/company, search for: "${searchQuery} drug deals ${timeframeLabel}"
-2. If user query mentions a therapeutic area, search for: "${searchQuery} licensing deals ${currentYear}"
-3. If user query mentions a company, search for: "${searchQuery} pharmaceutical deals ${timeframeLabel}"
-4. Search variations: "${searchQuery} biotech deals", "${searchQuery} M&A", "${searchQuery} partnerships"
+DYNAMIC SEARCHES BASED ON USER QUERY - ALWAYS TREAT AS DISEASE/CONDITION:
+🚨 CRITICAL: "${searchQuery}" IS ALWAYS A DISEASE/CONDITION, NEVER A DRUG NAME.
+The user can search for ANY disease worldwide (pain, oncology, inflammation, autoimmune, diabetes, etc.).
+You MUST search for DRUG DEALS related to treating "${searchQuery}" disease, NOT for a drug named "${searchQuery}".
 
-GENERAL COMPREHENSIVE SEARCHES (to find all relevant deals):
-5. "latest pharmaceutical licensing deals ${currentMonth} ${currentYear} ${timeframeLabel}"
-6. "recent biotech M&A deals ${currentYear} since ${minDateStr}"
-7. "newest drug partnership announcements ${timeframeLabel}"
-8. "latest therapeutic asset acquisitions ${currentMonth} ${currentYear}"
-9. "recent oncology licensing deals ${timeframeLabel}"
-10. "latest immunology drug deals ${currentMonth} ${currentYear}"
-11. "recent biotech collaboration deals ${timeframeLabel}"
-12. Search by month (ONLY months in range: ${monthsInRange.join(', ')}): "pharmaceutical deals ${currentMonth} ${currentYear}", then other months in range
+Prioritize these disease-focused searches (treat "${searchQuery}" as disease in ALL searches):
 
-CRITICAL: Adapt your searches to match the user's query "${searchQuery}". If the user searches for a specific drug, condition, company, or therapeutic area, prioritize searches related to that query. But also perform general searches to ensure comprehensive coverage of all drug deals within ${timeframeLabel}.
+1. "${searchQuery} drug deals ${timeframeLabel}" (HIGHEST PRIORITY - search for drug deals targeting ${searchQuery} disease)
+2. "drugs for ${searchQuery} deals ${timeframeLabel}" (HIGHEST PRIORITY - search for drugs treating ${searchQuery} disease)
+3. "${searchQuery} treatment deals ${timeframeLabel}" (HIGHEST PRIORITY - search for treatment deals for ${searchQuery} disease)
+4. "${searchQuery} pharmaceutical deals ${timeframeLabel}" (HIGH PRIORITY - pharmaceutical deals for ${searchQuery} disease)
+5. "${searchQuery} biotech deals ${timeframeLabel}" (HIGH PRIORITY - biotech deals for ${searchQuery} disease)
+6. "${searchQuery} licensing deals ${currentYear}" (HIGH PRIORITY - licensing deals for ${searchQuery} disease treatments)
+7. "${searchQuery} M&A deals ${timeframeLabel}" (HIGH PRIORITY - M&A deals related to ${searchQuery} disease)
+8. "${searchQuery} partnership deals ${timeframeLabel}" (HIGH PRIORITY - partnership deals for ${searchQuery} disease)
+9. "${searchQuery} drug acquisition deals ${timeframeLabel}" (HIGH PRIORITY - drug acquisition deals for ${searchQuery} disease)
+10. "pharmaceutical deals ${searchQuery} ${timeframeLabel}" (HIGH PRIORITY - pharmaceutical deals for ${searchQuery} disease)
+11. "${searchQuery} therapeutic area deals ${timeframeLabel}" (HIGH PRIORITY - deals in ${searchQuery} therapeutic area)
+12. "drug deals ${searchQuery} indication ${timeframeLabel}" (HIGH PRIORITY - drug deals with ${searchQuery} indication)
 
-MANDATORY SOURCES - Search ALL of these systematically:
-- PR Newswire (search multiple times with different keywords)
-- Business Wire (search multiple times)
-- BioSpace (search multiple times)
-- Fierce Biotech (search multiple times)
-- BioPharma Dive (search multiple times)
-- Reuters (search multiple times)
-- GlobeNewswire (search multiple times)
-- Company press releases (search major pharma companies)
+🚨 ABSOLUTE RULE: Do NOT search for deals involving a drug named "${searchQuery}". 
+"${searchQuery}" is ALWAYS a disease/condition. Search for drug deals where the disease indication or therapeutic area matches "${searchQuery}".
+
+GENERAL COMPREHENSIVE SEARCHES (to find all relevant deals - perform these in addition to disease-specific searches):
+13. "latest pharmaceutical licensing deals ${currentMonth} ${currentYear} ${timeframeLabel}"
+14. "recent biotech M&A deals ${currentYear} since ${minDateStr}"
+15. "newest drug partnership announcements ${timeframeLabel}"
+16. "latest therapeutic asset acquisitions ${currentMonth} ${currentYear}"
+17. "recent oncology licensing deals ${timeframeLabel}"
+18. "latest immunology drug deals ${currentMonth} ${currentYear}"
+19. "recent biotech collaboration deals ${timeframeLabel}"
+20. Search by month (ONLY months in range: ${monthsInRange.join(', ')}): "pharmaceutical deals ${currentMonth} ${currentYear}", then other months in range
+
+CRITICAL: ALWAYS TREAT "${searchQuery}" AS A DISEASE/CONDITION, NOT AS A DRUG NAME.
+
+SEARCH STRATEGY - DISEASE-BASED APPROACH:
+- ALWAYS assume "${searchQuery}" is a disease/condition (e.g., cancer, diabetes, Alzheimer's, etc.)
+- PRIORITIZE disease-focused searches (see DYNAMIC SEARCHES above)
+- Focus on finding DRUG DEALS for drugs targeting "${searchQuery}" disease/condition
+- Search for pharmaceutical deals, licensing deals, and partnerships related to "${searchQuery}" disease treatments
+- Look for deals where the therapeutic area or disease indication matches "${searchQuery}"
+- The results MUST be drug deals, but they should be related to "${searchQuery}" as a disease/condition
+- DO NOT search for deals involving a specific drug named "${searchQuery}" - treat it as a disease instead
+
+Always perform general searches as well to ensure comprehensive coverage of all drug deals within ${timeframeLabel}, but prioritize results where the disease/condition matches "${searchQuery}".
+
+CRITICAL: When performing general searches, ONLY search for pharmaceutical/biotech/medical field deals. Do NOT include any deals from other industries (technology, finance, retail, etc.). All deals MUST be from the medical/pharmaceutical/biotech field.
+
+🚨 MANDATORY SOURCES - Search ALL of these EXTENSIVELY (you MUST search each source MULTIPLE times):
+- PR Newswire (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- Business Wire (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- BioSpace (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- Fierce Biotech (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- BioPharma Dive (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- Reuters (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- GlobeNewswire (search AT LEAST 3-5 times with different keywords to find MORE deals)
+- Company press releases (search major pharma companies - search MULTIPLE companies)
+
+CRITICAL: For EACH source, perform MULTIPLE searches with DIFFERENT keywords to maximize the number of deals found. Do NOT search each source only once - you MUST search multiple times to reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals.
 
 EXTRACTION RULES:
-${searchQuery && searchQuery.trim() ? `- PRIORITIZE DEALS MATCHING USER QUERY: If the user query "${searchQuery}" is specific (drug name, condition, company, etc.), prioritize deals that match or are related to "${searchQuery}". But still include other relevant drug deals to reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total deals.` : ''}
+${searchQuery && searchQuery.trim() ? `- PRIORITIZE DEALS MATCHING USER QUERY: The user query "${searchQuery}" should be your PRIMARY focus. 
+
+🚨 CRITICAL: "${searchQuery}" IS ALWAYS A DISEASE/CONDITION, NEVER A DRUG NAME.
+The user can search for ANY disease worldwide (pain, oncology, inflammation, autoimmune, diabetes, etc.).
+
+DISEASE-BASED EXTRACTION (ALWAYS APPLY THIS):
+- "${searchQuery}" = DISEASE/CONDITION (e.g., "pain" = pain disease, "oncology" = cancer/oncology disease, "inflammation" = inflammation disease)
+- ALWAYS treat "${searchQuery}" as a disease/condition - this applies to ANY search term
+- CRITICAL: Only include deals where "${searchQuery}" disease is mentioned in the INDICATION or THERAPEUTIC AREA field
+- DO NOT include deals where "${searchQuery}" appears only in company names (buyer/seller) - this is NOT a match
+- DO NOT include deals where "${searchQuery}" appears only in drug names - this is NOT a match
+- Prioritize drug deals where the therapeuticArea/disease area matches or relates to "${searchQuery}" disease
+- Prioritize deals for drugs targeting "${searchQuery}" disease/condition
+- Look for deals mentioning "${searchQuery}" in the drug's indication or therapeutic area
+- Focus on deals where the disease indication matches "${searchQuery}"
+- DO NOT prioritize deals for a drug named "${searchQuery}" - "${searchQuery}" is ALWAYS a disease, NOT a drug name
+- Example: If user searches "pain", only include deals where indication mentions "pain" (e.g., "chronic pain", "acute pain"), NOT deals where "pain" appears in company name like "Royalty Pharma"
+- Still include other relevant drug deals to reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total deals, but prioritize "${searchQuery}" disease-related deals
+
+🚨 CRITICAL: When extracting deal data:
+- Extract ACTUAL company names, drug names, and disease names from articles whenever possible
+- DO NOT use placeholder values like "Not disclosed", "Undisclosed", "N/A", "Unknown" - if data is not available, leave field empty
+- IMPORTANT: Include deals even if some fields are empty - as long as it's a REAL drug deal announcement with a valid title/summary, include it
+- It's better to include a deal with partial data than to exclude it completely
+- Only exclude deals if they are NOT actual drug deal announcements (general news, educational articles, etc.)
+
+Always ensure you return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total drug deals, with priority given to deals where the disease/condition matches "${searchQuery}".` : ''}
+🚨 CRITICAL EXTRACTION REQUIREMENTS:
+- You MUST extract AT LEAST ${MIN_DEALS_TARGET} deals - returning fewer is a FAILURE
 - PRIORITIZE LATEST DEALS: Start by extracting deals from ${currentMonth} ${currentYear}, then work backwards through previous months
-- Extract deals from EACH search result, but prioritize the most recent ones first
-- Do NOT skip deals - include ALL qualifying drug deals found
+- Extract deals from EACH search result - do NOT skip any qualifying deals
+- Extract deals from EVERY source you search - PR Newswire, Business Wire, BioSpace, Fierce Biotech, BioPharma Dive, Reuters, GlobeNewswire
 - Search across the ENTIRE ${timeframeLabel} period, but FOCUS ON THE MOST RECENT DEALS FIRST
 - If ${timeframeLabel} includes multiple months, search EACH month separately, starting with ${currentMonth} ${currentYear} first, then previous months
 - When returning deals, prioritize deals with dates closest to ${currentDateStr} (most recent first)
 - You MUST reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals before stopping
-- Do NOT return only 5-10 deals - you MUST find ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals
+- Do NOT return only 3-5 deals - this is COMPLETELY UNACCEPTABLE
+- Do NOT return only 10 deals - you MUST find MORE
 - IMPORTANT: Include as many deals from ${currentMonth} ${currentYear} and recent months as possible - do NOT focus only on old deals
+- If you're not finding enough deals, search MORE sources, use MORE keywords, try MORE search variations
+- Extract deals from MULTIPLE pages of search results, not just the first page
+- Search each source MULTIPLE times with DIFFERENT keywords to find more deals
 
-CRITICAL: Only include deals that involve:
-- Specific drugs, drug candidates, or therapeutic assets
-- Drug licensing agreements
-- Drug acquisition deals
-- Drug partnership/collaboration deals
-- Drug-related M&A transactions
+CRITICAL: ONLY MEDICAL/PHARMACEUTICAL/BIOTECH FIELD DEALS - STRICT FILTERING REQUIRED:
 
-EXCLUDE:
-- General company news without specific drug mentions
-- General business news
+ONLY include deals that involve:
+- Specific drugs, drug candidates, pharmaceutical products, or therapeutic assets
+- Drug licensing agreements (pharmaceutical/biotech companies only)
+- Drug acquisition deals (pharmaceutical/biotech companies only)
+- Drug partnership/collaboration deals (pharmaceutical/biotech companies only)
+- Drug-related M&A transactions (pharmaceutical/biotech companies only)
+- Medical device deals ONLY if they are related to drug delivery or pharmaceutical use
+- Biotech deals involving drug development, drug discovery, or pharmaceutical research
+
+MANDATORY EXCLUSIONS - DO NOT INCLUDE ANY OF THESE (STRICTLY FORBIDDEN):
+- 🚫 General medical news articles - ABSOLUTELY FORBIDDEN (e.g., "cancer symptoms", "disease information", "health tips", "medical advice")
+- 🚫 Educational articles - ABSOLUTELY FORBIDDEN (e.g., "medical education", "exam information", "training programs", "qualification requirements")
+- 🚫 Lists and rankings - ABSOLUTELY FORBIDDEN (e.g., "influential people", "top doctors", "key opinion leaders", "100 influential women")
+- 🚫 Conference presentations/research updates - ABSOLUTELY FORBIDDEN (unless they specifically announce a deal transaction)
+- 🚫 General disease information articles - ABSOLUTELY FORBIDDEN (articles that just provide information about diseases without announcing a deal)
+- 🚫 News about medical procedures/treatments - ABSOLUTELY FORBIDDEN (unless it's part of a specific deal announcement)
+- 🚫 Articles about medical conferences/events - ABSOLUTELY FORBIDDEN (unless they announce a deal)
+- General company news without specific drug/pharmaceutical deal announcements
+- General business news from non-medical fields
+- Technology deals (software, IT, tech startups) - UNLESS they are specifically for pharmaceutical/drug development
+- Finance/banking deals - COMPLETELY EXCLUDED
+- Real estate deals - COMPLETELY EXCLUDED
+- Retail deals - COMPLETELY EXCLUDED
+- Manufacturing deals (unless pharmaceutical manufacturing)
+- 🚫 Energy/oil/gas deals - ABSOLUTELY FORBIDDEN, COMPLETELY EXCLUDED, NEVER INCLUDE, NEVER SHOW - THESE MUST NOT APPEAR IN RESULTS
+- 🚫 Automotive deals - ABSOLUTELY FORBIDDEN, COMPLETELY EXCLUDED, NEVER INCLUDE, NEVER SHOW - THESE MUST NOT APPEAR IN RESULTS
+- 🚫 Food/beverage deals - ABSOLUTELY FORBIDDEN, COMPLETELY EXCLUDED, NEVER INCLUDE, NEVER SHOW - THESE MUST NOT APPEAR IN RESULTS (even nutraceutical deals are excluded)
 - Non-drug related partnerships
 - General industry trends without deal specifics
+- Deals from companies NOT in pharmaceutical, biotech, or medical fields
+- ANY article that does NOT specifically announce a drug deal, licensing agreement, partnership, M&A, or acquisition
 - ANY deals with publication dates BEFORE ${minDateStr} (${dateRangeDays} days ago)
 - Deals from 2024, 2023, or any year before ${currentYear} unless the deal date is between ${minDateStr} and ${currentDateStr}
 - Old deals from months outside ${monthsInRange.join(', ')}
 
+VERIFICATION: Before including any deal, verify that:
+1. The article SPECIFICALLY ANNOUNCES a drug deal, licensing agreement, partnership, M&A, or acquisition (NOT just general news)
+2. The deal involves pharmaceutical/biotech/medical companies
+3. The deal is specifically about drugs, drug candidates, or pharmaceutical products
+4. 🚫 The article is NOT a general medical news article (e.g., symptoms, health tips, disease information) - IF IT IS, EXCLUDE IT IMMEDIATELY
+5. 🚫 The article is NOT an educational article (e.g., medical education, exams, training) - IF IT IS, EXCLUDE IT IMMEDIATELY
+6. 🚫 The article is NOT a list/ranking article (e.g., influential people, top doctors) - IF IT IS, EXCLUDE IT IMMEDIATELY
+7. 🚫 The article is NOT a conference presentation or research update (unless it announces a deal) - IF IT IS, EXCLUDE IT IMMEDIATELY
+8. The deal is NOT from technology, finance, retail, energy/oil/gas, automotive, food/beverage, or other non-medical industries
+9. 🚫 The deal is NOT an energy/oil/gas deal - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW - IF IT IS, EXCLUDE IT IMMEDIATELY
+10. 🚫 The deal is NOT an automotive deal - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW - IF IT IS, EXCLUDE IT IMMEDIATELY
+11. 🚫 The deal is NOT a food/beverage deal - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW - IF IT IS, EXCLUDE IT IMMEDIATELY (including nutraceutical deals)
+12. If unsure whether a deal is medical/pharmaceutical, EXCLUDE it - only include deals that are clearly pharmaceutical/biotech/medical field related
+13. 🚫 CRITICAL: If the article does NOT specifically announce a drug deal transaction, DO NOT INCLUDE IT - only actual deal announcements are acceptable
+14. 🚫 CRITICAL: If the deal is from energy/oil/gas, automotive, or food/beverage industries, DO NOT INCLUDE IT - these deals MUST NEVER appear in results
+
 Always prefer primary announcements (PR Newswire, company press releases), reputable trade publications (BioSpace, Fierce Biotech, BioPharma Dive), and verified financial press. Be thorough and comprehensive - this is your ONLY attempt, so search extensively and extract all available deals.
+
+FINAL FILTER: Before returning any deal, verify it is STRICTLY from the medical/pharmaceutical/biotech field. 
+
+🚫 ABSOLUTELY DO NOT INCLUDE deals from (THESE MUST NEVER APPEAR IN RESULTS):
+- 🚫 Energy/oil/gas industry - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW - EXCLUDE IMMEDIATELY
+- 🚫 Automotive industry - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW - EXCLUDE IMMEDIATELY
+- 🚫 Food/beverage industry (including nutraceutical) - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW - EXCLUDE IMMEDIATELY
+- Technology industry (unless specifically for pharmaceutical/drug development)
+- Finance/banking industry
+- Retail industry
+- Real estate industry
+- Any other non-medical industries
+
+🚫 CRITICAL: If ANY deal is from energy/oil/gas, automotive, or food/beverage industries, DO NOT include it. These deals MUST NEVER appear in results. Only medical/pharmaceutical/biotech deals are acceptable.
+
+🚫 FINAL CHECK BEFORE OUTPUT - ABSOLUTELY VERIFY:
+Before including ANY deal in the "deals" array, you MUST verify:
+- This article SPECIFICALLY ANNOUNCES a drug deal transaction (NOT just general medical news) - IF IT DOES NOT, EXCLUDE IT IMMEDIATELY
+- This article is NOT a general medical news article (symptoms, health tips, disease info) - IF IT IS, EXCLUDE IT IMMEDIATELY
+- This article is NOT an educational article (medical education, exams, training) - IF IT IS, EXCLUDE IT IMMEDIATELY
+- This article is NOT a list/ranking article (influential people, top doctors) - IF IT IS, EXCLUDE IT IMMEDIATELY
+- This article is NOT a conference presentation (unless it announces a deal) - IF IT IS, EXCLUDE IT IMMEDIATELY
+- This deal is NOT from energy/oil/gas industry - IF IT IS, EXCLUDE IT IMMEDIATELY
+- This deal is NOT from automotive industry - IF IT IS, EXCLUDE IT IMMEDIATELY  
+- This deal is NOT from food/beverage industry - IF IT IS, EXCLUDE IT IMMEDIATELY
+- This deal IS from pharmaceutical/biotech/medical field - IF IT IS NOT, EXCLUDE IT IMMEDIATELY
+
+If ANY deal in your results is:
+- A general news article (NOT a deal announcement) - REMOVE IT COMPLETELY
+- From energy/oil/gas, automotive, or food/beverage industries - REMOVE IT COMPLETELY
+- An educational article, list, or conference presentation (without deal announcement) - REMOVE IT COMPLETELY
+
+These types of articles MUST NEVER appear in the results. Only actual drug deal announcements are acceptable.
 
 Return a strictly valid JSON object with exactly these top-level fields: "narrative", "deals", "sources".
 - "narrative": Brief 2-3 paragraph summary of the drug deal activity found. Mention source names in [square brackets].
-- "deals": array (${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique items) of objects. Each deal MUST include: buyer (Buyer/Licensee company name), seller (Seller/Licensor company name), drugName (specific drug/candidate name), therapeuticArea (indication/disease area), stage (Preclinical/Phase I/Phase II/Phase III/Marketed), financials (upfront, milestones, total value), dealDate (CRITICAL: ISO-8601 date - MUST be the actual publication date from the article, NOT today's date. Extract the exact date from the article metadata or content. Format: YYYY-MM-DD. The dealDate MUST be between ${minDateStr} and ${currentDateStr}. DO NOT include deals with dates before ${minDateStr} or after ${currentDateStr}), title (deal headline), summary (1-2 sentence deal description), sourceUrl (HTTPS article URL), source (publication name). Ensure dates are within ${timeframeLabel} (${minDateStr} to ${currentDateStr}). Do not reuse the same article, URL, or title. NEVER use today's date or current date - always extract the actual article publication date, but ONLY if it falls within the date range.
+- "deals": array (${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} unique items) of objects. Each deal MUST include: buyer (Buyer/Licensee company name - MUST be actual company name, NOT "Not disclosed" or "Undisclosed"), seller (Seller/Licensor company name - MUST be actual company name, NOT "Not disclosed" or "Undisclosed"), drugName (specific drug/candidate name - MUST be actual drug name, NOT "Undisclosed" or "N/A"), therapeuticArea (indication/disease area - MUST be actual disease/condition name, NOT "N/A"), stage (Preclinical/Phase I/Phase II/Phase III/Marketed - actual stage if available), financials (upfront, milestones, total value - actual financial terms if available), dealDate (🚨 CRITICAL: ISO-8601 date format YYYY-MM-DD - MUST be the EXACT publication date from the article. DO NOT use today's date (${currentDateStr}). DO NOT use current date. You MUST extract the actual date from the article - look for dates in the article text like "Dec 7, 2022", "December 7, 2022", "2022-12-07", or dates in article metadata/URL. The dealDate MUST be the date when the article was published, NOT when you are reading it. Format: YYYY-MM-DD. Example: If article says "Dec 7, 2022", use "2022-12-07". If article says "Nov 15, 2025", use "2025-11-15". The dealDate MUST be between ${minDateStr} and ${currentDateStr}. DO NOT include deals with dates before ${minDateStr} or after ${currentDateStr}), title (deal headline - MUST be actual headline from article), summary (1-2 sentence deal description - MUST be actual description from article), sourceUrl (HTTPS article URL - MUST be actual URL), source (publication name - MUST be actual publication name). 
+
+🚨 CRITICAL DATA EXTRACTION REQUIREMENTS:
+- Extract ACTUAL data from articles whenever possible
+- DO NOT use placeholder values like "Not disclosed", "Undisclosed", "N/A", "Unknown" - if data is not available, leave the field empty
+- buyer and seller: Extract actual company names if mentioned in the article, otherwise leave empty
+- drugName: Extract actual drug/candidate name if mentioned, otherwise leave empty
+- therapeuticArea: Extract actual disease/indication if mentioned, otherwise leave empty
+- IMPORTANT: Include deals even if some fields are empty - as long as the deal is REAL and has a valid title/summary, include it
+- Only exclude deals if they are NOT actual drug deal announcements (e.g., general news, educational articles, etc.)
+- It's better to include a deal with partial data than to exclude it completely
+
+🚨 CRITICAL DATE EXTRACTION REQUIREMENTS:
+- Extract the EXACT publication date from each article - look for dates in article text, metadata, or URL
+- DO NOT use today's date (${currentDateStr}) - this is WRONG
+- DO NOT use current date - this is WRONG  
+- DO NOT guess the date - extract it from the article
+- Look for date patterns in article: "Dec 7, 2022", "December 7, 2022", "2022-12-07", "Nov 15, 2025", etc.
+- Convert dates to ISO format: YYYY-MM-DD (e.g., "Dec 7, 2022" → "2022-12-07")
+- If article date is outside ${timeframeLabel} (${minDateStr} to ${currentDateStr}), DO NOT include that deal
+- Example: If article says "Dec 7, 2022" but you're searching for deals from ${timeframeLabel}, exclude it because 2022 is outside the date range
+- Only include deals with dates between ${minDateStr} and ${currentDateStr}
+
+Ensure dates are within ${timeframeLabel} (${minDateStr} to ${currentDateStr}). Do not reuse the same article, URL, or title. NEVER use today's date or current date - always extract the actual article publication date, but ONLY if it falls within the date range.
 - "sources": array of objects with keys name, url, note.
 
 Only output valid JSON that matches this shape—no markdown fences or extra commentary. 
 
-FINAL REMINDER: You MUST return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals in the "deals" array. This is NOT optional. If you only find 5-10 deals, you MUST continue searching until you reach at least ${MIN_DEALS_TARGET} deals. 
+🚨 FINAL REMINDER - ABSOLUTELY CRITICAL: You MUST return AT LEAST ${MIN_DEALS_TARGET} deals (ideally ${MAX_DEALS_TARGET}) in the "deals" array. 
+- Returning only 3-5 deals is COMPLETELY UNACCEPTABLE
+- Returning only 10 deals is NOT ENOUGH
+- This is NOT optional - you MUST find ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} deals
+- If you only find a few deals, you MUST search MORE sources, use MORE keywords, try MORE search variations
+- Search EVERY source listed (PR Newswire, Business Wire, BioSpace, Fierce Biotech, BioPharma Dive, Reuters, GlobeNewswire) MULTIPLE times
+- Search by different months, different companies, different therapeutic areas
+- DO NOT stop until you have found at least ${MIN_DEALS_TARGET} unique drug deals
+- The minimum is ${MIN_DEALS_TARGET} deals - returning fewer is a FAILURE 
 
 CRITICAL PRIORITY: 
 - Focus on finding the LATEST and MOST RECENT deals first - deals from ${currentMonth} ${currentYear} and recent months (${monthsInRange.join(', ')})
@@ -645,14 +869,26 @@ User query: ${searchQuery}`.trim();
         }
       }
 
+      // Clean up placeholder values
+      const cleanValue = (value) => {
+        if (!value || typeof value !== 'string') return '';
+        const cleaned = value.trim();
+        // Reject placeholder values
+        const placeholders = ['not disclosed', 'undisclosed', 'n/a', 'na', 'unknown', 'tbd', 'to be determined', 'not available'];
+        if (placeholders.some(p => cleaned.toLowerCase() === p)) {
+          return '';
+        }
+        return cleaned;
+      };
+
       return {
-        buyer: deal.buyer || deal.acquirer || '',
-        seller: deal.seller || deal.partner || '',
-        drugName: deal.drugName || deal.asset || '',
-        therapeuticArea: deal.therapeuticArea || deal.indication || '',
-        stage: deal.stage || '',
-        financials: deal.financials || deal.value || '',
-        totalValue: deal.totalValue || deal.financials || deal.value || '',
+        buyer: cleanValue(deal.buyer || deal.acquirer || ''),
+        seller: cleanValue(deal.seller || deal.partner || ''),
+        drugName: cleanValue(deal.drugName || deal.asset || ''),
+        therapeuticArea: cleanValue(deal.therapeuticArea || deal.indication || ''),
+        stage: cleanValue(deal.stage || ''),
+        financials: cleanValue(deal.financials || deal.value || ''),
+        totalValue: cleanValue(deal.totalValue || deal.financials || deal.value || ''),
         dealDate: ensureIsoDate(deal.dealDate || deal.date || '', sourceUrl),
         source: deal.source || deal.sourceName || domain || 'OpenAI Web Search',
         sourceId: domain || 'openai_web_search',
@@ -664,6 +900,73 @@ User query: ${searchQuery}`.trim();
         searchQuery,
         userEmail
       };
+    }).filter((deal) => {
+      // Clean placeholder values but don't reject the deal if it has other valid data
+      // Only reject if ALL critical fields are placeholders or empty
+      
+      // Check if critical fields have real data (not placeholders)
+      const hasRealBuyer = deal.buyer && !deal.buyer.toLowerCase().includes('not disclosed') && !deal.buyer.toLowerCase().includes('undisclosed') && deal.buyer.trim().length > 0;
+      const hasRealSeller = deal.seller && !deal.seller.toLowerCase().includes('not disclosed') && !deal.seller.toLowerCase().includes('undisclosed') && deal.seller.trim().length > 0;
+      const hasRealDrug = deal.drugName && !deal.drugName.toLowerCase().includes('undisclosed') && deal.drugName.trim().length > 0;
+      const hasRealTherapeuticArea = deal.therapeuticArea && deal.therapeuticArea.toLowerCase() !== 'n/a' && deal.therapeuticArea.toLowerCase() !== 'na' && deal.therapeuticArea.trim().length > 0;
+      const hasRealTitle = deal.title && deal.title.trim().length > 0;
+      const hasRealSummary = deal.summary && deal.summary.trim().length > 0;
+      
+      // Require at least 2 fields with real data OR a valid title + summary
+      const realDataCount = [hasRealBuyer, hasRealSeller, hasRealDrug, hasRealTherapeuticArea].filter(Boolean).length;
+      const hasMinimumData = realDataCount >= 2 || (hasRealTitle && hasRealSummary);
+      
+      // Only reject if deal has no meaningful data at all
+      if (!hasMinimumData && !hasRealTitle) {
+        console.log(`⚠️ Filtered out deal with insufficient data:`, deal.title);
+        return false;
+      }
+      
+      // CRITICAL: If searchQuery is provided, filter deals to only include those where the disease is mentioned in indication/therapeutic area
+      // Do NOT include deals where the disease keyword appears only in company names or other fields
+      if (searchQuery && searchQuery.trim()) {
+        const searchTerm = searchQuery.toLowerCase().trim();
+        const therapeuticAreaLower = (deal.therapeuticArea || '').toLowerCase();
+        const summaryLower = (deal.summary || '').toLowerCase();
+        const titleLower = (deal.title || '').toLowerCase();
+        const drugNameLower = (deal.drugName || '').toLowerCase();
+        
+        // Check if disease is mentioned in indication/therapeutic area (primary check - MOST IMPORTANT)
+        const diseaseInIndication = therapeuticAreaLower.includes(searchTerm);
+        
+        // Also check summary and title for disease mention (secondary check)
+        const diseaseInSummary = summaryLower.includes(searchTerm);
+        const diseaseInTitle = titleLower.includes(searchTerm);
+        
+        // Exclude if disease appears ONLY in company names (buyer/seller) but NOT in indication/summary/title
+        const buyerLower = (deal.buyer || '').toLowerCase();
+        const sellerLower = (deal.seller || '').toLowerCase();
+        const diseaseInCompanyName = buyerLower.includes(searchTerm) || sellerLower.includes(searchTerm);
+        
+        // Exclude if disease appears ONLY in drug name but NOT in indication
+        const diseaseInDrugName = drugNameLower.includes(searchTerm);
+        
+        // CRITICAL: Only include if disease is mentioned in indication/therapeutic area OR summary/title
+        // Exclude if disease appears ONLY in company names or drug names
+        if (diseaseInCompanyName && !diseaseInIndication && !diseaseInSummary && !diseaseInTitle) {
+          console.log(`⚠️ Filtered out deal - disease "${searchTerm}" found only in company name, not in indication:`, deal.title, `| Indication: ${deal.therapeuticArea}`);
+          return false;
+        }
+        
+        // Exclude if disease appears only in drug name but not in indication
+        if (diseaseInDrugName && !diseaseInIndication && !diseaseInSummary && !diseaseInTitle) {
+          console.log(`⚠️ Filtered out deal - disease "${searchTerm}" found only in drug name, not in indication:`, deal.title, `| Indication: ${deal.therapeuticArea}`);
+          return false;
+        }
+        
+        // If disease is not mentioned in indication/therapeutic area, summary, or title, exclude it
+        if (!diseaseInIndication && !diseaseInSummary && !diseaseInTitle) {
+          console.log(`⚠️ Filtered out deal - disease "${searchTerm}" not found in indication/summary/title:`, deal.title, `| Indication: ${deal.therapeuticArea}`);
+          return false;
+        }
+      }
+      
+      return true;
     });
 
     console.log(`📊 Parsed deals:`, normalizedDeals.length);
@@ -708,22 +1011,67 @@ User query: ${searchQuery}`.trim();
     filterMinDate.setHours(0, 0, 0, 0);
     
     const filteredDeals = aggregatedDeals.filter((deal) => {
-      if (!deal.dealDate) return false; // Exclude deals without dates
-      
-      const dealDate = new Date(deal.dealDate);
-      dealDate.setHours(0, 0, 0, 0);
-      
-      // Only include deals within the date range
-      const isWithinRange = dealDate >= filterMinDate && dealDate <= filterToday;
-      
-      if (!isWithinRange) {
-        console.log(`⚠️ Filtered out deal outside date range: ${deal.dealDate} - ${deal.title}`);
+      // If no date, include the deal (don't filter it out - let it through)
+      if (!deal.dealDate) {
+        console.log(`⚠️ Deal without date included: ${deal.title}`);
+        return true;
       }
       
-      return isWithinRange;
+      try {
+        const dealDate = new Date(deal.dealDate);
+        if (isNaN(dealDate.getTime())) {
+          // Invalid date - include the deal anyway
+          console.log(`⚠️ Deal with invalid date included: ${deal.dealDate} - ${deal.title}`);
+          return true;
+        }
+        
+        dealDate.setHours(0, 0, 0, 0);
+        
+        // Only include deals within the date range
+        const isWithinRange = dealDate >= filterMinDate && dealDate <= filterToday;
+        
+        if (!isWithinRange) {
+          console.log(`⚠️ Filtered out deal outside date range: ${deal.dealDate} - ${deal.title}`);
+        }
+        
+        return isWithinRange;
+      } catch (error) {
+        // If date parsing fails, include the deal anyway
+        console.log(`⚠️ Deal with date parsing error included: ${deal.dealDate} - ${deal.title}`);
+        return true;
+      }
     });
 
     console.log(`✅ Deals after date filtering: ${filteredDeals.length} (removed ${aggregatedDeals.length - filteredDeals.length} old deals)`);
+
+    // If we don't have enough deals within the date range, include deals from current year
+    if (filteredDeals.length < MIN_DEALS_TARGET) {
+      console.log(`⚠️ Only ${filteredDeals.length} deals found within ${dateRangeDays} days, expanding to current year...`);
+      const currentYear = new Date().getFullYear();
+      const yearStart = new Date(currentYear, 0, 1); // January 1st of current year
+      
+      const additionalDeals = aggregatedDeals.filter((deal) => {
+        if (!deal.dealDate) return false;
+        
+        try {
+          const dealDate = new Date(deal.dealDate);
+          if (isNaN(dealDate.getTime())) return false;
+          
+          // Include deals from current year that weren't already included
+          const isInCurrentYear = dealDate >= yearStart && dealDate <= filterToday;
+          const alreadyIncluded = filteredDeals.some(d => 
+            d.sourceUrl === deal.sourceUrl && d.title === deal.title
+          );
+          
+          return isInCurrentYear && !alreadyIncluded;
+        } catch (error) {
+          return false;
+        }
+      });
+      
+      filteredDeals.push(...additionalDeals);
+      console.log(`✅ Added ${additionalDeals.length} deals from current year. Total: ${filteredDeals.length}`);
+    }
 
     // Sort deals by date (most recent first)
     filteredDeals.sort((a, b) => {
@@ -973,13 +1321,13 @@ console.log('  - Stripe initialized:', !!stripe);
 console.log('  - Using live key:', stripeSecretKey.includes('sk_live_'));
 
 const RAW_ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
-  'http://localhost:3005',
-  'http://localhost:3006',
+    'http://localhost:3000', 
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://localhost:3005',
+    'http://localhost:3006',
   'null',
-  'https://thebioping.com',
+    'https://thebioping.com',
   'https://www.thebioping.com'
 ];
 
@@ -1744,15 +2092,58 @@ app.use('/pdfs', express.static(path.join(__dirname, '../public/pdfs'), {
   }
 }));
 
-app.use('/static', express.static(path.join(__dirname, '../public'), {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.pdf')) {
+// Serve /static files from build directory first, then public
+const staticBuildPath = path.join(__dirname, '../build');
+const staticPublicPath = path.join(__dirname, '../public');
+const staticServePath = fs.existsSync(staticBuildPath) ? staticBuildPath : staticPublicPath;
+
+app.use('/static', express.static(staticServePath, {
+  setHeaders: (res, filePath) => {
+    // Set proper MIME types for JavaScript files
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+    // Set proper MIME types for CSS files
+    if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+    // Set proper MIME types for PDF files
+    if (filePath.endsWith('.pdf')) {
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow embedding from any domain
+      res.setHeader('X-Frame-Options', 'ALLOWALL');
       res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    // Set cache headers for static assets
+    if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
     }
   }
 }));
+
+// Handle 404 for /static files that don't exist
+app.use('/static', (req, res, next) => {
+  // If we reach here, the file wasn't found by express.static
+  // Check if it's a static file request
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot|json|pdf)$/)) {
+    // Try both build and public directories
+    let filePath = path.join(__dirname, '../build', req.path);
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(__dirname, '../public', req.path);
+    }
+    if (fs.existsSync(filePath)) {
+      // Set proper MIME type
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+      return res.sendFile(filePath);
+    }
+    // File doesn't exist - return 404
+    return res.status(404).json({ error: 'Static file not found', path: req.path });
+  }
+  next();
+});
 
 // Serve test subscription page
 app.use('/test', express.static(path.join(__dirname, 'public')));
@@ -5059,54 +5450,54 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
             // SECOND: If it's Oceania, check exclusions (only exclude if clearly from other regions)
             // Be careful with exclusions - only exclude if we're SURE it's not Oceania
             const isNorthAmerican = (itemRegionLower.includes('usa') || 
-                                    itemRegionLower.includes('united states') ||
-                                    itemRegionLower.includes('us') ||
-                                    itemRegionLower.includes('canada') ||
+                                itemRegionLower.includes('united states') ||
+                                itemRegionLower.includes('us') ||
+                                itemRegionLower.includes('canada') ||
                                     itemRegionLower.includes('mexico')) &&
                                     !isAustralia && // Don't exclude if it's Australia
                                     !containsNZVariant; // Don't exclude if it's NZ
                                     
             const isEuropean = (itemRegionLower.includes('germany') || 
-                               itemRegionLower.includes('france') ||
-                               itemRegionLower.includes('uk') ||
-                               itemRegionLower.includes('spain') ||
-                               itemRegionLower.includes('italy') ||
-                               itemRegionLower.includes('netherlands') ||
-                               itemRegionLower.includes('belgium') ||
-                               itemRegionLower.includes('austria') ||
-                               itemRegionLower.includes('finland') ||
-                               itemRegionLower.includes('poland') ||
-                               itemRegionLower.includes('norway') ||
-                               itemRegionLower.includes('hungary') ||
-                               itemRegionLower.includes('sweden') ||
-                               itemRegionLower.includes('iceland') ||
-                               itemRegionLower.includes('greece') ||
-                               itemRegionLower.includes('switzerland') ||
-                               itemRegionLower.includes('denmark') ||
-                               itemRegionLower.includes('ireland') ||
-                               itemRegionLower.includes('czech republic') ||
-                               itemRegionLower.includes('czech') ||
-                               itemRegionLower.includes('portugal') ||
-                               itemRegionLower.includes('estonia') ||
-                               itemRegionLower.includes('luxembourg') ||
-                               itemRegionLower.includes('malta') ||
-                               itemRegionLower.includes('slovenia') ||
-                               itemRegionLower.includes('romania') ||
-                               itemRegionLower.includes('slovakia') ||
+                           itemRegionLower.includes('france') ||
+                           itemRegionLower.includes('uk') ||
+                           itemRegionLower.includes('spain') ||
+                           itemRegionLower.includes('italy') ||
+                           itemRegionLower.includes('netherlands') ||
+                           itemRegionLower.includes('belgium') ||
+                           itemRegionLower.includes('austria') ||
+                           itemRegionLower.includes('finland') ||
+                           itemRegionLower.includes('poland') ||
+                           itemRegionLower.includes('norway') ||
+                           itemRegionLower.includes('hungary') ||
+                           itemRegionLower.includes('sweden') ||
+                           itemRegionLower.includes('iceland') ||
+                           itemRegionLower.includes('greece') ||
+                           itemRegionLower.includes('switzerland') ||
+                           itemRegionLower.includes('denmark') ||
+                           itemRegionLower.includes('ireland') ||
+                           itemRegionLower.includes('czech republic') ||
+                           itemRegionLower.includes('czech') ||
+                           itemRegionLower.includes('portugal') ||
+                           itemRegionLower.includes('estonia') ||
+                           itemRegionLower.includes('luxembourg') ||
+                           itemRegionLower.includes('malta') ||
+                           itemRegionLower.includes('slovenia') ||
+                           itemRegionLower.includes('romania') ||
+                           itemRegionLower.includes('slovakia') ||
                                itemRegionLower.includes('lithuania')) &&
                                !isAustralia && // Don't exclude if it's Australia
                                !containsNZVariant; // Don't exclude if it's NZ
                                
             const isAsian = (itemRegionLower.includes('japan') || 
-                           itemRegionLower.includes('china') ||
-                           itemRegionLower.includes('india') ||
-                           itemRegionLower.includes('south korea') ||
-                           itemRegionLower.includes('israel') ||
-                           itemRegionLower.includes('taiwan') ||
-                           itemRegionLower.includes('uae') ||
-                           itemRegionLower.includes('singapore') ||
-                           itemRegionLower.includes('hong kong') ||
-                           itemRegionLower.includes('saudi arabia') ||
+                         itemRegionLower.includes('china') ||
+                         itemRegionLower.includes('india') ||
+                         itemRegionLower.includes('south korea') ||
+                         itemRegionLower.includes('israel') ||
+                         itemRegionLower.includes('taiwan') ||
+                         itemRegionLower.includes('uae') ||
+                         itemRegionLower.includes('singapore') ||
+                         itemRegionLower.includes('hong kong') ||
+                         itemRegionLower.includes('saudi arabia') ||
                            itemRegionLower.includes('turkey')) &&
                            !isAustralia && // Don't exclude if it's Australia
                            !containsNZVariant; // Don't exclude if it's NZ
@@ -5117,8 +5508,8 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                              !containsNZVariant;
                              
             const isSouthAmerican = (itemRegionLower.includes('brazil') ||
-                                   itemRegionLower.includes('chile') ||
-                                   itemRegionLower.includes('colombia') ||
+                                 itemRegionLower.includes('chile') ||
+                                 itemRegionLower.includes('colombia') ||
                                    itemRegionLower.includes('uruguay')) &&
                                    !isAustralia &&
                                    !containsNZVariant;
@@ -5388,7 +5779,7 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
         if (regionFilterValue === 'Oceania' && (oceaniaMatches + oceaniaRejects < 10 || isMatch)) {
           console.log('🌍 Region match result:', isMatch, 'for company:', item.companyName, 'Region:', itemRegion);
         } else if (regionFilterValue !== 'Oceania' && oceaniaMatches === 0 && oceaniaRejects < 5) {
-          console.log('Region match result:', isMatch, 'for company:', item.companyName);
+        console.log('Region match result:', isMatch, 'for company:', item.companyName);
         }
         return isMatch;
       });
@@ -9541,6 +9932,77 @@ app.post('/api/admin/sync-old-payments', authenticateToken, async (req, res) => 
       message: 'Error syncing old payments',
       error: error.message 
     });
+  }
+});
+
+// Serve React app static files (JS, CSS, images, etc.) with proper MIME types
+// First try build directory (production build), then fall back to public
+const buildPath = path.join(__dirname, '../build');
+const publicPath = path.join(__dirname, '../public');
+
+// Serve from build directory if it exists, otherwise from public
+const staticPath = fs.existsSync(buildPath) ? buildPath : publicPath;
+
+app.use(express.static(staticPath, {
+  setHeaders: (res, filePath) => {
+    // Set proper MIME types for JavaScript files
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+    // Set proper MIME types for CSS files
+    if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+    // Set cache headers for static assets
+    if (filePath.match(/\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // 1 year
+    }
+  }
+}));
+
+// Catch-all handler: serve React app for all non-API routes (React Router)
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Skip /static routes - they're handled by express.static middleware above
+  if (req.path.startsWith('/static/')) {
+    return next(); // Let express.static handle it, or return 404 if not found
+  }
+  
+  // For other static file requests (JS, CSS, etc.), if file doesn't exist, return 404
+  // Don't serve index.html for missing static files
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|webp|ico|woff|woff2|ttf|eot|json|pdf)$/)) {
+    // Try build directory first, then public
+    let filePath = path.join(__dirname, '../build', req.path);
+    if (!fs.existsSync(filePath)) {
+      filePath = path.join(__dirname, '../public', req.path);
+    }
+    if (fs.existsSync(filePath)) {
+      // Set proper MIME type
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+      return res.sendFile(filePath);
+    } else {
+      return res.status(404).json({ error: 'File not found', path: req.path });
+    }
+  }
+  
+  // Serve index.html for all other routes (React Router)
+  // Try build directory first, then public
+  let indexPath = path.join(__dirname, '../build/index.html');
+  if (!fs.existsSync(indexPath)) {
+    indexPath = path.join(__dirname, '../public/index.html');
+  }
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('React app not found. Please build the frontend.');
   }
 });
 
