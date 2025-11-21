@@ -350,10 +350,12 @@ async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
   }
 
   try {
-    const timeframeLabel = dateRangeDays === 1 ? 'the last 24 hours' : `the last ${dateRangeDays} days`;
-    const MIN_DEALS_TARGET = 20;
-    const MAX_DEALS_TARGET = 30;
-    const MAX_ATTEMPTS = 1; // Single attempt to save credits
+    // FIXED: Always use 12 months (365 days) for drug deals
+    const fixedDateRangeDays = 365;
+    const timeframeLabel = `the last 12 months (${fixedDateRangeDays} days)`;
+    const MIN_DEALS_TARGET = 25;
+    const MAX_DEALS_TARGET = 40;
+    const MAX_ATTEMPTS = 3; // Multiple attempts to get more deals
     
     // Get current date for context
     const today = new Date();
@@ -361,9 +363,9 @@ async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
     const currentMonth = today.toLocaleString('en-US', { month: 'long' });
     const currentDateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
     
-    // Calculate minimum date (dateRangeDays ago)
+    // Calculate minimum date (12 months ago - 365 days)
     const minDate = new Date(today);
-    minDate.setDate(today.getDate() - dateRangeDays);
+    minDate.setDate(today.getDate() - fixedDateRangeDays);
     const minDateStr = minDate.toISOString().split('T')[0]; // YYYY-MM-DD
     
     // Get month names for the date range
@@ -375,15 +377,32 @@ async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
     }
 
     const basePrompt = `
-You are a pharmaceutical and biotechnology deal analyst. You MUST find AT LEAST ${MIN_DEALS_TARGET} unique DRUG DEALS (ideally ${MAX_DEALS_TARGET}, but minimum ${MIN_DEALS_TARGET}) (licensing, M&A, partnerships, acquisitions) published within ${timeframeLabel}.
+You are a pharmaceutical and biotechnology deal analyst. You MUST find AT LEAST ${MIN_DEALS_TARGET} unique DRUG DEALS (ideally ${MAX_DEALS_TARGET}, but minimum ${MIN_DEALS_TARGET}) (licensing, M&A, partnerships, acquisitions) published within ${timeframeLabel} (last 12 months only).
 
 🚨 CRITICAL REQUIREMENT: YOU MUST RETURN AT LEAST ${MIN_DEALS_TARGET} DEALS. RETURNING ONLY 3-5 DEALS IS NOT ACCEPTABLE. YOU MUST SEARCH EXTENSIVELY AND FIND ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} DEALS.
 
+🚨 MANDATORY: ONLY DEALS FROM THE LAST 12 MONTHS (${minDateStr} to ${currentDateStr})
+- DO NOT include deals older than 12 months
+- DO NOT include deals from 2024, 2023, or earlier years unless they fall within the last 12 months
+- ONLY search for deals announced between ${minDateStr} and ${currentDateStr}
+
 🚫 ABSOLUTE PROHIBITION - THESE DEALS MUST NEVER APPEAR IN RESULTS (COMPLETELY FORBIDDEN):
+- Medical devices, diagnostic devices, surgical instruments, medical equipment, implants, catheters, stents, pacemakers - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
+- ANY deal mentioning "device", "diagnostic device", "surgical instrument", "medical equipment" - ABSOLUTELY FORBIDDEN
 - Energy/oil/gas deals - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
 - Automotive deals - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
 - Food/beverage deals - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW (including nutraceutical deals)
-These three categories are STRICTLY PROHIBITED and must NEVER appear in your results. If you encounter any deals from these industries, IMMEDIATELY EXCLUDE them and DO NOT include them in the output.
+- Wikipedia articles (wikipedia.org, wikipedia.com) - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
+- Political news (Trump, Biden, elections, politics, president) - ABSOLUTELY FORBIDDEN, NEVER INCLUDE, NEVER SHOW
+- General news articles that are not drug deal announcements - ABSOLUTELY FORBIDDEN
+- Deals without disclosed buyer AND seller - ABSOLUTELY FORBIDDEN, NEVER INCLUDE
+
+🚨 CRITICAL: ONLY DRUG DEALS - NO DEVICES:
+- You MUST ONLY include deals for DRUGS, DRUG CANDIDATES, PHARMACEUTICAL COMPOUNDS, or THERAPEUTIC BIOLOGICS
+- DO NOT include deals for medical devices, diagnostic devices, surgical equipment, or any non-drug medical products
+- Every deal MUST involve a pharmaceutical drug, drug candidate, or therapeutic biologic product
+- If a deal involves a device or equipment, EXCLUDE it completely - it is FORBIDDEN
+These restrictions are STRICTLY PROHIBITED and must NEVER appear in your results. If you encounter any deals from these categories, IMMEDIATELY EXCLUDE them and DO NOT include them in the output.
 
 🚫 CRITICAL: ONLY ACTUAL DRUG DEAL ANNOUNCEMENTS - EXCLUDE ALL GENERAL NEWS ARTICLES:
 You MUST ONLY include actual DRUG DEAL announcements (licensing agreements, M&A transactions, partnerships, acquisitions). 
@@ -434,12 +453,26 @@ CRITICAL SEARCH PRIORITY - DISEASE-BASED SEARCH ONLY:
 
 CURRENT DATE CONTEXT: Today is ${currentDateStr} (${currentMonth} ${currentYear}). 
 
-CRITICAL DATE FILTERING:
-- ONLY include deals with publication dates between ${minDateStr} and ${currentDateStr} (${timeframeLabel})
-- EXCLUDE any deals older than ${minDateStr}
-- EXCLUDE deals from 2024, 2023, or any year before ${currentYear} unless they fall within ${timeframeLabel}
-- PRIORITIZE deals from ${monthsInRange.join(', ')} - these are the months within ${timeframeLabel}
-- Do NOT include deals from months outside this range
+CRITICAL DATE FILTERING - LAST 12 MONTHS ONLY:
+- ONLY include deals with publication dates between ${minDateStr} and ${currentDateStr} (last 12 months / ${fixedDateRangeDays} days)
+- EXCLUDE any deals older than ${minDateStr} (12 months ago)
+- EXCLUDE deals from 2024, 2023, or any year before ${currentYear} unless they fall within the last 12 months
+- PRIORITIZE deals from ${monthsInRange.join(', ')} - these are the months within the last 12 months
+- Do NOT include deals from months outside the last 12 months range
+- If a deal date is not specified, only include it if the article publication date is within the last 12 months
+
+🚨 CRITICAL DATE ACCURACY REQUIREMENTS:
+- dealDate MUST be the EXACT date from the article, NOT today's date (${currentDateStr})
+- DO NOT use current date, today's date, or guess the date
+- You MUST extract the actual date from the article text or metadata
+- Look for dates in formats like "Dec 7, 2024", "December 7, 2024", "2024-12-07", "Nov 15, 2024"
+- Check article publication date, press release date, or announcement date mentioned in the article
+- If article says "announced on February 3, 2024", use "2024-02-03" - NOT today's date
+- If article says "signed in July 2024", look for the specific day or use the first day of that month
+- DO NOT assume dates - if you cannot find the exact date in the article, DO NOT make up a date
+- Dates must be between ${minDateStr} and ${currentDateStr} (last 12 months)
+- Dates MUST NOT be in the future - if you see a future date, it's likely wrong, check the article again
+- Example: If today is ${currentDateStr} and article says "announced February 3, 2024", use "2024-02-03", NOT "${currentDateStr}"
 
 🚨 CRITICAL: You MUST return AT LEAST ${MIN_DEALS_TARGET} deals (ideally ${MAX_DEALS_TARGET}). 
 - DO NOT stop at 3-5 deals - this is NOT ACCEPTABLE
@@ -522,25 +555,30 @@ The user can search for ANY disease worldwide (pain, oncology, inflammation, aut
 DISEASE-BASED EXTRACTION (ALWAYS APPLY THIS):
 - "${searchQuery}" = DISEASE/CONDITION (e.g., "pain" = pain disease, "oncology" = cancer/oncology disease, "inflammation" = inflammation disease)
 - ALWAYS treat "${searchQuery}" as a disease/condition - this applies to ANY search term
-- CRITICAL: Only include deals where "${searchQuery}" disease is mentioned in the INDICATION or THERAPEUTIC AREA field
+- 🚨 CRITICAL STRICT MATCHING: ONLY include deals where "${searchQuery}" disease is mentioned in the INDICATION/THERAPEUTIC AREA field
+- DO NOT match on title or summary - ONLY match on indication/therapeutic area field
 - DO NOT include deals where "${searchQuery}" appears only in company names (buyer/seller) - this is NOT a match
 - DO NOT include deals where "${searchQuery}" appears only in drug names - this is NOT a match
-- Prioritize drug deals where the therapeuticArea/disease area matches or relates to "${searchQuery}" disease
-- Prioritize deals for drugs targeting "${searchQuery}" disease/condition
-- Look for deals mentioning "${searchQuery}" in the drug's indication or therapeutic area
-- Focus on deals where the disease indication matches "${searchQuery}"
-- DO NOT prioritize deals for a drug named "${searchQuery}" - "${searchQuery}" is ALWAYS a disease, NOT a drug name
-- Example: If user searches "pain", only include deals where indication mentions "pain" (e.g., "chronic pain", "acute pain"), NOT deals where "pain" appears in company name like "Royalty Pharma"
-- Still include other relevant drug deals to reach ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total deals, but prioritize "${searchQuery}" disease-related deals
+- DO NOT include deals where "${searchQuery}" appears only in title/summary but NOT in indication/therapeutic area - this is NOT a match
+- ONLY include deals where the therapeuticArea/indication field contains "${searchQuery}" disease
+- Example: If user searches "oncology", ONLY include deals where therapeuticArea/indication field mentions "oncology" (e.g., "oncology", "cancer", "tumor"), NOT deals where "oncology" appears only in title
+- Example: If user searches "pain", ONLY include deals where indication mentions "pain" (e.g., "chronic pain", "acute pain"), NOT deals where "pain" appears only in company name like "Royalty Pharma"
+- The indication/therapeutic area field is the ONLY matching criteria - all other fields are ignored for matching purposes
 
 🚨 CRITICAL: When extracting deal data:
 - Extract ACTUAL company names, drug names, and disease names from articles whenever possible
 - DO NOT use placeholder values like "Not disclosed", "Undisclosed", "N/A", "Unknown" - if data is not available, leave field empty
-- IMPORTANT: Include deals even if some fields are empty - as long as it's a REAL drug deal announcement with a valid title/summary, include it
-- It's better to include a deal with partial data than to exclude it completely
-- Only exclude deals if they are NOT actual drug deal announcements (general news, educational articles, etc.)
+- 🚨 MANDATORY: Every deal MUST have BOTH buyer AND seller disclosed with actual company names
+- If buyer or seller is "Not disclosed", "Undisclosed", "N/A", "Unknown", empty, or missing - DO NOT include that deal in results
+- Only include deals where BOTH buyer and seller are actual named companies (e.g., "Pfizer", "Merck", "Novartis")
+- IMPORTANT: Include deals even if some other fields are empty (drugName, financials, etc.) - as long as buyer and seller are disclosed
+- Only exclude deals if buyer or seller is missing/undisclosed, or if it's NOT an actual drug deal announcement
+- Each deal MUST have exactly ONE valid sourceUrl - do not include multiple URLs for the same deal
+- 🚨 CRITICAL: If search query is provided, ONLY include deals where the indication/therapeutic area field matches the search query (disease-based matching)
+- DO NOT match on title, summary, or any other field - ONLY match on indication/therapeutic area field
+- The indication column is the PRIMARY and ONLY matching field for search keywords
 
-Always ensure you return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total drug deals, with priority given to deals where the disease/condition matches "${searchQuery}".` : ''}
+Always ensure you return ${MIN_DEALS_TARGET}-${MAX_DEALS_TARGET} total drug deals, but ONLY include deals where the indication/therapeutic area field matches "${searchQuery}".` : ''}
 🚨 CRITICAL EXTRACTION REQUIREMENTS:
 - You MUST extract AT LEAST ${MIN_DEALS_TARGET} deals - returning fewer is a FAILURE
 - PRIORITIZE LATEST DEALS: Start by extracting deals from ${currentMonth} ${currentYear}, then work backwards through previous months
@@ -800,65 +838,77 @@ User query: ${searchQuery}`.trim();
       return '';
     };
 
-    // Single comprehensive attempt
-    const response = await openaiClient.responses.create({
-      model: 'gpt-4o',
-      input: basePrompt,
-      tools: [{ type: 'web_search' }],
-      max_output_tokens: 12000, // Increased to allow 20-30 comprehensive deals
-      temperature: 0.2,
-      text: {
-        format: {
-          name: jsonSchema.name,
-          type: 'json_schema',
-          schema: jsonSchema.schema
+    // Multiple attempts to get more deals (up to 3 attempts)
+    const allDeals = [];
+    const allSources = [];
+    let finalNarrative = '';
+    const seenDealKeys = new Set();
+    
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      console.log(`🔄 Attempt ${attempt} of ${MAX_ATTEMPTS}...`);
+      
+      try {
+        const response = await openaiClient.responses.create({
+          model: 'gpt-4o',
+          input: basePrompt,
+          tools: [{ type: 'web_search' }],
+          max_output_tokens: 12000, // Increased to allow 20-30 comprehensive deals
+          temperature: 0.2,
+          text: {
+            format: {
+              name: jsonSchema.name,
+              type: 'json_schema',
+              schema: jsonSchema.schema
+            }
+          },
+          metadata: {
+            feature: 'ai_deal_scraper',
+            userEmail,
+            attempt: attempt.toString()
+          }
+        });
+
+        let rawOutput = extractResponseText(response);
+
+        if (!rawOutput) {
+          console.warn(`⚠️ Attempt ${attempt}: OpenAI response had no text payload.`);
+          continue; // Try next attempt
         }
-      },
-      metadata: {
-        feature: 'ai_deal_scraper',
-        userEmail,
-        attempt: '1'
-      }
-    });
 
-    let rawOutput = extractResponseText(response);
+        rawOutput = rawOutput.trim();
+        console.log(`📦 Attempt ${attempt} - OpenAI raw output (first 500 chars):`, rawOutput.substring(0, 500));
 
-    if (!rawOutput) {
-      console.warn('⚠️ OpenAI response had no text payload. Snapshot:', JSON.stringify({
-        id: response?.id,
-        model: response?.model,
-        usage: response?.usage || null
-      }, null, 2));
-      return { deals: [], sources: [], narrative: '' };
-    }
+        const sanitized = rawOutput
+          .replace(/^```json\s*/i, '')
+          .replace(/^```json-schema\s*/i, '')
+          .replace(/^```js\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/```$/i, '')
+          .trim();
 
-    rawOutput = rawOutput.trim();
-    console.log('📦 OpenAI raw output:', rawOutput);
+        let parsed = null;
+        try {
+          parsed = JSON.parse(sanitized);
+        } catch (jsonError) {
+          console.error(`❌ Attempt ${attempt}: Error parsing JSON:`, jsonError.message);
+          continue; // Try next attempt
+        }
 
-    const sanitized = rawOutput
-      .replace(/^```json\s*/i, '')
-      .replace(/^```json-schema\s*/i, '')
-      .replace(/^```js\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```$/i, '')
-      .trim();
+        const dealsArray = Array.isArray(parsed?.deals) ? parsed.deals : [];
+        console.log(`✅ Attempt ${attempt}: Found ${dealsArray.length} deals`);
+        
+        // Collect narrative from first successful attempt
+        if (attempt === 1 && parsed?.narrative) {
+          finalNarrative = parsed.narrative;
+        }
+        
+        // Collect sources
+        if (Array.isArray(parsed?.sources)) {
+          allSources.push(...parsed.sources);
+        }
 
-    console.log('🧹 Sanitized OpenAI output:', sanitized);
-
-    let parsed = null;
-    try {
-      parsed = JSON.parse(sanitized);
-    } catch (jsonError) {
-      console.error('Error parsing OpenAI response JSON:', jsonError.message);
-      console.error('🚨 Raw sanitised payload:', sanitized.slice(0, 1000));
-      return { deals: [], sources: [], narrative: '' };
-    }
-
-    const dealsArray = Array.isArray(parsed?.deals) ? parsed.deals : [];
-    const aggregatedDeals = [];
-    const aggregatedDealsKeyed = new Set();
-
-    const normalizedDeals = dealsArray.map((deal) => {
+        // Normalize deals from this attempt
+        const normalizedDeals = dealsArray.map((deal) => {
       const sourceUrl = deal.sourceUrl || deal.url || '';
       let domain = 'openai_web_search';
       if (sourceUrl) {
@@ -969,40 +1019,48 @@ User query: ${searchQuery}`.trim();
       return true;
     });
 
-    console.log(`📊 Parsed deals:`, normalizedDeals.length);
+    console.log(`📊 Attempt ${attempt} - Parsed deals:`, normalizedDeals.length);
 
-    // Deduplicate deals
+    // Deduplicate and aggregate deals from this attempt
     for (const deal of normalizedDeals) {
       const key = `${(deal.sourceUrl || '').toLowerCase()}|${(deal.title || '').toLowerCase()}`;
-      if (key.trim() && !aggregatedDealsKeyed.has(key)) {
-        aggregatedDealsKeyed.add(key);
-        aggregatedDeals.push(deal);
+      if (key.trim() && !seenDealKeys.has(key)) {
+        seenDealKeys.add(key);
+        allDeals.push(deal);
       }
     }
+    
+    console.log(`📊 Attempt ${attempt} - Total unique deals so far: ${allDeals.length}`);
+    
+    // If we have enough deals, we can stop early
+    if (allDeals.length >= MIN_DEALS_TARGET) {
+      console.log(`✅ Reached target of ${MIN_DEALS_TARGET} deals after ${attempt} attempts. Stopping.`);
+      break;
+    }
+    
+      } catch (attemptError) {
+        console.error(`❌ Attempt ${attempt} failed:`, attemptError.message);
+        // Continue to next attempt
+        continue;
+      }
+    }
+    
+    console.log(`🎯 Final result: ${allDeals.length} unique deals from ${MAX_ATTEMPTS} attempts`);
 
+    // Deduplicate sources
     const aggregatedSources = new Map();
-    const sources = Array.isArray(parsed?.sources)
-      ? parsed.sources
-          .map((source) => ({
-            name: source.name || 'OpenAI Web Search',
-            url: source.url || '',
-            note: source.note || ''
-          }))
-          .filter((source) => source.name || source.url)
-      : [];
-
-    for (const source of sources) {
+    for (const source of allSources) {
       const sourceKey = `${source.name || ''}|${source.url || ''}`;
       if (!aggregatedSources.has(sourceKey)) {
-        aggregatedSources.set(sourceKey, source);
+        aggregatedSources.set(sourceKey, {
+          name: source.name || 'OpenAI Web Search',
+          url: source.url || '',
+          note: source.note || ''
+        });
       }
     }
 
-    const finalNarrative = typeof parsed?.narrative === 'string' && parsed.narrative.trim() 
-      ? parsed.narrative.trim() 
-      : '';
-
-    console.log(`✅ Total unique deals found: ${aggregatedDeals.length}`);
+    console.log(`✅ Total unique deals found: ${allDeals.length}`);
 
     // Filter deals by date range (remove old deals outside the range)
     const filterToday = new Date();
@@ -1010,7 +1068,7 @@ User query: ${searchQuery}`.trim();
     filterMinDate.setDate(filterToday.getDate() - dateRangeDays);
     filterMinDate.setHours(0, 0, 0, 0);
     
-    const filteredDeals = aggregatedDeals.filter((deal) => {
+    const filteredDeals = allDeals.filter((deal) => {
       // If no date, include the deal (don't filter it out - let it through)
       if (!deal.dealDate) {
         console.log(`⚠️ Deal without date included: ${deal.title}`);
@@ -1042,7 +1100,7 @@ User query: ${searchQuery}`.trim();
       }
     });
 
-    console.log(`✅ Deals after date filtering: ${filteredDeals.length} (removed ${aggregatedDeals.length - filteredDeals.length} old deals)`);
+    console.log(`✅ Deals after date filtering: ${filteredDeals.length} (removed ${allDeals.length - filteredDeals.length} old deals)`);
 
     // If we don't have enough deals within the date range, include deals from current year
     if (filteredDeals.length < MIN_DEALS_TARGET) {
@@ -1050,7 +1108,7 @@ User query: ${searchQuery}`.trim();
       const currentYear = new Date().getFullYear();
       const yearStart = new Date(currentYear, 0, 1); // January 1st of current year
       
-      const additionalDeals = aggregatedDeals.filter((deal) => {
+      const additionalDeals = allDeals.filter((deal) => {
         if (!deal.dealDate) return false;
         
         try {
@@ -6008,7 +6066,8 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     user.credits -= 1;
     await user.save();
 
-    const rangeInDays = parseInt(dateRange, 10) || 7;
+    // FIXED: Always use 12 months (365 days) for drug deals
+    const rangeInDays = 365;
     
     let openAiResult;
     try {
@@ -6031,19 +6090,255 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       );
     }
 
-    // Deduplicate by URL/title combo
+    // Filter out invalid sources (Wikipedia, Trump news, etc.)
+    const blockedDomains = ['wikipedia.org', 'wikipedia.com', 'wikimedia.org'];
+    const blockedKeywords = ['trump', 'biden', 'election', 'politics', 'president'];
+    
+    // Filter deals: must have buyer AND seller, no blocked sources, must match indication, no devices
+    const searchQueryLower = (searchQuery || '').toLowerCase().trim();
+    
+    // Blocked device-related keywords
+    const deviceKeywords = ['device', 'diagnostic device', 'surgical instrument', 'medical equipment', 
+                           'implant', 'catheter', 'stent', 'pacemaker', 'prosthetic', 'orthopedic device',
+                           'imaging device', 'monitoring device', 'sensor', 'scanner', 'analyzer'];
+    
+    const filteredDeals = aggregatedDeals.filter(deal => {
+      // Normalize buyer and seller values
+      const buyer = (deal.buyer || '').trim();
+      const seller = (deal.seller || '').trim();
+      
+      // Must have both buyer and seller (not empty, not disclosed, not placeholder)
+      const hasBuyer = buyer && 
+                       buyer.length > 0 &&
+                       buyer !== '—' &&
+                       buyer !== '-' &&
+                       buyer !== 'N/A' &&
+                       buyer !== 'n/a' &&
+                       buyer !== 'NA' &&
+                       !buyer.toLowerCase().includes('not disclosed') &&
+                       !buyer.toLowerCase().includes('undisclosed') &&
+                       !buyer.toLowerCase().includes('unknown') &&
+                       !buyer.toLowerCase().includes('tbd') &&
+                       !buyer.toLowerCase().includes('to be determined') &&
+                       !buyer.toLowerCase().includes('pending');
+      
+      const hasSeller = seller &&
+                        seller.length > 0 &&
+                        seller !== '—' &&
+                        seller !== '-' &&
+                        seller !== 'N/A' &&
+                        seller !== 'n/a' &&
+                        seller !== 'NA' &&
+                        !seller.toLowerCase().includes('not disclosed') &&
+                        !seller.toLowerCase().includes('undisclosed') &&
+                        !seller.toLowerCase().includes('unknown') &&
+                        !seller.toLowerCase().includes('tbd') &&
+                        !seller.toLowerCase().includes('to be determined') &&
+                        !seller.toLowerCase().includes('pending');
+      
+      if (!hasBuyer || !hasSeller) {
+        console.log(`🚫 Filtered out deal: buyer="${buyer}", seller="${seller}"`);
+        return false; // Skip deals without buyer or seller
+      }
+      
+      // CRITICAL: Validate deal date - must be within last 12 months (365 days) and not in future
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // End of today
+      const minDate = new Date(today);
+      minDate.setDate(today.getDate() - 365); // 12 months ago
+      minDate.setHours(0, 0, 0, 0); // Start of that day
+      
+      let dealDate = null;
+      const dealDateStr = (deal.dealDate || '').trim();
+      
+      if (dealDateStr) {
+        try {
+          // Parse date - handle ISO format (YYYY-MM-DD) and other formats
+          let parsedDate = null;
+          
+          // Try ISO format first (most common)
+          if (dealDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            parsedDate = new Date(dealDateStr + 'T00:00:00'); // Add time to avoid timezone issues
+          } else if (dealDateStr.match(/^\d{4}-\d{2}-\d{2}T/)) {
+            // Already has time
+            parsedDate = new Date(dealDateStr);
+          } else {
+            // Try parsing other formats
+            parsedDate = new Date(dealDateStr);
+          }
+          
+          // Check if date is valid
+          if (isNaN(parsedDate.getTime())) {
+            console.log(`🚫 Filtered out deal - invalid date format: "${dealDateStr}"`);
+            return false; // Skip deals with invalid date format
+          }
+          
+          // Normalize to date only (remove time component for comparison)
+          dealDate = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+          const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const minDateOnly = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
+          
+          // CRITICAL: Date must not be in the future (except today)
+          if (dealDate > todayDateOnly) {
+            console.log(`🚫 Filtered out deal - date in future: "${dealDateStr}" (parsed as ${dealDate.toISOString().split('T')[0]}, today is ${todayDateOnly.toISOString().split('T')[0]})`);
+            return false; // Skip deals with future dates
+          }
+          
+          // Check if date is within range (last 12 months to today)
+          if (dealDate < minDateOnly) {
+            console.log(`🚫 Filtered out deal - date too old: "${dealDateStr}" (parsed as ${dealDate.toISOString().split('T')[0]}, minimum is ${minDateOnly.toISOString().split('T')[0]})`);
+            return false; // Skip deals with dates older than 12 months
+          }
+          
+          // Additional sanity check: if date is very recent (within last 7 days) but deal seems old based on title/summary, flag it
+          const daysDiff = Math.floor((todayDateOnly - dealDate) / (1000 * 60 * 60 * 24));
+          if (daysDiff < 7) {
+            // Very recent date - check if it makes sense
+            const titleLower = (deal.title || '').toLowerCase();
+            const summaryLower = (deal.summary || '').toLowerCase();
+            const hasOldKeywords = ['announced', 'signed', 'completed', 'closed'].some(keyword => 
+              titleLower.includes(keyword) || summaryLower.includes(keyword)
+            );
+            // If deal mentions "announced" or "signed" but date is very recent, it might be wrong
+            // But we'll allow it for now, just log a warning
+            if (hasOldKeywords && daysDiff < 2) {
+              console.log(`⚠️ Warning: Deal has very recent date but mentions announcement: "${dealDateStr}" - "${deal.title || 'Unknown'}"`);
+            }
+          }
+          
+        } catch (dateError) {
+          console.log(`🚫 Filtered out deal - date parsing error: "${dealDateStr}"`, dateError);
+          return false; // Skip deals with unparseable dates
+        }
+      } else {
+        // If no date provided, we'll allow it but log a warning
+        console.log(`⚠️ Deal has no date: "${deal.title || 'Unknown'}" - allowing but may need review`);
+      }
+      
+      // Check for blocked domains (Wikipedia, etc.)
+      const sourceUrl = (deal.sourceUrl || '').toLowerCase();
+      const isBlockedDomain = blockedDomains.some(domain => sourceUrl.includes(domain));
+      if (isBlockedDomain) {
+        return false;
+      }
+      
+      // Check for blocked keywords in title/summary (Trump, Biden, politics, etc.)
+      const titleLower = (deal.title || '').toLowerCase();
+      const summaryLower = (deal.summary || '').toLowerCase();
+      const hasBlockedKeyword = blockedKeywords.some(keyword => 
+        titleLower.includes(keyword) || summaryLower.includes(keyword)
+      );
+      if (hasBlockedKeyword) {
+        return false;
+      }
+      
+      // CRITICAL: Exclude device deals - only allow drug deals
+      // Check in all relevant fields for device keywords
+      const drugNameLower = (deal.drugName || '').toLowerCase();
+      const therapeuticAreaLower = (deal.therapeuticArea || '').toLowerCase();
+      const allText = `${titleLower} ${summaryLower} ${drugNameLower} ${therapeuticAreaLower}`;
+      
+      // More aggressive device filtering
+      const isDeviceDeal = deviceKeywords.some(keyword => 
+        allText.includes(keyword) ||
+        titleLower.includes(keyword) ||
+        summaryLower.includes(keyword) ||
+        drugNameLower.includes(keyword)
+      );
+      
+      // Also check if it's explicitly a drug deal (must mention drug, pharmaceutical, therapeutic, etc.)
+      const drugKeywords = ['drug', 'pharmaceutical', 'therapeutic', 'biologic', 'compound', 'candidate', 
+                           'therapy', 'treatment', 'medication', 'medicine', 'biotech'];
+      const hasDrugKeyword = drugKeywords.some(keyword => 
+        allText.includes(keyword) ||
+        titleLower.includes(keyword) ||
+        summaryLower.includes(keyword)
+      );
+      
+      if (isDeviceDeal || !hasDrugKeyword) {
+        console.log(`🚫 Filtered out non-drug deal: isDevice=${isDeviceDeal}, hasDrugKeyword=${hasDrugKeyword}`);
+        return false; // Skip device deals or deals without drug keywords - only drugs allowed
+      }
+      
+      // CRITICAL: If search query provided, MUST match indication/therapeutic area field ONLY (strict matching)
+      if (searchQueryLower) {
+        const therapeuticArea = therapeuticAreaLower;
+        
+        // STRICT MATCHING: Search query MUST match indication/therapeutic area field
+        // Indication column is the PRIMARY and ONLY matching field for search keyword
+        // Do NOT match on title/summary - only indication/therapeutic area matters
+        const matchesIndication = therapeuticArea && therapeuticArea.includes(searchQueryLower);
+        
+        if (!matchesIndication) {
+          console.log(`🚫 Filtered out deal - indication mismatch: searchQuery="${searchQueryLower}", therapeuticArea="${therapeuticArea}"`);
+          return false; // Skip deals where indication/therapeutic area doesn't match search keyword
+        }
+        
+        // Only deals with matching indication will pass this filter
+      }
+      
+      return true;
+    });
+
+    // Enhanced deduplication: check URL, title similarity, buyer+seller combo, and date
     const seenKeys = new Set();
+    const seenTitles = new Set();
+    const seenBuyerSellerDates = new Set();
     const uniqueDeals = [];
-    for (const deal of aggregatedDeals) {
-      const key = `${deal.sourceUrl || ''}-${deal.title || ''}`.toLowerCase();
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
+    
+    for (const deal of filteredDeals) {
+      // Normalize title for similarity check (remove special chars, normalize spaces)
+      const normalizedTitle = (deal.title || '').toLowerCase()
+        .replace(/[^\w\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 120); // First 120 chars for comparison
+      
+      // Create unique key from URL (primary deduplication)
+      const urlKey = (deal.sourceUrl || '').toLowerCase().trim();
+      
+      // Create buyer+seller+date key (secondary deduplication for same deal from different sources)
+      const buyer = (deal.buyer || '').toLowerCase().trim();
+      const seller = (deal.seller || '').toLowerCase().trim();
+      const dealDate = (deal.dealDate || '').toLowerCase().trim();
+      const buyerSellerDateKey = `${buyer}|||${seller}|||${dealDate}`;
+      
+      // Check if we've seen this exact URL, very similar title, or same buyer+seller+date
+      const isDuplicate = (urlKey && seenKeys.has(urlKey)) || 
+                         (normalizedTitle && normalizedTitle.length > 20 && seenTitles.has(normalizedTitle)) ||
+                         (buyerSellerDateKey && buyerSellerDateKey.length > 10 && seenBuyerSellerDates.has(buyerSellerDateKey));
+      
+      if (!isDuplicate && urlKey) {
+        // Mark as seen
+        seenKeys.add(urlKey);
+        if (normalizedTitle && normalizedTitle.length > 20) {
+          seenTitles.add(normalizedTitle);
+        }
+        if (buyerSellerDateKey && buyerSellerDateKey.length > 10) {
+          seenBuyerSellerDates.add(buyerSellerDateKey);
+        }
+        
         const domainKey = (deal.sourceId || '').replace(/^www\./i, '');
         const friendlySource = deal.source || PREFERRED_DOMAIN_LABELS[domainKey] || domainKey || 'OpenAI Web Search';
 
+        // Ensure only one sourceUrl (take the first valid one, no duplicates)
+        const sourceUrl = (deal.sourceUrl || '').trim();
+        if (!sourceUrl) continue; // Skip if no URL
+
+        // Final safety check: ensure buyer and seller are valid (should already be filtered, but double-check)
+        const finalBuyer = (deal.buyer || '').trim();
+        const finalSeller = (deal.seller || '').trim();
+        
+        if (!finalBuyer || !finalSeller || 
+            finalBuyer === '—' || finalBuyer === '-' || finalBuyer === 'N/A' ||
+            finalSeller === '—' || finalSeller === '-' || finalSeller === 'N/A') {
+          console.log(`🚫 Final filter: Skipping deal with invalid buyer/seller: buyer="${finalBuyer}", seller="${finalSeller}"`);
+          continue; // Skip this deal
+        }
+
         uniqueDeals.push({
-          buyer: deal.buyer || '',
-          seller: deal.seller || '',
+          buyer: finalBuyer,
+          seller: finalSeller,
           drugName: deal.drugName || '',
           therapeuticArea: deal.therapeuticArea || '',
           stage: deal.stage || '',
@@ -6052,7 +6347,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
           dealDate: deal.dealDate || new Date().toISOString().split('T')[0],
           source: friendlySource,
           sourceId: domainKey || 'openai_web_search',
-          sourceUrl: deal.sourceUrl || '',
+          sourceUrl: sourceUrl, // Only one URL per deal
           title: deal.title || searchQuery,
           summary: deal.summary || '',
           rawText: deal.rawText || '',
@@ -6063,21 +6358,39 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       }
     }
 
-    const preferredDeals = [];
-    const otherDeals = [];
-    const preferredDomainSet = new Set(PREFERRED_DOMAINS);
-
-    for (const deal of uniqueDeals) {
-      const domain = (deal.sourceId || '').replace(/^www\./i, '');
-      if (domain && preferredDomainSet.has(domain)) {
-        preferredDeals.push(deal);
-      } else {
-        otherDeals.push(deal);
+    // Sort deals: indication-matched deals first (therapeuticArea only), then by preferred domains, then by date (newest first)
+    const searchQueryLowerForSort = (searchQuery || '').toLowerCase().trim();
+    
+    const sortedDeals = uniqueDeals.sort((a, b) => {
+      // Priority 1: Indication-matched deals first (only check therapeuticArea field - indication column)
+      if (searchQueryLowerForSort) {
+        const aTherapeuticArea = (a.therapeuticArea || '').toLowerCase();
+        const aMatches = aTherapeuticArea.includes(searchQueryLowerForSort);
+        
+        const bTherapeuticArea = (b.therapeuticArea || '').toLowerCase();
+        const bMatches = bTherapeuticArea.includes(searchQueryLowerForSort);
+        
+        // Indication-matched deals go first
+        if (aMatches && !bMatches) return -1;
+        if (!aMatches && bMatches) return 1;
       }
-    }
+      
+      // Priority 2: Preferred domains first
+      const aDomain = (a.sourceId || '').replace(/^www\./i, '');
+      const bDomain = (b.sourceId || '').replace(/^www\./i, '');
+      const aIsPreferred = PREFERRED_DOMAINS.includes(aDomain);
+      const bIsPreferred = PREFERRED_DOMAINS.includes(bDomain);
+      
+      if (aIsPreferred && !bIsPreferred) return -1;
+      if (!aIsPreferred && bIsPreferred) return 1;
+      
+      // Priority 3: Newest deals first (by dealDate)
+      const aDate = new Date(a.dealDate || 0);
+      const bDate = new Date(b.dealDate || 0);
+      return bDate - aDate;
+    });
 
-    const prioritizedDeals = [...preferredDeals, ...otherDeals];
-    const responseDeals = prioritizedDeals.slice(0, 30);
+    const responseDeals = sortedDeals.slice(0, 50); // Show up to 50 deals (increased from 30)
     const responseDomains = Array.from(new Set(responseDeals.map(deal => deal.sourceId || 'openai_web_search')));
 
     const sourcesUsed = ['openai_web_search'];
