@@ -189,6 +189,7 @@ const Pricing = () => {
         "1 Seat included",
         "Get 5 free contacts",
         "Credits expire after 5 days",
+        "AI Deal Scanner",
         "No BD Insights Access",
         "No BD TRACKER Access",
         "No credit card needed"
@@ -210,6 +211,7 @@ const Pricing = () => {
       features: [
         "1 Seat included",
         "50 contacts per month",
+        "AI Deal Scanner",
         "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
@@ -231,34 +233,13 @@ const Pricing = () => {
         "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
+        "AI Deal Scanner",
         "Access to BD Tracker",
         "Free Deal Comps & VC Contacts",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
-      buttonText: "Choose plan",
-      buttonStyle: "primary"
-    },
-    {
-      id: 'budget-plan',
-      name: "Budget Plan",
-      description: "Affordable monthly access with BD Insights",
-      credits: "10 credits/month",
-      monthlyPrice: 1,
-      annualPrice: 6,
-      planType: 'monthly',
-      yearlyPlanType: 'yearly',
-      features: [
-        "1 Seat included",
-        "10 credits per month",
-        "Access to BD Insights",
-        "Monthly billing at $1",
-        "Annual billing at $6 (50% savings)",
-        "Pay by credit/debit card"
-      ],
-      icon: CreditCard,
-      popular: false,
       buttonText: "Choose plan",
       buttonStyle: "primary"
     }
@@ -327,7 +308,10 @@ const Pricing = () => {
   const defaultPlans = getDefaultPlans();
   const plansToUse = pricingPlans.length > 0 ? pricingPlans : defaultPlans;
   
-  const plans = plansToUse.map(plan => {
+  // Filter out budget-plan from plans
+  const plans = plansToUse
+    .filter(plan => plan.id !== 'budget-plan')
+    .map(plan => {
     return {
       ...plan,
       // Map yearlyPrice to annualPrice for consistency

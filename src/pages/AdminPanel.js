@@ -62,8 +62,14 @@ const AdminPanel = () => {
     customDate: ''
   });
 
-  // Credit Management State - REMOVED
-  // Credits can only be consumed, never restored
+  // Credit Management State
+  const [creditModal, setCreditModal] = useState(false);
+  const [selectedUserForCredits, setSelectedUserForCredits] = useState(null);
+  const [creditForm, setCreditForm] = useState({
+    credits: '',
+    reason: ''
+  });
+  const [isAddingCredits, setIsAddingCredits] = useState(false);
 
   useEffect(() => {
     // Load data from backend
@@ -735,7 +741,65 @@ Created: ${user.createdAt ? new Date(user.createdAt).toLocaleString() : 'Unknown
   };
 
   // Credit Management Functions
-  // Credit management functions removed - credits can only be consumed, never restored
+  const openCreditModal = (user) => {
+    setSelectedUserForCredits(user);
+    setCreditForm({
+      credits: '',
+      reason: ''
+    });
+    setCreditModal(true);
+  };
+
+  const closeCreditModal = () => {
+    setCreditModal(false);
+    setSelectedUserForCredits(null);
+    setCreditForm({
+      credits: '',
+      reason: ''
+    });
+  };
+
+  const handleAddCredits = async () => {
+    if (!creditForm.credits || creditForm.credits < 1 || creditForm.credits > 10000) {
+      setError('Please enter valid credits (1-10000)');
+      return;
+    }
+
+    setIsAddingCredits(true);
+    setError(null);
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL || API_BASE_URL}/api/admin/add-credits`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: selectedUserForCredits.email,
+          credits: parseInt(creditForm.credits),
+          reason: creditForm.reason || `Admin credit addition`
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(`✅ Successfully added ${creditForm.credits} credits to ${selectedUserForCredits.email}\n\nOld Credits: ${data.data.oldCredits}\nNew Credits: ${data.data.newCredits}`);
+        closeCreditModal();
+        fetchUsers(); // Refresh user list
+        fetchComprehensiveData(); // Refresh comprehensive data
+      } else {
+        setError(data.message || 'Failed to add credits');
+      }
+    } catch (err) {
+      console.error('Error adding credits:', err);
+      setError('Error adding credits. Please try again.');
+    } finally {
+      setIsAddingCredits(false);
+    }
+  };
 
 
 
@@ -2252,6 +2316,13 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                             <Eye className="w-3 h-3" />
                                             <span>View</span>
                                           </button>
+                                          <button
+                                            onClick={() => openCreditModal(user)}
+                                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
+                                          >
+                                            <Plus className="w-3 h-3" />
+                                            <span>Add Credits</span>
+                                          </button>
                                           {suspensionStatus && suspensionStatus.status === 'suspended' ? (
                                             <button
                                               onClick={() => handleUnsuspendUser(user.id || user._id)}
@@ -2518,6 +2589,116 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
             )}
           </div>
         </div>
+
+        {/* Credit Addition Modal */}
+        {creditModal && selectedUserForCredits && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Add Credits</h3>
+                <button
+                  onClick={closeCreditModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    User Email
+                  </label>
+                  <input
+                    type="email"
+                    value={selectedUserForCredits.email}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Credits
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedUserForCredits.currentCredits || 0}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Credits to Add <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    value={creditForm.credits}
+                    onChange={(e) => setCreditForm({ ...creditForm, credits: e.target.value })}
+                    placeholder="Enter credits (1-10000)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum: 1, Maximum: 10000</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason (Optional)
+                  </label>
+                  <textarea
+                    value={creditForm.reason}
+                    onChange={(e) => setCreditForm({ ...creditForm, reason: e.target.value })}
+                    placeholder="e.g., Partner bonus, Customer support, etc."
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={closeCreditModal}
+                    disabled={isAddingCredits}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddCredits}
+                    disabled={isAddingCredits || !creditForm.credits}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  >
+                    {isAddingCredits ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Adding...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        <span>Add Credits</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
             </div>
   );
 };

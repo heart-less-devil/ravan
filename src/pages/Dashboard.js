@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, Fragment, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
@@ -647,7 +647,7 @@ const Dashboard = () => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: Grid, section: 'MAIN' },
     { name: 'Advanced Search', path: '/dashboard/search', icon: Search, section: 'DATA' },
-    { name: 'AI Deal Scraper', path: '/dashboard/ai-deal-scraper', icon: Sparkles, section: 'DATA', paidOnly: true },
+    { name: 'AI Deal Scanner', path: '/dashboard/ai-deal-scraper', icon: Sparkles, section: 'DATA' },
     { name: 'BD Tracker', path: '/dashboard/bd-tracker', icon: TrendingUp, section: 'MY DEALS' },
     { name: 'Definitions', path: '/dashboard/resources/definitions', icon: FileText, section: 'RESOURCES' },
     { name: 'Quick Guide', path: '/dashboard/resources/quick-guide', icon: FileText, section: 'RESOURCES' },
@@ -709,7 +709,7 @@ const Dashboard = () => {
           daysRemaining={daysRemaining}
         />;
       case '/dashboard/ai-deal-scraper':
-        // Check for suspension before allowing access to AI Deal Scraper
+        // Check for suspension before allowing access to AI Deal Scanner
         if (suspensionData) {
           return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-red-100">
@@ -1806,10 +1806,7 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
   };
 
   // Sort search results (use filtered results if available, otherwise original)
-  // Use useMemo to prevent recalculation on every render
-  const sortedSearchResults = useMemo(() => {
-    return sortSearchResults(filteredSearchResults || searchResults);
-  }, [filteredSearchResults, searchResults]);
+  const sortedSearchResults = sortSearchResults(filteredSearchResults || searchResults);
 
   // Clear filtered results when search results change
   useEffect(() => {
@@ -1851,25 +1848,19 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
       // Auto-populate Contact Name field with first contact when searching by company
       if (currentSearchType === 'Company Name' && sortedSearchResults.length > 0 && !hasAutoPopulated) {
         const firstContact = sortedSearchResults[0];
-        if (firstContact.contactPerson) {
+        if (firstContact.contactPerson && formData.contactPerson !== firstContact.contactPerson) {
           console.log('Auto-populated Contact Name field with:', firstContact.contactPerson);
-          setFormData(prev => {
-            // Only update if different to prevent unnecessary re-renders
-            if (prev.contactPerson !== firstContact.contactPerson) {
-              return {
-                ...prev,
-                contactPerson: firstContact.contactPerson
-              };
-            }
-            return prev;
-          });
+          setFormData(prev => ({
+            ...prev,
+            contactPerson: firstContact.contactPerson
+          }));
           setHasAutoPopulated(true);
         }
       }
     } else {
       setGroupedResults({});
     }
-  }, [sortedSearchResults, currentSearchType, isGlobalSearch, hasAutoPopulated]);
+  }, [sortedSearchResults, currentSearchType, isGlobalSearch]);
 
   const handleChange = (e) => {
     setFormData({
@@ -4636,12 +4627,10 @@ const PricingPage = ({ user }) => {
         "1 Seat included",
         "Get 5 free contacts",
         "Credits expire after 5 days",
-    
-        
+        "AI Deal Scanner",
         "No BD Insights Access",
         "No BD TRACKER Access",
         "No credit card needed"
-       
       ],
       icon: Gift,
       popular: false,
@@ -4657,6 +4646,7 @@ const PricingPage = ({ user }) => {
       features: [
         "1 Seat included",
         "50 contacts per month",
+        "AI Deal Scanner",
         "Access to BD Tracker",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
@@ -4676,32 +4666,13 @@ const PricingPage = ({ user }) => {
         "Everything in Basic, plus:",
         "1 Seat included",
         "100 contacts per month",
+        "AI Deal Scanner",
         "Access to BD Tracker",
         "Free Deal Comps & VC Contacts",
         "1 hr. of BD Consulting with Mr. Vik"
       ],
       icon: Target,
       popular: true,
-      buttonText: "Choose plan",
-      buttonStyle: "primary"
-    },
-    {
-      id: 'budget-plan',
-      name: "Budget Plan",
-      description: "Affordable monthly access with BD Insights",
-      credits: "10 credits/month",
-      monthlyPrice: 1,
-      annualPrice: 6,
-      features: [
-        "1 Seat included",
-        "10 credits per month",
-        "Access to BD Insights",
-        "Monthly billing at $1",
-        "Annual billing at $6 (50% savings)",
-        "Pay by credit/debit card"
-      ],
-      icon: CreditCard,
-      popular: false,
       buttonText: "Choose plan",
       buttonStyle: "primary"
     }
@@ -4745,7 +4716,10 @@ const PricingPage = ({ user }) => {
 
   // Use dynamic pricing plans from API and ensure features are arrays and icons are properly mapped
   // Temporarily force using local plans to ensure updated features are shown
-  const plans = getDefaultPlans().map(plan => {
+  // Filter out budget-plan from plans
+  const plans = getDefaultPlans()
+    .filter(plan => plan.id !== 'budget-plan')
+    .map(plan => {
     return {
       ...plan,
       // Map yearlyPrice to annualPrice for consistency

@@ -41,7 +41,7 @@ if (stripeSecretKey && stripeSecretKey !== 'sk_live_your_stripe_secret_key_here'
 }
 
 // ============================================================================
-// AI DEAL SCRAPER FUNCTIONS
+// AI DEAL SCANNER FUNCTIONS
 // ============================================================================
 
 // Web scraping dependencies
@@ -54,9 +54,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 let openaiClient = null;
 if (OPENAI_API_KEY) {
   openaiClient = new OpenAI({ apiKey: OPENAI_API_KEY });
-  console.log('✅ OpenAI client initialized for AI Deal Scraper web search');
+  console.log('✅ OpenAI client initialized for AI Deal Scanner web search');
 } else {
-  console.log('⚠️ OPENAI_API_KEY not set. AI Deal Scraper web search will be limited to NewsAPI results.');
+  console.log('⚠️ OPENAI_API_KEY not set. AI Deal Scanner web search will be limited to NewsAPI results.');
 }
 
 // News sources configuration
@@ -353,9 +353,9 @@ async function searchDealsWithOpenAI(searchQuery, dateRangeDays, userEmail) {
     // FIXED: Always use 12 months (365 days) for drug deals
     const fixedDateRangeDays = 365;
     const timeframeLabel = `the last 12 months (${fixedDateRangeDays} days)`;
-    const MIN_DEALS_TARGET = 25;
-    const MAX_DEALS_TARGET = 40;
-    const MAX_ATTEMPTS = 3; // Multiple attempts to get more deals
+    const MIN_DEALS_TARGET = 20; // Reduced from 25 for faster response
+    const MAX_DEALS_TARGET = 30; // Reduced from 40 for faster response
+    const MAX_ATTEMPTS = 2; // Reduced from 3 to improve response time
     
     // Get current date for context
     const today = new Date();
@@ -847,12 +847,23 @@ User query: ${searchQuery}`.trim();
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       console.log(`🔄 Attempt ${attempt} of ${MAX_ATTEMPTS}...`);
       
+      // Early return if we already have enough deals
+      if (allDeals.length >= MIN_DEALS_TARGET && attempt > 1) {
+        console.log(`✅ Already have ${allDeals.length} deals, skipping remaining attempts`);
+        break;
+      }
+      
       try {
-        const response = await openaiClient.responses.create({
+        // Add timeout to prevent hanging (60 seconds max per attempt)
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('OpenAI API timeout after 60 seconds')), 60000)
+        );
+        
+        const apiPromise = openaiClient.responses.create({
           model: 'gpt-4o',
           input: basePrompt,
           tools: [{ type: 'web_search' }],
-          max_output_tokens: 12000, // Increased to allow 20-30 comprehensive deals
+          max_output_tokens: 8000, // Reduced from 12000 for faster processing
           temperature: 0.2,
           text: {
             format: {
@@ -867,6 +878,8 @@ User query: ${searchQuery}`.trim();
             attempt: attempt.toString()
           }
         });
+        
+        const response = await Promise.race([apiPromise, timeoutPromise]);
 
         let rawOutput = extractResponseText(response);
 
@@ -3263,13 +3276,30 @@ app.post('/api/auth/login', [
         });
       }
       
+      // Check if free trial has expired (only for free users who haven't paid)
+      if (!registeredUser.paymentCompleted && registeredUser.currentPlan === 'free') {
+        const now = new Date();
+        const registrationDate = new Date(registeredUser.createdAt || registeredUser.registrationDate || now);
+        const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
+        const trialDays = 5;
+        const trialExpired = daysSinceRegistration >= trialDays;
+        
+        if (trialExpired) {
+          console.log(`⏰ Trial expired for user: ${email} (${daysSinceRegistration} days since registration)`);
+          return res.status(403).json({
+            message: 'Your Trial Period is Over',
+            trialExpired: true
+          });
+        }
+      }
+      
       // Generate JWT token for registered user
       const token = jwt.sign(
         { 
-          id: registeredUser._id || registeredUser.id,
-          email: registeredUser.email, 
-          name: registeredUser.name || `${registeredUser.firstName} ${registeredUser.lastName}`,
-          role: registeredUser.role
+          id: userObj._id || userObj.id,
+          email: userObj.email, 
+          name: userObj.name || `${userObj.firstName} ${userObj.lastName}`,
+          role: userObj.role
         },
         JWT_SECRET,
         { expiresIn: '24h' }
@@ -3281,11 +3311,11 @@ app.post('/api/auth/login', [
         message: 'Login successful',
         token,
         user: {
-          email: registeredUser.email,
-          name: registeredUser.name || `${registeredUser.firstName} ${registeredUser.lastName}`,
-          role: registeredUser.role
+          email: userObj.email,
+          name: userObj.name || `${userObj.firstName} ${userObj.lastName}`,
+          role: userObj.role
         },
-        credits: registeredUser.currentCredits || 5
+        credits: userObj.currentCredits || 5
       });
       
       // Save login data
@@ -3958,16 +3988,20 @@ Timestamp: ${new Date().toLocaleString()}
         const isCustomDomain = true;
         
         // Use simple Gmail function for reliable email sending
-        const emailResult = await sendEmail(
-          'gauravvij1980@gmail.com',
-          'New Contact Form Submission - BioPing',
-          `
+        const emailHtml = `
           <h2>New Contact Form Submission</h2>
           <p><strong>Name:</strong> ${name}</p>
           <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Company:</strong> ${company || 'Not specified'}</p>
           <p><strong>Message:</strong> ${message}</p>
           <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
-          `,
+        `;
+        
+        // Send to gauravvij1980@gmail.com (keep as is)
+        const emailResult = await sendEmail(
+          'gauravvij1980@gmail.com',
+          'New Contact Form Submission - BioPing',
+          emailHtml,
           email // Set Reply-To to user's email
         );
         
@@ -3977,6 +4011,26 @@ Timestamp: ${new Date().toLocaleString()}
         } else {
           console.log('❌ Contact form email failed:', emailResult.error);
           console.log('📧 Full email result:', emailResult);
+        }
+        
+        // Also send to vik.vij@thebioping.com
+        try {
+          const vikEmailResult = await sendEmail(
+            'vik.vij@thebioping.com',
+            'New Contact Form Submission - BioPing',
+            emailHtml,
+            email // Set Reply-To to user's email
+          );
+          
+          if (vikEmailResult.success) {
+            console.log('✅ Contact form email sent successfully to vik.vij@thebioping.com');
+            console.log('📧 Email ID:', vikEmailResult.messageId);
+          } else {
+            console.log('❌ Contact form email to vik.vij@thebioping.com failed:', vikEmailResult.error);
+          }
+        } catch (vikEmailError) {
+          console.error('❌ Error sending email to vik.vij@thebioping.com:', vikEmailError);
+          // Don't fail the whole request if this fails
         }
         
         // Also send to customer
@@ -5506,16 +5560,22 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
             isMatch = false;
           } else {
             // SECOND: If it's Oceania, check exclusions (only exclude if clearly from other regions)
-            // Be careful with exclusions - only exclude if we're SURE it's not Oceania
-            const isNorthAmerican = (itemRegionLower.includes('usa') || 
+            // Default to true if it's a positive Oceania match, then exclude only if clearly from another region
+            isMatch = true; // Start with true for positive Oceania matches
+            
+            // Only exclude if it's CLEARLY from another region AND not Oceania
+            // Be very careful - don't exclude if there's any Oceania indicator
+            const hasNorthAmericanOnly = (itemRegionLower.includes('usa') || 
                                 itemRegionLower.includes('united states') ||
                                 itemRegionLower.includes('us') ||
                                 itemRegionLower.includes('canada') ||
-                                    itemRegionLower.includes('mexico')) &&
-                                    !isAustralia && // Don't exclude if it's Australia
-                                    !containsNZVariant; // Don't exclude if it's NZ
+                                itemRegionLower.includes('mexico')) &&
+                                !isAustralia && 
+                                !containsNZVariant &&
+                                !isOceaniaContinent &&
+                                !hasOceaniaInRegion;
                                     
-            const isEuropean = (itemRegionLower.includes('germany') || 
+            const hasEuropeanOnly = (itemRegionLower.includes('germany') || 
                            itemRegionLower.includes('france') ||
                            itemRegionLower.includes('uk') ||
                            itemRegionLower.includes('spain') ||
@@ -5542,11 +5602,13 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                            itemRegionLower.includes('slovenia') ||
                            itemRegionLower.includes('romania') ||
                            itemRegionLower.includes('slovakia') ||
-                               itemRegionLower.includes('lithuania')) &&
-                               !isAustralia && // Don't exclude if it's Australia
-                               !containsNZVariant; // Don't exclude if it's NZ
+                           itemRegionLower.includes('lithuania')) &&
+                           !isAustralia && 
+                           !containsNZVariant &&
+                           !isOceaniaContinent &&
+                           !hasOceaniaInRegion;
                                
-            const isAsian = (itemRegionLower.includes('japan') || 
+            const hasAsianOnly = (itemRegionLower.includes('japan') || 
                          itemRegionLower.includes('china') ||
                          itemRegionLower.includes('india') ||
                          itemRegionLower.includes('south korea') ||
@@ -5556,24 +5618,32 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
                          itemRegionLower.includes('singapore') ||
                          itemRegionLower.includes('hong kong') ||
                          itemRegionLower.includes('saudi arabia') ||
-                           itemRegionLower.includes('turkey')) &&
-                           !isAustralia && // Don't exclude if it's Australia
-                           !containsNZVariant; // Don't exclude if it's NZ
+                         itemRegionLower.includes('turkey')) &&
+                         !isAustralia && 
+                         !containsNZVariant &&
+                         !isOceaniaContinent &&
+                         !hasOceaniaInRegion;
                            
-            const isAfrican = (itemRegionLower.includes('egypt') ||
+            const hasAfricanOnly = (itemRegionLower.includes('egypt') ||
                              itemRegionLower.includes('south africa')) &&
                              !isAustralia &&
-                             !containsNZVariant;
+                             !containsNZVariant &&
+                             !isOceaniaContinent &&
+                             !hasOceaniaInRegion;
                              
-            const isSouthAmerican = (itemRegionLower.includes('brazil') ||
+            const hasSouthAmericanOnly = (itemRegionLower.includes('brazil') ||
                                  itemRegionLower.includes('chile') ||
                                  itemRegionLower.includes('colombia') ||
-                                   itemRegionLower.includes('uruguay')) &&
-                                   !isAustralia &&
-                                   !containsNZVariant;
+                                 itemRegionLower.includes('uruguay')) &&
+                                 !isAustralia &&
+                                 !containsNZVariant &&
+                                 !isOceaniaContinent &&
+                                 !hasOceaniaInRegion;
             
-            // Match if it's Oceania AND not clearly from other regions
-            isMatch = !isNorthAmerican && !isEuropean && !isAsian && !isAfrican && !isSouthAmerican;
+            // Exclude only if it's clearly from another region (no Oceania indicators)
+            if (hasNorthAmericanOnly || hasEuropeanOnly || hasAsianOnly || hasAfricanOnly || hasSouthAmericanOnly) {
+              isMatch = false;
+            }
           }
           
           // Only log first few Oceania checks for debugging
@@ -5586,14 +5656,8 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
               itemContinentLower: itemContinentLower,
               isAustralia: isAustralia,
               containsNZVariant: containsNZVariant,
-              isMatch: isMatch,
-              exclusions: {
-                isNorthAmerican,
-                isEuropean,
-                isAsian,
-                isAfrican,
-                isSouthAmerican
-              }
+              isOceaniaPositiveMatch: isOceaniaContinent || isAustralia || containsNZVariant || hasOceaniaInRegion,
+              isMatch: isMatch
             });
           }
           
@@ -6013,16 +6077,16 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
   }
 });
 
-// Test endpoint for AI Deal Scraper
+// Test endpoint for AI Deal Scanner
 app.get('/api/ai-deal-scraper-test', (req, res) => {
   res.json({ 
     success: true, 
-    message: 'AI Deal Scraper endpoint is working',
+    message: 'AI Deal Scanner endpoint is working',
     timestamp: new Date().toISOString()
   });
 });
 
-// AI Deal Scraper endpoint
+// AI Deal Scanner endpoint
 app.post('/api/ai-deal-scraper', authenticateToken, [
   body('searchQuery').notEmpty().trim(),
   body('sources').optional().isArray(),
@@ -6041,13 +6105,13 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
 
     const { searchQuery, dateRange, userEmail } = req.body;
     
-    console.log(`🤖 AI Deal Scraper started for user: ${userEmail}`);
+    console.log(`🤖 AI Deal Scanner started for user: ${userEmail}`);
     console.log(`🔍 Search query: ${searchQuery}`);
     console.log('🛰️ Sources: OpenAI web search');
     console.log(`📅 Date range: ${dateRange} days`);
 
-    // Check user credits (assuming 1 credit per scraping session)
-    const user = await User.findOne({ email: userEmail });
+    // Check user credits (assuming 1 credit per scraping session) - optimized query
+    const user = await User.findOne({ email: userEmail }).select('credits').lean();
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -6058,13 +6122,16 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     if (user.credits < 1) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Insufficient credits. Please purchase more credits to use AI Deal Scraper.' 
+        message: 'Insufficient credits. Please purchase more credits to use AI Deal Scanner.' 
       });
     }
 
-    // Deduct credit
-    user.credits -= 1;
-    await user.save();
+    // Deduct credit asynchronously (don't wait for it)
+    User.findOneAndUpdate(
+      { email: userEmail },
+      { $inc: { credits: -1 } },
+      { new: true }
+    ).catch(err => console.error('Error deducting credit:', err));
 
     // FIXED: Always use 12 months (365 days) for drug deals
     const rangeInDays = 365;
@@ -6358,35 +6425,17 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       }
     }
 
-    // Sort deals: indication-matched deals first (therapeuticArea only), then by preferred domains, then by date (newest first)
-    const searchQueryLowerForSort = (searchQuery || '').toLowerCase().trim();
-    
+    // Sort deals by dealDate in descending order (latest date first)
     const sortedDeals = uniqueDeals.sort((a, b) => {
-      // Priority 1: Indication-matched deals first (only check therapeuticArea field - indication column)
-      if (searchQueryLowerForSort) {
-        const aTherapeuticArea = (a.therapeuticArea || '').toLowerCase();
-        const aMatches = aTherapeuticArea.includes(searchQueryLowerForSort);
-        
-        const bTherapeuticArea = (b.therapeuticArea || '').toLowerCase();
-        const bMatches = bTherapeuticArea.includes(searchQueryLowerForSort);
-        
-        // Indication-matched deals go first
-        if (aMatches && !bMatches) return -1;
-        if (!aMatches && bMatches) return 1;
-      }
-      
-      // Priority 2: Preferred domains first
-      const aDomain = (a.sourceId || '').replace(/^www\./i, '');
-      const bDomain = (b.sourceId || '').replace(/^www\./i, '');
-      const aIsPreferred = PREFERRED_DOMAINS.includes(aDomain);
-      const bIsPreferred = PREFERRED_DOMAINS.includes(bDomain);
-      
-      if (aIsPreferred && !bIsPreferred) return -1;
-      if (!aIsPreferred && bIsPreferred) return 1;
-      
-      // Priority 3: Newest deals first (by dealDate)
       const aDate = new Date(a.dealDate || 0);
       const bDate = new Date(b.dealDate || 0);
+      
+      // Handle invalid dates - put them at the end
+      if (isNaN(aDate.getTime()) && isNaN(bDate.getTime())) return 0;
+      if (isNaN(aDate.getTime())) return 1;
+      if (isNaN(bDate.getTime())) return -1;
+      
+      // Descending order: latest date first
       return bDate - aDate;
     });
 
@@ -6405,40 +6454,41 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
       }
     }
 
-    // Store deals in MongoDB for future reference
-    try {
-      const dealSchema = new mongoose.Schema({
-        searchQuery: String,
-        buyer: String,
-        seller: String,
-        drugName: String,
-        therapeuticArea: String,
-        stage: String,
-        financials: String,
-        totalValue: String,
-        dealDate: String,
-        source: String,
-        sourceId: String,
-        sourceUrl: String,
-        title: String,
-        summary: String,
-        rawText: String,
-        tags: [String],
-        scrapedAt: { type: Date, default: Date.now },
-        userEmail: String
-      }, { timestamps: true });
+    // Store deals in MongoDB asynchronously (non-blocking) for better performance
+    if (responseDeals.length > 0) {
+      setImmediate(async () => {
+        try {
+          const dealSchema = new mongoose.Schema({
+            searchQuery: String,
+            buyer: String,
+            seller: String,
+            drugName: String,
+            therapeuticArea: String,
+            stage: String,
+            financials: String,
+            totalValue: String,
+            dealDate: String,
+            source: String,
+            sourceId: String,
+            sourceUrl: String,
+            title: String,
+            summary: String,
+            rawText: String,
+            tags: [String],
+            scrapedAt: { type: Date, default: Date.now },
+            userEmail: String
+          }, { timestamps: true });
 
-      const Deal = mongoose.models.Deal || mongoose.model('Deal', dealSchema);
-
-      if (responseDeals.length > 0) {
-        await Deal.insertMany(responseDeals.map(deal => ({
-        ...deal,
-          scrapedAt: new Date()
-      })));
-        console.log(`💾 Saved ${responseDeals.length} deals to database`);
-      }
-    } catch (dbError) {
-      console.error('Error saving deals to database:', dbError);
+          const Deal = mongoose.models.Deal || mongoose.model('Deal', dealSchema);
+          await Deal.insertMany(responseDeals.map(deal => ({
+            ...deal,
+            scrapedAt: new Date()
+          })));
+          console.log(`💾 Saved ${responseDeals.length} deals to database`);
+        } catch (dbError) {
+          console.error('Error saving deals to database:', dbError);
+        }
+      });
     }
 
     if (responseDeals.length === 0) {
@@ -6484,7 +6534,7 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     });
 
   } catch (error) {
-    console.error('❌ Error in AI Deal Scraper:', error);
+    console.error('❌ Error in AI Deal Scanner:', error);
     console.error('❌ Error stack:', error.stack);
     console.error('❌ Error details:', {
       message: error.message,
@@ -6494,6 +6544,173 @@ app.post('/api/ai-deal-scraper', authenticateToken, [
     res.status(500).json({ 
       success: false, 
       message: 'Error scraping deals. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Admin endpoint to add credits to multiple users (bulk operation)
+app.post('/api/admin/add-credits-bulk', authenticateAdmin, [
+  body('users').isArray().withMessage('Users must be an array'),
+  body('users.*.email').isEmail().withMessage('Each user must have a valid email'),
+  body('users.*.credits').isInt({ min: 1, max: 10000 }).withMessage('Credits must be between 1 and 10000'),
+  body('reason').optional().isString().withMessage('Reason must be a string')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { users, reason } = req.body;
+    const adminEmail = req.user.email;
+
+    console.log(`🔧 Admin ${adminEmail} attempting bulk credit addition to ${users.length} users`);
+
+    const results = [];
+    const errors_list = [];
+
+    for (const userData of users) {
+      try {
+        const { email, credits } = userData;
+        
+        let user = null;
+        
+        // Try MongoDB first
+        try {
+          user = await User.findOne({ email }).maxTimeMS(10000);
+          
+          if (user) {
+            const oldCredits = user.currentCredits || 0;
+            const newCredits = oldCredits + credits;
+
+            // Update credits in MongoDB
+            await User.findOneAndUpdate(
+              { _id: user._id },
+              { 
+                $inc: { currentCredits: credits },
+                $set: { 
+                  lastCreditRenewal: new Date(),
+                  lastModifiedBy: adminEmail,
+                  lastModifiedAt: new Date()
+                }
+              },
+              { new: true, maxTimeMS: 10000 }
+            );
+
+            // Log credit addition
+            if (!user.creditUsageHistory) {
+              user.creditUsageHistory = [];
+            }
+            user.creditUsageHistory.push({
+              creditsAdded: credits,
+              creditsBefore: oldCredits,
+              creditsAfter: newCredits,
+              reason: reason || `Bulk admin credit addition by ${adminEmail}`,
+              addedBy: adminEmail,
+              addedAt: new Date()
+            });
+            await User.findOneAndUpdate(
+              { _id: user._id },
+              { creditUsageHistory: user.creditUsageHistory },
+              { new: true, maxTimeMS: 10000 }
+            );
+
+            // Also update file storage
+            const userIndex = mockDB.users.findIndex(u => u.email === user.email);
+            if (userIndex !== -1) {
+              mockDB.users[userIndex].currentCredits = newCredits;
+              mockDB.users[userIndex].lastCreditRenewal = new Date();
+            }
+
+            results.push({
+              email,
+              success: true,
+              oldCredits,
+              newCredits,
+              creditsAdded: credits
+            });
+            continue;
+          }
+        } catch (dbError) {
+          console.error(`❌ MongoDB error for ${email}:`, dbError);
+        }
+
+        // Fallback to file storage
+        const userIndex = mockDB.users.findIndex(u => u.email === email);
+        
+        if (userIndex === -1) {
+          errors_list.push({
+            email,
+            error: 'User not found'
+          });
+          continue;
+        }
+
+        const fileUser = mockDB.users[userIndex];
+        const oldCredits = fileUser.currentCredits || 0;
+        const newCredits = oldCredits + credits;
+
+        // Update credits in file storage
+        mockDB.users[userIndex].currentCredits = newCredits;
+        mockDB.users[userIndex].lastCreditRenewal = new Date();
+
+        // Add to credit history
+        if (!mockDB.users[userIndex].creditUsageHistory) {
+          mockDB.users[userIndex].creditUsageHistory = [];
+        }
+        mockDB.users[userIndex].creditUsageHistory.push({
+          creditsAdded: credits,
+          creditsBefore: oldCredits,
+          creditsAfter: newCredits,
+          reason: reason || `Bulk admin credit addition by ${adminEmail}`,
+          addedBy: adminEmail,
+          addedAt: new Date()
+        });
+
+        results.push({
+          email,
+          success: true,
+          oldCredits,
+          newCredits,
+          creditsAdded: credits
+        });
+
+      } catch (error) {
+        console.error(`❌ Error processing ${userData.email}:`, error);
+        errors_list.push({
+          email: userData.email,
+          error: error.message
+        });
+      }
+    }
+
+    // Save file storage if any updates were made
+    if (results.length > 0) {
+      saveDataToFiles('bulk_admin_credit_addition');
+    }
+
+    res.json({
+      success: true,
+      message: `Processed ${users.length} users: ${results.length} successful, ${errors_list.length} failed`,
+      data: {
+        successful: results,
+        failed: errors_list,
+        totalProcessed: users.length,
+        successCount: results.length,
+        failureCount: errors_list.length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in bulk credit addition:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding credits',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -10947,6 +11164,173 @@ app.get('/api/admin/credit-monitoring', authenticateAdmin, (req, res) => {
   }
 });
 
+// Admin endpoint to add/increase credits for users
+app.post('/api/admin/add-credits', authenticateAdmin, [
+  body('email').optional().isEmail().withMessage('Valid email required if using email'),
+  body('userId').optional().isString().withMessage('Valid userId required if using userId'),
+  body('credits').isInt({ min: 1, max: 10000 }).withMessage('Credits must be between 1 and 10000'),
+  body('reason').optional().isString().withMessage('Reason must be a string')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { email, userId, credits, reason } = req.body;
+    const adminEmail = req.user.email;
+
+    // Must provide either email or userId
+    if (!email && !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either email or userId must be provided'
+      });
+    }
+
+    console.log(`🔧 Admin ${adminEmail} attempting to add ${credits} credits to ${email || userId}`);
+
+    let user = null;
+    let userIdentifier = email || userId;
+
+    // Try MongoDB first
+    try {
+      if (email) {
+        user = await User.findOne({ email }).maxTimeMS(10000);
+      } else if (userId) {
+        user = await User.findById(userId).maxTimeMS(10000);
+      }
+
+      if (user) {
+        console.log(`✅ User found in MongoDB: ${user.email}`);
+        const oldCredits = user.currentCredits || 0;
+        const newCredits = oldCredits + credits;
+
+        // Update credits in MongoDB
+        await User.findOneAndUpdate(
+          { _id: user._id },
+          { 
+            $inc: { currentCredits: credits },
+            $set: { 
+              lastCreditRenewal: new Date(),
+              lastModifiedBy: adminEmail,
+              lastModifiedAt: new Date()
+            }
+          },
+          { new: true, maxTimeMS: 10000 }
+        );
+
+        // Log credit addition in creditUsageHistory
+        if (!user.creditUsageHistory) {
+          user.creditUsageHistory = [];
+        }
+        user.creditUsageHistory.push({
+          creditsAdded: credits,
+          creditsBefore: oldCredits,
+          creditsAfter: newCredits,
+          reason: reason || `Admin credit addition by ${adminEmail}`,
+          addedBy: adminEmail,
+          addedAt: new Date()
+        });
+        await User.findOneAndUpdate(
+          { _id: user._id },
+          { creditUsageHistory: user.creditUsageHistory },
+          { new: true, maxTimeMS: 10000 }
+        );
+
+        console.log(`✅ Credits updated in MongoDB: ${oldCredits} → ${newCredits} (+${credits})`);
+
+        // Also update file storage as backup
+        const userIndex = mockDB.users.findIndex(u => u.email === user.email);
+        if (userIndex !== -1) {
+          mockDB.users[userIndex].currentCredits = newCredits;
+          mockDB.users[userIndex].lastCreditRenewal = new Date();
+          saveDataToFiles('admin_credit_addition');
+        }
+
+        return res.json({
+          success: true,
+          message: `Successfully added ${credits} credits to ${user.email}`,
+          data: {
+            email: user.email,
+            name: user.firstName + ' ' + user.lastName,
+            oldCredits,
+            newCredits,
+            creditsAdded: credits,
+            reason: reason || `Admin credit addition by ${adminEmail}`
+          }
+        });
+      }
+    } catch (dbError) {
+      console.error('❌ MongoDB error:', dbError);
+    }
+
+    // Fallback to file storage
+    const userIndex = mockDB.users.findIndex(u => 
+      (email && u.email === email) || (userId && u.id === userId)
+    );
+
+    if (userIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: `User not found: ${userIdentifier}`
+      });
+    }
+
+    const fileUser = mockDB.users[userIndex];
+    const oldCredits = fileUser.currentCredits || 0;
+    const newCredits = oldCredits + credits;
+
+    // Update credits in file storage
+    mockDB.users[userIndex].currentCredits = newCredits;
+    mockDB.users[userIndex].lastCreditRenewal = new Date();
+    mockDB.users[userIndex].lastModifiedBy = adminEmail;
+    mockDB.users[userIndex].lastModifiedAt = new Date();
+
+    // Add to credit history
+    if (!mockDB.users[userIndex].creditUsageHistory) {
+      mockDB.users[userIndex].creditUsageHistory = [];
+    }
+    mockDB.users[userIndex].creditUsageHistory.push({
+      creditsAdded: credits,
+      creditsBefore: oldCredits,
+      creditsAfter: newCredits,
+      reason: reason || `Admin credit addition by ${adminEmail}`,
+      addedBy: adminEmail,
+      addedAt: new Date()
+    });
+
+    saveDataToFiles('admin_credit_addition');
+
+    console.log(`✅ Credits updated in file storage: ${oldCredits} → ${newCredits} (+${credits})`);
+
+    res.json({
+      success: true,
+      message: `Successfully added ${credits} credits to ${fileUser.email}`,
+      data: {
+        email: fileUser.email,
+        name: fileUser.firstName + ' ' + fileUser.lastName,
+        oldCredits,
+        newCredits,
+        creditsAdded: credits,
+        reason: reason || `Admin credit addition by ${adminEmail}`
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error adding credits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error adding credits',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Data export endpoint (for backup)
 app.get('/api/admin/export-data', authenticateAdmin, (req, res) => {
   try {
@@ -11304,10 +11688,12 @@ app.get('/api/pricing-plans', async (req, res) => {
     if (mockDB.pricing && mockDB.pricing.length > 0) {
       console.log('📊 Using admin-managed pricing data');
       console.log('📊 Raw pricing data:', JSON.stringify(mockDB.pricing, null, 2));
-      const activePlans = mockDB.pricing.filter(plan => plan.isActive !== false).map(plan => ({
-        ...plan,
-        features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
-      }));
+      const activePlans = mockDB.pricing
+        .filter(plan => plan.isActive !== false && plan.id !== 'budget-plan')
+        .map(plan => ({
+          ...plan,
+          features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+        }));
       
       console.log('✅ Returning admin-managed pricing plans:', activePlans.length, 'plans');
       console.log('✅ Active plans data:', JSON.stringify(activePlans, null, 2));
@@ -11333,6 +11719,7 @@ app.get('/api/pricing-plans', async (req, res) => {
             '1 Seat included',
             'Get 5 free contacts',
             'Credits expire after 5 days (including weekends)',
+            'AI Deal Scanner',
             'No Credit Card Needed',
             'No BD Insights Access'
           ],
@@ -11356,6 +11743,7 @@ app.get('/api/pricing-plans', async (req, res) => {
           features: [
             '1 Seat included',
             '50 contacts per month',
+            'AI Deal Scanner',
             'Pay by credit/debit card',
             'Access to BD Tracker',
             '1 hr. of BD Consulting with Mr. Vik'
@@ -11380,6 +11768,7 @@ app.get('/api/pricing-plans', async (req, res) => {
           features: [
             '1 Seat included',
             '100 contacts per month',
+            'AI Deal Scanner',
             'Pay by credit/debit card',
             'Access to BD Tracker',
             '2 hrs. of BD Consulting with Mr. Vik'
@@ -11403,11 +11792,13 @@ app.get('/api/pricing-plans', async (req, res) => {
       saveDataToFiles('default_pricing_plans_created');
     }
     
-    // Filter only active plans for public display and ensure features are arrays
-    const activePlans = mockDB.pricing.filter(plan => plan.isActive !== false).map(plan => ({
-      ...plan,
-      features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
-    }));
+    // Filter only active plans for public display, exclude budget-plan, and ensure features are arrays
+    const activePlans = mockDB.pricing
+      .filter(plan => plan.isActive !== false && plan.id !== 'budget-plan')
+      .map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features : (plan.features ? [plan.features] : [])
+      }));
     
     console.log('✅ Returning public pricing plans:', activePlans.length, 'plans');
     res.json({ plans: activePlans });

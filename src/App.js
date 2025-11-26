@@ -31,6 +31,7 @@ import BDInsights from './pages/BDInsights';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import CookiePolicy from './pages/CookiePolicy';
+import TrialExpired from './pages/TrialExpired';
 import ScrollToTop from './components/ScrollToTop';
 import './App.css';
 import KeepAlive from './components/KeepAlive';
@@ -83,6 +84,7 @@ function App() {
               } />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/trial-expired" element={<TrialExpired />} />
               <Route path="/about" element={
                 <>
                   <Header />

@@ -76,7 +76,7 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
     try {
       const token = sessionStorage.getItem('token');
       
-      console.log('🔍 AI Deal Scraper API Call:');
+      console.log('🔍 AI Deal Scanner API Call:');
       console.log('  - API_BASE_URL:', API_BASE_URL);
       console.log('  - Full URL:', `${API_BASE_URL}/api/ai-deal-scraper`);
       console.log('  - Search Query:', searchQuery);
@@ -113,13 +113,27 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
       if (result.success) {
         const incomingDeals = Array.isArray(result.data?.deals) ? result.data.deals : [];
         
-        console.log('✅ Setting deals:', incomingDeals.length, 'items');
-        if (incomingDeals.length === 0) {
+        // Sort deals by dealDate in descending order (latest first)
+        const sortedDeals = incomingDeals.sort((a, b) => {
+          const dateA = a.dealDate ? new Date(a.dealDate) : new Date(0);
+          const dateB = b.dealDate ? new Date(b.dealDate) : new Date(0);
+          
+          // Handle invalid dates - put them at the end
+          if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+          if (isNaN(dateA.getTime())) return 1;
+          if (isNaN(dateB.getTime())) return -1;
+          
+          // Descending order: latest date first
+          return dateB - dateA;
+        });
+        
+        console.log('✅ Setting deals:', sortedDeals.length, 'items');
+        if (sortedDeals.length === 0) {
           console.warn('⚠️ No deals received from API. Check backend logs.');
         }
 
-        setScrapedDeals(incomingDeals);
-        setFilteredDeals(incomingDeals);
+        setScrapedDeals(sortedDeals);
+        setFilteredDeals(sortedDeals);
         setLastRunMeta({
           fetchedAt: new Date().toISOString(),
           totalFound: result.data?.totalFound ?? incomingDeals.length,
@@ -187,7 +201,7 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
             <div className="grid lg:grid-cols-[minmax(0,1fr)_auto_auto] gap-4">
               <div className="relative">
                 <label className="text-xs font-semibold uppercase tracking-wide text-indigo-200/80">
-                  Search any therapeutic area, modality, or company
+                  Search Any Therapeutic Area or Indication, Last 12 Mos. & Drug Only Deals
                   </label>
                 <div className="mt-2 relative">
                   <input
@@ -195,7 +209,7 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-5 py-4 pr-12 text-base text-white placeholder:text-slate-400 focus:border-indigo-300/60 focus:outline-none focus:ring-2 focus:ring-indigo-400/50"
-                    placeholder="Ex: oncology licensing, CAR-T partnership, Alzheimer’s acquisition"
+                    placeholder="Ex. Cancer, Pain, Respiratory"
                   />
                   <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 </div>
@@ -234,7 +248,7 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
           </form>
         </motion.div>
 
-
+        {(hasResults || lastRunMeta || isScraping) && (
         <div className="relative">
           {isScraping && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-3xl border border-indigo-400/20 bg-slate-950/80 backdrop-blur">
@@ -341,16 +355,10 @@ const AIDealScraper = ({ user, userCredits, setUserCredits }) => {
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-12 text-center text-slate-300/80">
-                <h3 className="text-xl font-semibold text-white">Run your first discovery</h3>
-                <p className="mt-2 text-sm">
-                  Enter a topic like “oncology licensing” or “CAR-T partnership” to see live deal coverage.
-              </p>
-            </div>
-          )}
+            ) : null}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

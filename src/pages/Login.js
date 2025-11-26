@@ -145,6 +145,12 @@ const Login = () => {
         // Redirect to dashboard
         navigate('/dashboard');
       } else {
+        // Check if this is a trial expired error
+        if (data.trialExpired || (response.status === 403 && data.message && data.message.includes('Trial Period is Over'))) {
+          // Redirect to trial expired page
+          navigate('/trial-expired', { state: { email: formData.email } });
+          return;
+        }
         // Check if this is a pending approval error
         if (data.awaitingApproval || (response.status === 403 && data.message && (data.message.includes('reviewing your request') || data.message.includes('admin approval')))) {
           setError(''); // Clear any error - don't show in form
