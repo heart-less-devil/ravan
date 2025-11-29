@@ -4178,11 +4178,41 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
 
     // Send email notification to admin emails
     const emailHtml = `
-      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.6">
-        <h2>New Newsletter Subscription Request</h2>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
-        <p>Someone has subscribed to stay updated with BioPing newsletter.</p>
+      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.8;max-width:600px;margin:0 auto;padding:20px;">
+        <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:24px;">🎉 New Newsletter Subscription</h1>
+        </div>
+        
+        <div style="background:#ffffff;padding:30px;border:1px solid #e0e0e0;border-radius:0 0 10px 10px;">
+          <p style="color:#333333;font-size:16px;margin-bottom:20px;">
+            Great news! Someone has subscribed to stay updated with <strong>BioPing newsletter</strong>.
+          </p>
+          
+          <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0;">
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">📧 Subscriber Email:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${email}</span>
+            </p>
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">🕐 Subscription Date & Time:</strong><br/>
+              <span style="color:#666666;">${new Date().toLocaleString()}</span>
+            </p>
+          </div>
+          
+          <div style="background:#e8f5e9;padding:15px;border-radius:8px;border-left:4px solid #4caf50;margin:20px 0;">
+            <p style="margin:0;color:#2e7d32;font-size:14px;">
+              <strong>✅ Action Required:</strong> This subscriber has expressed interest in receiving BioPing newsletter updates. You can add them to your email marketing list.
+            </p>
+          </div>
+          
+          <p style="color:#666666;font-size:14px;margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0;">
+            This is an automated notification from BioPing newsletter subscription system.
+          </p>
+        </div>
+        
+        <div style="text-align:center;padding:20px;color:#999999;font-size:12px;">
+          <p style="margin:0;">© ${new Date().getFullYear()} BioPing. All rights reserved.</p>
+        </div>
       </div>
     `;
 
@@ -4199,14 +4229,17 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
     console.log('📧 Newsletter: Starting to send emails to admin addresses...');
     console.log('📧 Newsletter: Admin emails:', adminEmails);
     
-    for (const adminEmail of adminEmails) {
+    for (let i = 0; i < adminEmails.length; i++) {
+      const adminEmail = adminEmails[i];
       try {
-        console.log(`📧 Newsletter: Attempting to send to ${adminEmail}...`);
+        console.log(`📧 Newsletter: Attempting to send to ${adminEmail} (${i + 1}/${adminEmails.length})...`);
+        
+        // Send email WITHOUT replyTo to avoid issues (like OTP emails work)
         const emailResult = await sendEmail(
           adminEmail,
           'New Newsletter Subscription - BioPing',
-          emailHtml,
-          email // Reply-To set to subscriber's email
+          emailHtml
+          // Removed replyTo parameter - it was causing email delivery issues
         );
         
         if (emailResult.success) {
@@ -4217,6 +4250,11 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
           const errorMsg = `Failed to send to ${adminEmail}: ${emailResult.error}`;
           console.error(`❌ ${errorMsg}`);
           emailErrors.push(errorMsg);
+        }
+        
+        // Add small delay between emails to avoid rate limiting (except for last email)
+        if (i < adminEmails.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
         }
       } catch (emailError) {
         const errorMsg = `Exception sending to ${adminEmail}: ${emailError.message}`;
