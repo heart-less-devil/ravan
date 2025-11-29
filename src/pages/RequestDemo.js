@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Calendar, Clock, Users, CheckCircle, Send } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const RequestDemo = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ const RequestDemo = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -53,31 +55,43 @@ const RequestDemo = () => {
     if (!validateForm()) return;
     
     setIsSubmitting(true);
+    setError('');
     
-    // Send email to support@thebioping.com
-    const emailData = {
-      to: 'support@thebioping.com',
-      subject: 'Demo Request from BioPing Website',
-      body: `
-        Demo Request Details:
-        Name: ${formData.firstName} ${formData.lastName}
-        Email: ${formData.email}
-        Company: ${formData.company}
-        Role: ${formData.role}
-        Phone: ${formData.phone}
-        Message: ${formData.message}
-      `
-    };
-    
-    // Create mailto link
-    const mailtoLink = `mailto:${emailData.to}?subject=${encodeURIComponent(emailData.subject)}&body=${encodeURIComponent(emailData.body)}`;
-    window.location.href = mailtoLink;
-    
-    setTimeout(() => {
+    try {
+      console.log('📧 Request Demo: Submitting form...', formData);
+      const response = await fetch(`${API_BASE_URL}/api/request-demo/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      console.log('📧 Request Demo: Response status:', response.status);
+      const data = await response.json();
+      console.log('📧 Request Demo: Response data:', data);
+
+      if (response.ok && data.success) {
+        setIsSubmitted(true);
+        // Reset form after successful submission
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          company: '',
+          role: '',
+          phone: '',
+          message: ''
+        });
+      } else {
+        setError(data.message || 'Failed to submit demo request. Please try again.');
+      }
+    } catch (err) {
+      console.error('❌ Request Demo form submission error:', err);
+      setError('Network error or server issue. Please try again or contact us directly at support@thebioping.com');
+    } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
-      setFormData({ firstName: '', lastName: '', email: '', company: '', role: '', phone: '', message: '' });
-    }, 1000);
+    }
   };
 
   const demoBenefits = [
@@ -164,6 +178,11 @@ const RequestDemo = () => {
               ) : (
                 <div className="card p-8">
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <p className="text-red-800 text-sm">{error}</p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="firstName" className="block text-sm font-bold text-gray-700 mb-2">

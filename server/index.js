@@ -4300,14 +4300,30 @@ app.post('/api/opt-out/submit', async (req, res) => {
     const { fullName, company, workEmail, corrections } = req.body;
     
     // Validate required fields
-    if (!fullName || !workEmail) {
+    if (!fullName || !fullName.trim()) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Full name and work email are required' 
+        message: 'Full name is required' 
+      });
+    }
+    
+    if (!workEmail || !workEmail.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Work email is required' 
+      });
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(workEmail.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide a valid work email address' 
       });
     }
 
-    console.log('📧 Opt-Out form submission received:', { fullName, company, workEmail });
+    console.log('📧 Opt-Out form submission received:', { fullName, company, workEmail, hasCorrections: !!corrections });
 
     // Check if RESEND_API_KEY is configured
     if (!RESEND_API_KEY || RESEND_API_KEY === 're_your_resend_api_key_here') {
@@ -4318,56 +4334,64 @@ app.post('/api/opt-out/submit', async (req, res) => {
       });
     }
 
+    // Escape HTML to prevent XSS and template issues
+    const escapeHtml = (text) => {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    const safeFullName = escapeHtml(fullName);
+    const safeCompany = escapeHtml(company || '');
+    const safeWorkEmail = escapeHtml(workEmail);
+    const safeCorrections = escapeHtml(corrections || '');
+
     // Create email HTML
     const emailHtml = `
       <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.8;max-width:600px;margin:0 auto;padding:20px;">
-        <div style="background:linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
-          <h1 style="color:#ffffff;margin:0;font-size:24px;">🚫 Opt-Out Request</h1>
+        <div style="background:linear-gradient(135deg, #ff6b6b 0%, #ee5253 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:24px;">🚫 New Opt-Out / Data Request</h1>
         </div>
-        
         <div style="background:#ffffff;padding:30px;border:1px solid #e0e0e0;border-radius:0 0 10px 10px;">
           <p style="color:#333333;font-size:16px;margin-bottom:20px;">
-            A user has submitted an opt-out request to remove their profile from BioPing database.
+            A user has submitted a request regarding their personal information on BioPing.
           </p>
-          
           <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0;">
             <p style="margin:10px 0;color:#333333;">
-              <strong style="color:#3b82f6;">👤 Full Name:</strong><br/>
-              <span style="color:#666666;font-size:16px;">${fullName}</span>
+              <strong style="color:#ff6b6b;">👤 Full Name:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeFullName}</span>
             </p>
-            ${company ? `
             <p style="margin:10px 0;color:#333333;">
-              <strong style="color:#3b82f6;">🏢 Company:</strong><br/>
-              <span style="color:#666666;font-size:16px;">${company}</span>
+              <strong style="color:#ff6b6b;">🏢 Company:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeCompany || 'Not provided'}</span>
             </p>
-            ` : ''}
             <p style="margin:10px 0;color:#333333;">
-              <strong style="color:#3b82f6;">📧 Work Email to Remove:</strong><br/>
-              <span style="color:#666666;font-size:18px;">${workEmail}</span>
+              <strong style="color:#ff6b6b;">📧 Work Email to Remove:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeWorkEmail}</span>
             </p>
-            ${corrections ? `
+            ${safeCorrections ? `
             <p style="margin:10px 0;color:#333333;">
-              <strong style="color:#3b82f6;">📝 Corrections/Updates:</strong><br/>
-              <span style="color:#666666;">${corrections}</span>
-            </p>
-            ` : ''}
+              <strong style="color:#ff6b6b;">📝 Corrections/Updates:</strong><br/>
+              <span style="color:#666666;font-size:16px;white-space:pre-wrap;">${safeCorrections}</span>
+            </p>` : ''}
             <p style="margin:10px 0;color:#333333;">
-              <strong style="color:#3b82f6;">🕐 Request Date & Time:</strong><br/>
+              <strong style="color:#ff6b6b;">🕐 Submission Date & Time:</strong><br/>
               <span style="color:#666666;">${new Date().toLocaleString()}</span>
             </p>
           </div>
-          
-          <div style="background:#fff3cd;padding:15px;border-radius:8px;border-left:4px solid #ffc107;margin:20px 0;">
-            <p style="margin:0;color:#856404;font-size:14px;">
-              <strong>⏰ Action Required:</strong> Please process this opt-out request within <strong>15 business days</strong> as per CCPA/CPRA requirements.
+          <div style="background:#fff3e0;padding:15px;border-radius:8px;border-left:4px solid #ff9800;margin:20px 0;">
+            <p style="margin:0;color:#e65100;font-size:14px;">
+              <strong>⚠️ Action Required:</strong> Please review this request and process it within 15 business days as per policy.
             </p>
           </div>
-          
           <p style="color:#666666;font-size:14px;margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0;">
-            This is an automated notification from BioPing opt-out request system.
+            This is an automated notification from BioPing's data request system.
           </p>
         </div>
-        
         <div style="text-align:center;padding:20px;color:#999999;font-size:12px;">
           <p style="margin:0;">© ${new Date().getFullYear()} BioPing. All rights reserved.</p>
         </div>
@@ -4423,16 +4447,22 @@ app.post('/api/opt-out/submit', async (req, res) => {
     console.log(`📧 Opt-Out: Success: ${emailSent ? 'YES' : 'NO'}`);
     console.log(`📧 Opt-Out: Total admin emails: ${adminEmails.length}`);
     console.log(`📧 Opt-Out: Errors: ${emailErrors.length}`);
+    if (emailErrors.length > 0) {
+      console.log('📧 Opt-Out: Error details:', emailErrors);
+    }
 
     if (emailSent) {
+      console.log('✅ Opt-Out: Request processed successfully - emails sent');
       res.json({ 
         success: true, 
-        message: 'Opt-out request submitted successfully! We will process your request within 15 business days.' 
+        message: 'Opt-out request submitted successfully! Admins have been notified. We will process your request within 15 business days.' 
       });
     } else {
-      res.json({ 
-        success: true, 
-        message: 'Request received (email notification may have failed)' 
+      console.error('❌ Opt-Out: Request received but email sending failed');
+      console.error('❌ Opt-Out: All email attempts failed:', emailErrors);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Request received, but email notification failed. Please contact support directly at privacy@thebioping.com' 
       });
     }
   } catch (error) {
@@ -4440,6 +4470,220 @@ app.post('/api/opt-out/submit', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server error' 
+    });
+  }
+});
+
+// Request Demo form submission endpoint
+app.post('/api/request-demo/submit', async (req, res) => {
+  try {
+    const { firstName, lastName, email, company, role, phone, message } = req.body;
+    
+    // Validate required fields
+    if (!firstName || !firstName.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'First name is required' 
+      });
+    }
+    
+    if (!lastName || !lastName.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Last name is required' 
+      });
+    }
+    
+    if (!email || !email.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email is required' 
+      });
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide a valid email address' 
+      });
+    }
+    
+    if (!company || !company.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Company name is required' 
+      });
+    }
+    
+    if (!role || !role.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Role is required' 
+      });
+    }
+
+    console.log('📧 Request Demo form submission received:', { firstName, lastName, email, company, role, phone: phone ? 'provided' : 'not provided' });
+
+    // Check if RESEND_API_KEY is configured
+    if (!RESEND_API_KEY || RESEND_API_KEY === 're_your_resend_api_key_here') {
+      console.error('❌ Request Demo: RESEND_API_KEY is not configured!');
+      return res.json({ 
+        success: true, 
+        message: 'Request received (email notifications are currently disabled)' 
+      });
+    }
+
+    // Escape HTML to prevent XSS and template issues
+    const escapeHtml = (text) => {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    const safeFirstName = escapeHtml(firstName);
+    const safeLastName = escapeHtml(lastName);
+    const safeEmail = escapeHtml(email);
+    const safeCompany = escapeHtml(company || '');
+    const safeRole = escapeHtml(role || '');
+    const safePhone = escapeHtml(phone || '');
+    const safeMessage = escapeHtml(message || '');
+
+    // Create email HTML
+    const emailHtml = `
+      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.8;max-width:600px;margin:0 auto;padding:20px;">
+        <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:24px;">🎯 New Demo Request</h1>
+        </div>
+        <div style="background:#ffffff;padding:30px;border:1px solid #e0e0e0;border-radius:0 0 10px 10px;">
+          <p style="color:#333333;font-size:16px;margin-bottom:20px;">
+            A potential customer has requested a demo of the BioPing platform.
+          </p>
+          <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0;">
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">👤 Full Name:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeFirstName} ${safeLastName}</span>
+            </p>
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">📧 Email:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeEmail}</span>
+            </p>
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">🏢 Company:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeCompany}</span>
+            </p>
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">💼 Role:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safeRole}</span>
+            </p>
+            ${safePhone ? `
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">📞 Phone:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${safePhone}</span>
+            </p>` : ''}
+            ${safeMessage ? `
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">💬 Additional Information:</strong><br/>
+              <span style="color:#666666;font-size:16px;white-space:pre-wrap;">${safeMessage}</span>
+            </p>` : ''}
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#667eea;">🕐 Request Date & Time:</strong><br/>
+              <span style="color:#666666;">${new Date().toLocaleString()}</span>
+            </p>
+          </div>
+          <div style="background:#e8f5e9;padding:15px;border-radius:8px;border-left:4px solid #4caf50;margin:20px 0;">
+            <p style="margin:0;color:#2e7d32;font-size:14px;">
+              <strong>✅ Action Required:</strong> Please contact this potential customer within 24 hours to schedule their personalized demo.
+            </p>
+          </div>
+          <p style="color:#666666;font-size:14px;margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0;">
+            This is an automated notification from BioPing's demo request system.
+          </p>
+        </div>
+        <div style="text-align:center;padding:20px;color:#999999;font-size:12px;">
+          <p style="margin:0;">© ${new Date().getFullYear()} BioPing. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    // Send to admin emails
+    const adminEmails = [
+      'amankk0007@gmail.com',
+      'vik.vij@thebioping.com'
+    ];
+
+    let emailSent = false;
+    const emailErrors = [];
+    
+    console.log('📧 Request Demo: Starting to send emails to admin addresses...');
+    console.log('📧 Request Demo: Admin emails:', adminEmails);
+    
+    for (let i = 0; i < adminEmails.length; i++) {
+      const adminEmail = adminEmails[i];
+      try {
+        console.log(`📧 Request Demo: Attempting to send to ${adminEmail} (${i + 1}/${adminEmails.length})...`);
+        
+        const emailResult = await sendEmail(
+          adminEmail,
+          'Demo Request from BioPing Website',
+          emailHtml
+        );
+        
+        if (emailResult.success) {
+          console.log(`✅ Request Demo email sent successfully to ${adminEmail}`);
+          console.log(`✅ Email ID: ${emailResult.messageId}`);
+          emailSent = true;
+        } else {
+          const errorMsg = `Failed to send to ${adminEmail}: ${emailResult.error}`;
+          console.error(`❌ ${errorMsg}`);
+          emailErrors.push(errorMsg);
+        }
+        
+        // Add small delay between emails
+        if (i < adminEmails.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (emailError) {
+        const errorMsg = `Exception sending to ${adminEmail}: ${emailError.message}`;
+        console.error(`❌ ${errorMsg}`);
+        console.error(`❌ Stack trace:`, emailError.stack);
+        emailErrors.push(errorMsg);
+      }
+    }
+    
+    // Log summary
+    console.log('📧 Request Demo: Email sending summary:');
+    console.log(`📧 Request Demo: Success: ${emailSent ? 'YES' : 'NO'}`);
+    console.log(`📧 Request Demo: Total admin emails: ${adminEmails.length}`);
+    console.log(`📧 Request Demo: Errors: ${emailErrors.length}`);
+    if (emailErrors.length > 0) {
+      console.log('📧 Request Demo: Error details:', emailErrors);
+    }
+
+    if (emailSent) {
+      console.log('✅ Request Demo: Request processed successfully - emails sent');
+      res.json({ 
+        success: true, 
+        message: 'Demo request submitted successfully! We will contact you within 24 hours to schedule your personalized demo.' 
+      });
+    } else {
+      console.error('❌ Request Demo: Request received but email sending failed');
+      console.error('❌ Request Demo: All email attempts failed:', emailErrors);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Request received, but email notification failed. Please contact support directly at support@thebioping.com' 
+      });
+    }
+  } catch (error) {
+    console.error('Request Demo submission error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during demo request submission.' 
     });
   }
 });

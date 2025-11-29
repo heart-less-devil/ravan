@@ -21,6 +21,7 @@ const OptOut = () => {
     setError('');
     
     try {
+      console.log('📧 Opt-Out: Submitting form...', formData);
       const response = await fetch(`${API_BASE_URL}/api/opt-out/submit`, {
         method: 'POST',
         headers: {
@@ -29,9 +30,11 @@ const OptOut = () => {
         body: JSON.stringify(formData),
       });
 
+      console.log('📧 Opt-Out: Response status:', response.status);
       const data = await response.json();
+      console.log('📧 Opt-Out: Response data:', data);
 
-      if (data.success) {
+      if (response.ok && data.success) {
         setIsSubmitted(true);
         // Reset form after successful submission
         setFormData({
@@ -44,8 +47,8 @@ const OptOut = () => {
         setError(data.message || 'Failed to submit request. Please try again.');
       }
     } catch (err) {
-      console.error('Opt-out submission error:', err);
-      setError('An error occurred. Please try again or email us directly at privacy@thebioping.com');
+      console.error('❌ Opt-out form submission error:', err);
+      setError('Network error or server issue. Please try again or email us directly at privacy@thebioping.com');
     } finally {
       setIsLoading(false);
     }
