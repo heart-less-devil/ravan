@@ -1,0 +1,24 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: '*/4 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend 1
+        run: curl -s "https://bioping-backend.onrender.com/api/health" || echo "Failed to ping backend 1"
+      
+      - name: Ping Render Backend 2
+        run: curl -s "https://ravan-backend.onrender.com/api/health" || echo "Failed to ping backend 2"
+      
+      - name: Ping Render Backend 3
+        run: curl -s "https://bioping-server.onrender.com/api/health" || echo "Failed to ping backend 3"
+      
+      - name: Summary
+        run: echo "Keepalive completed at $(date)"
+
+

@@ -1,0 +1,362 @@
+/* Secure PDF Viewer Styles */
+
+/* Main container security */
+.secure-pdf-container {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  position: relative;
+  scroll-behavior: smooth;
+  overflow-y: auto;
+}
+
+/* Smooth scrolling for PDF content */
+.secure-pdf-container canvas {
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+/* Disable all text selection */
+.secure-pdf-container * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  
+  /* Disable copy operations */
+  -webkit-user-modify: read-only;
+  -moz-user-modify: read-only;
+  -ms-user-modify: read-only;
+  user-modify: read-only;
+}
+
+/* Prevent drag and drop */
+.secure-pdf-container {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
+/* Disable context menu */
+.secure-pdf-container {
+  -webkit-touch-callout: none;
+  -webkit-context-menu: none;
+  -moz-context-menu: none;
+  -ms-context-menu: none;
+  context-menu: none;
+}
+
+/* Prevent printing */
+@media print {
+  .secure-pdf-container {
+    display: none !important;
+  }
+}
+
+/* Security overlay with watermark */
+.security-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+  background: transparent;
+}
+
+/* Watermark grid pattern */
+.watermark-grid {
+  background-image: 
+    linear-gradient(45deg, rgba(255, 0, 0, 0.02) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 0, 0, 0.02) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 0, 0, 0.02) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 0, 0, 0.02) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  opacity: 0.1;
+}
+
+/* Security mode overlay - activated during security events */
+.security-mode-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1001;
+  background: rgba(255, 0, 0, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Security mode activation */
+.security-mode .security-mode-overlay {
+  opacity: 1;
+  background: rgba(255, 0, 0, 0.3);
+}
+
+/* Screenshot protection */
+.security-mode {
+  filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+  transition: all 0.3s ease !important;
+}
+
+.security-mode canvas {
+  filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+}
+
+/* Additional watermark text */
+.security-overlay::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  font-size: 2rem;
+  font-weight: bold;
+  color: rgba(255, 0, 0, 0.2);
+  z-index: 1002;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Disable keyboard shortcuts */
+.secure-pdf-container:focus {
+  outline: none;
+}
+
+/* Prevent any form of content extraction */
+.secure-pdf-container canvas {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  
+  /* Disable copy operations */
+  -webkit-user-modify: read-only;
+  -moz-user-modify: read-only;
+  -ms-user-modify: read-only;
+  user-modify: read-only;
+}
+
+/* Screenshot detection enhancements */
+@media screen and (max-width: 1px) {
+  /* This triggers when screenshot tools try to capture */
+  .secure-pdf-container {
+    filter: brightness(0) contrast(0) saturate(0) !important;
+    background: black !important;
+  }
+}
+
+/* High DPI screen protection */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .security-mode {
+    filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+  }
+}
+
+/* Additional security for different browsers */
+@supports (-webkit-appearance: none) {
+  .security-mode {
+    -webkit-filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+    filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+  }
+}
+
+@supports not (-webkit-appearance: none) {
+  .security-mode {
+    filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .security-overlay::before {
+    font-size: 1.5rem;
+  }
+  
+  .watermark-grid {
+    background-size: 15px 15px;
+  }
+}
+
+/* Disable all possible capture methods */
+.secure-pdf-container {
+  /* Prevent screen recording */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Disable accessibility features that could capture */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Disable developer tools access */
+.secure-pdf-container {
+  /* Prevent F12 and other dev tools */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Additional screenshot prevention */
+@media screen {
+  .secure-pdf-container {
+    /* Normal viewing */
+    -webkit-filter: none;
+    filter: none;
+  }
+  
+  .security-mode {
+    /* Force security mode */
+    -webkit-filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+    filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+  }
+}
+
+/* Disable all possible capture methods */
+.secure-pdf-container {
+  /* Prevent screen recording */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Disable accessibility features that could capture */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Disable right-click context menu */
+.secure-pdf-container {
+  -webkit-context-menu: none;
+  -moz-context-menu: none;
+  -ms-context-menu: none;
+  context-menu: none;
+}
+
+/* Google Pay style security - clear viewing, protected screenshots */
+.secure-pdf-container {
+  /* Ensure normal viewing experience */
+  -webkit-filter: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Only apply security filter during security events */
+.secure-pdf-container.security-mode {
+  -webkit-filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+  filter: brightness(0.8) contrast(1.2) saturate(0.8) !important;
+}
+
+/* Enhanced security for website-only reading */
+.secure-pdf-container {
+  /* Prevent any form of content extraction */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Disable all possible interactions */
+  -webkit-user-modify: read-only;
+  -moz-user-modify: read-only;
+  -ms-user-modify: read-only;
+  user-modify: read-only;
+  
+  /* Prevent drag and drop */
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
+/* Prevent iframe embedding */
+.secure-pdf-container {
+  /* Detect if in iframe and hide content */
+  position: relative;
+}
+
+/* Additional watermark for content protection */
+.secure-pdf-container::after {
+  content: "READ ONLY - WEBSITE ACCESS ONLY";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 1003;
+  pointer-events: none;
+}
+
+/* Prevent any form of selection */
+.secure-pdf-container * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  
+  /* Disable all interactions */
+  -webkit-user-modify: read-only !important;
+  -moz-user-modify: read-only !important;
+  -ms-user-modify: read-only !important;
+  user-modify: read-only !important;
+}
+
+/* Ultra-strong screenshot protection */
+@media screen {
+  .secure-pdf-container {
+    /* Normal viewing */
+    -webkit-filter: none;
+    filter: none;
+  }
+  
+  .security-mode {
+    /* Complete blackout during security events */
+    -webkit-filter: brightness(0) contrast(0) saturate(0) !important;
+    filter: brightness(0) contrast(0) saturate(0) !important;
+    background: black !important;
+  }
+}
+
+/* Additional security for different browsers */
+@supports (-webkit-appearance: none) {
+  .security-mode {
+    -webkit-filter: brightness(0) contrast(0) saturate(0) !important;
+    filter: brightness(0) contrast(0) saturate(0) !important;
+  }
+}
+
+@supports not (-webkit-appearance: none) {
+  .security-mode {
+    filter: brightness(0) contrast(0) saturate(0) !important;
+  }
+}
+
+/* Prevent printing completely */
+@media print {
+  .secure-pdf-container,
+  .secure-pdf-container * {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+} 

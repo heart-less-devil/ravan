@@ -1,0 +1,80 @@
+{
+  "name": "bioping-react",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@mantine/core": "^8.1.3",
+    "@mantine/form": "^8.1.3",
+    "@mantine/hooks": "^8.1.3",
+    "@mantine/notifications": "^8.1.3",
+    "@sendgrid/mail": "^8.1.6",
+    "@stripe/react-stripe-js": "^3.8.0",
+    "@stripe/stripe-js": "^7.6.1",
+    "@tabler/icons-react": "^3.34.0",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^14.5.2",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "framer-motion": "^10.16.16",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.294.0",
+    "multer": "^2.0.2",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.7",
+    "pdfjs-dist": "^3.11.174",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "react-scripts": "5.0.1",
+    "stripe": "^18.5.0",
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "build:production": "REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_51RlErgLf1iznKy11bUQ4zowN63lhfc2ElpXY9stuz1XqzBBJcWHHWzczvSUfVAxkFQiOTFfzaDzD38WMzBKCAlJA00lB6CGJwT REACT_APP_API_BASE_URL=https://bioping-backend.onrender.com react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "server": "node server/index.js",
+    "dev": "concurrently \"npm run server\" \"npm start\"",
+    "vercel-build": "npm run build"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "react-hooks/exhaustive-deps": "warn",
+      "jsx-a11y/anchor-is-valid": "warn"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "http-proxy-middleware": "^2.0.6",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6"
+  }
+}

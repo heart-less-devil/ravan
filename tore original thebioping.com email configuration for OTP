@@ -1,0 +1,20 @@
+[33m4bd8dc0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Restore OTP email sending with hardcoded Gmail credentials
+[33mb2245c4[m Temporary fix: Skip email sending, return OTP in response
+[33m3c53f50[m Fix OTP validation - bypass strict validation to allow email sending
+[33m6d86457[m Deploy updated frontend with improved API error handling
+[33ma0dc385[m Force redeploy - fix environment variables
+[33m482df5a[m Fix server startup messages - show correct URLs
+[33m31b2697[m Fenvironment variables
+[33m963dd84[m Fix OTP email configuration - add environment variables
+[33m4c3430d[m Fix OTP email sending - Improve error handling and API call logic
+[33mb3b9bb0[m Clean up all test files and temporary deployment scripts - Keep only essential GoDaddy deployment files
+[33mdf35b10[m Remove all Netlify references and clean up codebase - Focus on GoDaddy deployment only
+[33m87073d8[m Improve frontend error handling and add fallback URLs - Increase timeout and add retry mechanism for API calls
+[33m1e49f60[m Fix server deployment configuration - Update service name and remove sensitive keys
+[33m0e84a7f[m Fix OTP email functionality - Clean implementation with proper Gmail SMTP
+[33m769b044[m Fix email configuration: Fix nodemailer.createTransporter typo to createTransport
+[33m056cf90[m Restore old working OTP email code from api/index.js
+[33m5c532c1[m Fix localhost references and default port to 10000 for production
+[33m58a2c51[m Fix port binding to 0.0.0.0 as required by Render
+[33m039dfaf[m Try GoDaddy SMTP with multiple configurations for email delivery
+[33m5af5980[m Copy working email configuration from aman.js to index.js
