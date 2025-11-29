@@ -31,6 +31,9 @@ import BDInsights from './pages/BDInsights';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import CookiePolicy from './pages/CookiePolicy';
+import DataSourcing from './pages/DataSourcing';
+import LegalDisclaimer from './pages/LegalDisclaimer';
+import OptOut from './pages/OptOut';
 import TrialExpired from './pages/TrialExpired';
 import ScrollToTop from './components/ScrollToTop';
 import './App.css';
@@ -183,6 +186,9 @@ function App() {
                   <CookieConsent />
                 </>
               } />
+              <Route path="/data-sourcing" element={<DataSourcing />} />
+              <Route path="/legal-disclaimer" element={<LegalDisclaimer />} />
+              <Route path="/opt-out" element={<OptOut />} />
 
               {/* Dashboard Routes - Protected */}
               <Route path="/dashboard" element={<Dashboard />} />

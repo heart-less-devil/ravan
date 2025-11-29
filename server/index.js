@@ -4294,6 +4294,156 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
   }
 });
 
+// Opt-Out form submission endpoint
+app.post('/api/opt-out/submit', async (req, res) => {
+  try {
+    const { fullName, company, workEmail, corrections } = req.body;
+    
+    // Validate required fields
+    if (!fullName || !workEmail) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Full name and work email are required' 
+      });
+    }
+
+    console.log('📧 Opt-Out form submission received:', { fullName, company, workEmail });
+
+    // Check if RESEND_API_KEY is configured
+    if (!RESEND_API_KEY || RESEND_API_KEY === 're_your_resend_api_key_here') {
+      console.error('❌ Opt-Out: RESEND_API_KEY is not configured!');
+      return res.json({ 
+        success: true, 
+        message: 'Request received (email notifications are currently disabled)' 
+      });
+    }
+
+    // Create email HTML
+    const emailHtml = `
+      <div style="font-family:Arial,Helvetica,sans-serif;line-height:1.8;max-width:600px;margin:0 auto;padding:20px;">
+        <div style="background:linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);padding:30px;text-align:center;border-radius:10px 10px 0 0;">
+          <h1 style="color:#ffffff;margin:0;font-size:24px;">🚫 Opt-Out Request</h1>
+        </div>
+        
+        <div style="background:#ffffff;padding:30px;border:1px solid #e0e0e0;border-radius:0 0 10px 10px;">
+          <p style="color:#333333;font-size:16px;margin-bottom:20px;">
+            A user has submitted an opt-out request to remove their profile from BioPing database.
+          </p>
+          
+          <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0;">
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#3b82f6;">👤 Full Name:</strong><br/>
+              <span style="color:#666666;font-size:16px;">${fullName}</span>
+            </p>
+            ${company ? `
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#3b82f6;">🏢 Company:</strong><br/>
+              <span style="color:#666666;font-size:16px;">${company}</span>
+            </p>
+            ` : ''}
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#3b82f6;">📧 Work Email to Remove:</strong><br/>
+              <span style="color:#666666;font-size:18px;">${workEmail}</span>
+            </p>
+            ${corrections ? `
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#3b82f6;">📝 Corrections/Updates:</strong><br/>
+              <span style="color:#666666;">${corrections}</span>
+            </p>
+            ` : ''}
+            <p style="margin:10px 0;color:#333333;">
+              <strong style="color:#3b82f6;">🕐 Request Date & Time:</strong><br/>
+              <span style="color:#666666;">${new Date().toLocaleString()}</span>
+            </p>
+          </div>
+          
+          <div style="background:#fff3cd;padding:15px;border-radius:8px;border-left:4px solid #ffc107;margin:20px 0;">
+            <p style="margin:0;color:#856404;font-size:14px;">
+              <strong>⏰ Action Required:</strong> Please process this opt-out request within <strong>15 business days</strong> as per CCPA/CPRA requirements.
+            </p>
+          </div>
+          
+          <p style="color:#666666;font-size:14px;margin-top:30px;padding-top:20px;border-top:1px solid #e0e0e0;">
+            This is an automated notification from BioPing opt-out request system.
+          </p>
+        </div>
+        
+        <div style="text-align:center;padding:20px;color:#999999;font-size:12px;">
+          <p style="margin:0;">© ${new Date().getFullYear()} BioPing. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    // Send to admin emails
+    const adminEmails = [
+      'amankk0007@gmail.com',
+      'vik.vij@thebioping.com'
+    ];
+
+    let emailSent = false;
+    const emailErrors = [];
+    
+    console.log('📧 Opt-Out: Starting to send emails to admin addresses...');
+    console.log('📧 Opt-Out: Admin emails:', adminEmails);
+    
+    for (let i = 0; i < adminEmails.length; i++) {
+      const adminEmail = adminEmails[i];
+      try {
+        console.log(`📧 Opt-Out: Attempting to send to ${adminEmail} (${i + 1}/${adminEmails.length})...`);
+        
+        const emailResult = await sendEmail(
+          adminEmail,
+          'Do Not Sell or Share My Info or Opt-Out - BioPing',
+          emailHtml
+        );
+        
+        if (emailResult.success) {
+          console.log(`✅ Opt-Out email sent successfully to ${adminEmail}`);
+          console.log(`✅ Email ID: ${emailResult.messageId}`);
+          emailSent = true;
+        } else {
+          const errorMsg = `Failed to send to ${adminEmail}: ${emailResult.error}`;
+          console.error(`❌ ${errorMsg}`);
+          emailErrors.push(errorMsg);
+        }
+        
+        // Add small delay between emails
+        if (i < adminEmails.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (emailError) {
+        const errorMsg = `Exception sending to ${adminEmail}: ${emailError.message}`;
+        console.error(`❌ ${errorMsg}`);
+        emailErrors.push(errorMsg);
+      }
+    }
+    
+    // Log summary
+    console.log('📧 Opt-Out: Email sending summary:');
+    console.log(`📧 Opt-Out: Success: ${emailSent ? 'YES' : 'NO'}`);
+    console.log(`📧 Opt-Out: Total admin emails: ${adminEmails.length}`);
+    console.log(`📧 Opt-Out: Errors: ${emailErrors.length}`);
+
+    if (emailSent) {
+      res.json({ 
+        success: true, 
+        message: 'Opt-out request submitted successfully! We will process your request within 15 business days.' 
+      });
+    } else {
+      res.json({ 
+        success: true, 
+        message: 'Request received (email notification may have failed)' 
+      });
+    }
+  } catch (error) {
+    console.error('Opt-Out submission error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
 // Contact form data storage (for admin panel)
 const contactSubmissions = [];
 

@@ -242,24 +242,47 @@ const Footer = () => {
               </div>
 
               {/* Legal Links */}
-              <div className="flex items-center space-x-6 text-sm relative z-30">
+              <div className="flex items-center justify-center gap-x-2 md:gap-x-3 text-xs md:text-sm relative z-30 overflow-x-auto pb-1">
+                <Link 
+                  to="/data-sourcing" 
+                  className="text-gray-700 hover:text-orange-400 transition-colors duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
+                >
+                  Data Sourcing
+                </Link>
+                <span className="text-gray-400 flex-shrink-0">|</span>
                 <Link 
                   to="/privacy" 
-                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium cursor-pointer"
+                  className="text-gray-700 hover:text-orange-400 transition-colors duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
                 >
                   Privacy Policy
                 </Link>
+                <span className="text-gray-400 flex-shrink-0">|</span>
                 <Link 
                   to="/terms" 
-                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium cursor-pointer"
+                  className="text-gray-700 hover:text-orange-400 transition-colors duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
                 >
                   Terms of Service
                 </Link>
+                <span className="text-gray-400 flex-shrink-0">|</span>
+                <Link 
+                  to="/legal-disclaimer" 
+                  className="text-gray-700 hover:text-orange-400 transition-colors duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
+                >
+                  Legal Disclaimer
+                </Link>
+                <span className="text-gray-400 flex-shrink-0">|</span>
                 <Link 
                   to="/cookie-policy" 
-                  className="text-black hover:text-orange-400 transition-colors duration-200 font-medium cursor-pointer"
+                  className="text-gray-700 hover:text-orange-400 transition-colors duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
                 >
                   Cookie Policy
+                </Link>
+                <span className="text-gray-400 flex-shrink-0">|</span>
+                <Link 
+                  to="/opt-out" 
+                  className="text-gray-700 hover:text-orange-400 transition-colors duration-200 cursor-pointer whitespace-nowrap flex-shrink-0"
+                >
+                  Do Not Sell or Share Info. / Opt Out
                 </Link>
               </div>
             </div>

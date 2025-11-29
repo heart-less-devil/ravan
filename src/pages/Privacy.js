@@ -1,86 +1,215 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Shield, Lock, Eye, Database, Users, CheckCircle, Clock, Globe, Server, Key, Bell } from 'lucide-react';
+import { ArrowLeft, Shield, Lock, Eye, Database, Users, CheckCircle, Clock, Globe, Server, Key, Bell, FileText, Mail, Building, AlertCircle } from 'lucide-react';
 
 const Privacy = () => {
   const sections = [
     {
       id: 'information-collection',
-      title: '1. Information We Collect',
+      title: '1. What Information We Collect',
       icon: Database,
-      content: 'We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support.',
-      features: [
-        'Personal information (name, email address, company details)',
-        'Account credentials and profile information',
-        'Usage data and analytics',
-        'Communication preferences',
-        'Payment information (processed securely through third-party providers)'
+      content: 'We collect information from the following categories:',
+      subsections: [
+        {
+          title: '1.1 Information You Provide Directly',
+          description: 'When you create an account, subscribe, or interact with us, we may collect:',
+          points: [
+            'Name, job title, company name',
+            'Work email address, phone number',
+            'Billing and payment information',
+            'Messages, inquiries, customer support communications',
+            'Account preferences and settings'
+          ]
+        },
+        {
+          title: '1.2 Information Collected Automatically',
+          description: 'When you access our platform, we may collect:',
+          points: [
+            'IP address, device identifiers, browser information',
+            'Usage data (logins, page views, searches)',
+            'Cookies, pixels, tracking technologies (See our Cookie Policy for details.)'
+          ]
+        },
+        {
+          title: '1.3 Professional Publicly Available Information',
+          description: 'BioPing collects and compiles professional business contact details from:',
+          points: [
+            'Public websites / corporate websites',
+            'Regulatory filings',
+            'Business directories',
+            'Social media profiles',
+            'Press releases, conference attendance lists',
+            'Data providers and partners'
+          ],
+          additionalInfo: 'This may include: Name, company, job role; Work email, work phone; Work location; Industry specialization; Publicly available work history or education',
+          footer: 'BioPing does not collect personal or consumer information unrelated to professional identity.'
+        },
+        {
+          title: '1.4 Information from Customers or Partners',
+          description: 'Customers may provide business contacts to enrich their CRM or support their BD processes.',
+          footer: 'Customers are responsible for ensuring they have the right to share such information.'
+        }
       ]
     },
     {
       id: 'how-we-use',
-      title: '2. How We Use Your Information',
+      title: '2. How We Use Information',
       icon: CheckCircle,
-      content: 'We use the information we collect to provide, maintain, and improve our services.',
-      features: [
-        'Provide and maintain our business development platform',
-        'Process transactions and send related information',
-        'Send technical notices, updates, and support messages',
-        'Respond to your comments and questions',
-        'Develop new products and services'
-      ]
+      content: 'We use personal and business information for the following purposes:',
+      subsections: [
+        {
+          title: 'To Provide and Improve Our Services',
+          points: [
+            'Maintain and operate the BioPing platform',
+            'Provide access to contact databases and BD tools',
+            'Process subscriptions, billing, and invoicing',
+            'Offer customer support and technical assistance'
+          ]
+        },
+        {
+          title: 'To Communicate with You',
+          points: [
+            'Service-related updates',
+            'Administrative messages',
+            'Marketing and promotional emails (opt-out available)'
+          ]
+        },
+        {
+          title: 'To Improve Data Quality',
+          points: [
+            'Verify, cleanse, and update business contact information',
+            'Develop new features and platform capabilities'
+          ]
+        },
+        {
+          title: 'For Security and Compliance',
+          points: [
+            'Detect and prevent fraud, abuse, and cybersecurity threats',
+            'Enforce our Terms of Use',
+            'Comply with legal obligations'
+          ]
+        }
+      ],
+      footer: 'Legal Basis for Processing (GDPR): Legitimate interest; Performance of a contract with our customers; Consent (where required); Compliance with legal obligations'
     },
     {
-      id: 'information-sharing',
-      title: '3. Information Sharing and Disclosure',
+      id: 'sharing',
+      title: '3. How We Share Information',
       icon: Users,
-      content: 'We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy.',
-      features: [
-        'Service providers who assist in our operations',
-        'Legal requirements and law enforcement',
-        'Business transfers in case of merger or acquisition',
-        'With your explicit consent',
-        'Aggregated, anonymized data for analytics'
-      ]
+      content: 'We may share information in the following limited circumstances:',
+      subsections: [
+        {
+          title: '3.1 Customers and Users',
+          description: 'BioPing provides professional business contact information to its paying subscribers for B2B outreach and networking purposes.'
+        },
+        {
+          title: '3.2 Service Providers',
+          description: 'We may share data with trusted vendors who support:',
+          points: [
+            'Hosting & cloud infrastructure',
+            'Data storage',
+            'Payment processing',
+            'Analytics & security tools',
+            'Customer support platforms'
+          ],
+          footer: 'All providers must maintain confidentiality and security.'
+        },
+        {
+          title: '3.3 Business Transfers',
+          description: 'If BioPing is involved in a merger, acquisition, financing, or asset sale, information may be transferred as part of the transaction.'
+        },
+        {
+          title: '3.4 Legal and Regulatory',
+          description: 'We may disclose information where required to:',
+          points: [
+            'Comply with the law',
+            'Respond to legal requests or investigations',
+            'Protect rights, property, and safety'
+          ]
+        }
+      ],
+      footer: 'We do not sell personal data in the traditional sense but may be considered to "share" data under California law if contacts appear in our database.'
     },
     {
-      id: 'data-security',
-      title: '4. Data Security and Protection',
+      id: 'protection',
+      title: '4. How We Protect Your Information',
       icon: Shield,
-      content: 'We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.',
-      features: [
-        'Encryption of data in transit and at rest',
-        'Regular security audits and vulnerability assessments',
-        'Access controls and authentication measures',
-        'Employee training on data protection',
-        'Incident response and breach notification procedures'
-      ]
+      content: 'We use industry-standard administrative, technical, and physical safeguards. These include:',
+      points: [
+        'Encrypted data at rest and in transit',
+        'Access controls and authentication',
+        'Logging and monitoring',
+        'Vendor security reviews'
+      ],
+      footer: 'However, no internet-based service can be 100% secure.'
     },
     {
-      id: 'your-rights',
+      id: 'rights',
       title: '5. Your Rights and Choices',
       icon: Key,
-      content: 'You have certain rights regarding your personal information, including the right to access, correct, or delete your data.',
-      features: [
-        'Access and review your personal information',
-        'Correct inaccurate or incomplete data',
-        'Request deletion of your personal information',
-        'Opt-out of marketing communications',
-        'Data portability and transfer rights'
+      content: 'Depending on your location, you may have the right to:',
+      points: [
+        'Access personal data we hold about you',
+        'Correct inaccurate information',
+        'Delete / Remove your profile',
+        'Object to processing (including legitimate interest)',
+        'Opt-out of professional contact visibility',
+        'Withdraw consent where applicable'
+      ],
+      footer: 'To remove your professional profile from BioPing, submit a request at: privacy@thebioping.com We may require verification of identity before processing requests.'
+    },
+    {
+      id: 'international',
+      title: '6. International Data Transfers',
+      icon: Globe,
+      content: 'BioPing is based in the United States. We may transfer and store information in the U.S. and other countries where our service providers operate. We implement appropriate safeguards, including:',
+      points: [
+        'Standard Contractual Clauses (SCCs)',
+        'Vendor due-diligence and data protection agreements'
       ]
     },
     {
-      id: 'cookies-tracking',
-      title: '6. Cookies and Tracking Technologies',
+      id: 'retention',
+      title: '7. Data Retention',
+      icon: Database,
+      content: 'We retain professional and customer information only as long as necessary to:',
+      points: [
+        'Provide Services',
+        'Comply with legal obligations',
+        'Resolve disputes',
+        'Maintain data accuracy'
+      ],
+      footer: 'We delete or anonymize data when it is no longer needed.'
+    },
+    {
+      id: 'children',
+      title: '8. Children\'s Privacy',
+      icon: AlertCircle,
+      content: '',
+      points: [
+        'Our Services are not intended for individuals under 18.',
+        'We do not knowingly collect information from children.'
+      ]
+    },
+    {
+      id: 'third-party',
+      title: '9. Third-Party Links',
       icon: Globe,
-      content: 'We use cookies and similar tracking technologies to enhance your experience and analyze our service usage.',
-      features: [
-        'Essential cookies for service functionality',
-        'Analytics cookies to understand usage patterns',
-        'Marketing cookies for personalized content',
-        'Third-party cookies from our partners',
-        'Options to manage cookie preferences'
+      content: '',
+      points: [
+        'BioPing may contain links to third-party websites.',
+        'We are not responsible for their content or privacy practices.'
+      ]
+    },
+    {
+      id: 'changes',
+      title: '10. Changes to This Policy',
+      icon: FileText,
+      content: '',
+      points: [
+        'We may update this Privacy Policy periodically.',
+        'Material changes will be posted on our website with an updated "Effective Date."'
       ]
     }
   ];
@@ -93,7 +222,7 @@ const Privacy = () => {
           <div className="flex items-center justify-between">
             <Link 
               to="/" 
-              className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors group"
+              className="flex items-center space-x-2 text-gray-600 hover:text-green-600 transition-colors group"
             >
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
               <span className="font-medium">Back to Home</span>
@@ -130,34 +259,24 @@ const Privacy = () => {
             <Shield className="w-10 h-10 text-white" />
           </motion.div>
           
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent"
-          >
-            Privacy Policy
-          </motion.h1>
-          
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex items-center justify-center space-x-4 text-gray-600 mb-8"
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex items-center justify-center space-x-4 text-gray-600 mb-4"
           >
             <Clock className="w-5 h-5" />
-            <span className="text-lg">Last updated: December 2024</span>
+            <span className="text-lg">Date: Nov, 2025</span>
           </motion.div>
           
-          <motion.p
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-5xl font-bold text-gray-900 mb-6 bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent"
           >
-            We are committed to protecting your privacy and ensuring the security of your personal information. 
-            This policy explains how we collect, use, and safeguard your data.
-          </motion.p>
+            BioPing — Privacy Policy
+          </motion.h1>
         </motion.div>
       </div>
 
@@ -170,101 +289,104 @@ const Privacy = () => {
                 key={section.id}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.6 + index * 0.1 }}
+                transition={{ duration: 0.6, delay: 0.5 + index * 0.05 }}
                 className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300"
               >
                 <div className="flex items-start space-x-4 mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
                     <section.icon className="w-6 h-6 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">{section.title}</h2>
                     <div className="w-16 h-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"></div>
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <p className="text-gray-700 leading-relaxed text-lg">
-                    {section.content}
-                  </p>
-                  
-                  {section.features && (
-                    <div className="mt-6">
-                      <ul className="space-y-3">
-                        {section.features.map((feature, featureIndex) => (
-                          <motion.li
-                            key={featureIndex}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 0.4, delay: 0.8 + index * 0.1 + featureIndex * 0.05 }}
-                            className="flex items-start space-x-3"
-                          >
-                            <div className="w-2 h-2 bg-green-500 rounded-full mt-3 flex-shrink-0"></div>
-                            <span className="text-gray-700 leading-relaxed">{feature}</span>
-                          </motion.li>
-                        ))}
-                      </ul>
+                <div className="space-y-4 ml-16">
+                  {section.content && (
+                    <p className="text-gray-700 leading-relaxed text-lg mb-4">
+                      {section.content}
+                    </p>
+                  )}
+
+                  {section.subsections && section.subsections.map((subsection, subIndex) => (
+                    <div key={subIndex} className="mb-6">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">{subsection.title}</h3>
+                      {subsection.description && (
+                        <p className="text-gray-700 leading-relaxed mb-3">{subsection.description}</p>
+                      )}
+                      {subsection.points && (
+                        <ul className="space-y-2 ml-4">
+                          {subsection.points.map((point, pointIndex) => (
+                            <li key={pointIndex} className="flex items-start">
+                              <span className="text-green-600 mr-2 font-bold">•</span>
+                              <span className="text-gray-700 leading-relaxed">{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {subsection.additionalInfo && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-gray-700 text-sm">{subsection.additionalInfo}</p>
+                        </div>
+                      )}
+                      {subsection.footer && (
+                        <p className="text-gray-700 leading-relaxed text-sm mt-3 italic">{subsection.footer}</p>
+                      )}
                     </div>
+                  ))}
+                  
+                  {section.points && !section.subsections && (
+                    <ul className="space-y-3">
+                      {section.points.map((point, pointIndex) => (
+                        <motion.li
+                          key={pointIndex}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.4, delay: 0.6 + index * 0.05 + pointIndex * 0.03 }}
+                          className="flex items-start space-x-3"
+                        >
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-3 flex-shrink-0"></div>
+                          <span className="text-gray-700 leading-relaxed">{point}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {section.footer && (
+                    <p className="text-gray-700 leading-relaxed text-lg mt-4 pt-4 border-t border-gray-200">
+                      {section.footer}
+                    </p>
                   )}
                 </div>
               </motion.div>
             ))}
           </div>
 
-          {/* Security Commitment Section */}
+          {/* Contact Section */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.2 }}
             className="mt-12 bg-gradient-to-r from-green-600 to-emerald-600 rounded-3xl p-8 text-white"
           >
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Lock className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-4">Our Security Commitment</h3>
-              <p className="text-green-100 text-lg max-w-2xl mx-auto">
-                We implement industry-standard security measures to protect your data and maintain the highest levels of privacy protection.
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <Server className="w-8 h-8 text-white mx-auto mb-3" />
-                <h4 className="font-semibold mb-2">Secure Infrastructure</h4>
-                <p className="text-green-100 text-sm">Enterprise-grade security with encryption at rest and in transit</p>
-              </div>
-              <div className="text-center">
-                <Eye className="w-8 h-8 text-white mx-auto mb-3" />
-                <h4 className="font-semibold mb-2">Transparent Practices</h4>
-                <p className="text-green-100 text-sm">Clear policies and regular updates on our data practices</p>
-              </div>
-              <div className="text-center">
-                <Bell className="w-8 h-8 text-white mx-auto mb-3" />
-                <h4 className="font-semibold mb-2">Proactive Monitoring</h4>
-                <p className="text-green-100 text-sm">24/7 security monitoring and incident response</p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Contact Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.4 }}
-            className="mt-8 bg-white/70 backdrop-blur-sm rounded-3xl p-8 text-center border border-gray-100"
-          >
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Questions About Privacy?</h3>
-            <p className="text-gray-600 mb-6 text-lg">
-              If you have any questions about our privacy practices, please contact us.
+            <h3 className="text-2xl font-bold mb-6 text-center">11. Contact Us</h3>
+            <p className="text-center text-green-100 mb-6 text-lg">
+              For privacy questions or data rights requests, contact:
             </p>
-            <Link
-              to="/contact-us"
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200"
-            >
-              <span>Contact Us</span>
-              <ArrowLeft className="w-4 h-4 rotate-180" />
-            </Link>
+            <div className="text-center">
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <Building className="w-6 h-6" />
+                <h4 className="font-semibold text-lg">BioPing – Privacy Office</h4>
+              </div>
+              <a
+                href="mailto:privacy@thebioping.com"
+                className="inline-flex items-center space-x-2 bg-white text-green-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-colors duration-200 text-lg"
+              >
+                <Mail className="w-5 h-5" />
+                <span>privacy@thebioping.com</span>
+              </a>
+            </div>
           </motion.div>
         </div>
       </div>
@@ -272,4 +394,4 @@ const Privacy = () => {
   );
 };
 
-export default Privacy; 
+export default Privacy;
