@@ -2437,9 +2437,26 @@ console.log('📧 Email configured with Resend HTTP API (Render Compatible)');
 console.log('📧 RESEND_API_KEY set:', process.env.RESEND_API_KEY ? 'Yes' : 'No');
 console.log('📧 RESEND_API_KEY value:', process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 4) + '****' : 'Not set');
 
+// Warn if RESEND_API_KEY is not properly configured
+if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 're_your_resend_api_key_here') {
+  console.error('⚠️ WARNING: RESEND_API_KEY is not configured! Email sending will fail!');
+  console.error('⚠️ Please set RESEND_API_KEY in your environment variables.');
+} else {
+  console.log('✅ RESEND_API_KEY is configured and ready');
+}
+
 // RESEND EMAIL FUNCTION - HTTP API (NO SMTP)
 const sendEmail = async (to, subject, html, replyTo = null, attachments = []) => {
   try {
+    // Validate RESEND_API_KEY first
+    if (!RESEND_API_KEY || RESEND_API_KEY === 're_your_resend_api_key_here') {
+      console.error('❌ RESEND EMAIL ERROR: RESEND_API_KEY is not configured!');
+      return { 
+        success: false, 
+        error: 'Email service is not configured. Please set RESEND_API_KEY in environment variables.'
+      };
+    }
+
     console.log(`📧 RESEND EMAIL: Sending to ${to}`);
     console.log(`📧 RESEND EMAIL: From: BioPing <support@thebioping.com>`);
     if (replyTo) {
@@ -2470,6 +2487,7 @@ const sendEmail = async (to, subject, html, replyTo = null, attachments = []) =>
       }));
     }
 
+    console.log(`📧 RESEND EMAIL: Making API request to Resend...`);
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -2480,6 +2498,8 @@ const sendEmail = async (to, subject, html, replyTo = null, attachments = []) =>
     });
     
     const result = await response.json();
+    console.log(`📧 RESEND EMAIL: Response status: ${response.status}`);
+    console.log(`📧 RESEND EMAIL: Response body:`, JSON.stringify(result));
     
     if (response.ok) {
       console.log('✅ RESEND EMAIL: Sent successfully:', result.id);
@@ -2488,15 +2508,18 @@ const sendEmail = async (to, subject, html, replyTo = null, attachments = []) =>
         messageId: result.id 
       };
     } else {
-      console.error('❌ RESEND EMAIL ERROR:', result.message);
+      console.error('❌ RESEND EMAIL ERROR - Status:', response.status);
+      console.error('❌ RESEND EMAIL ERROR - Message:', result.message);
+      console.error('❌ RESEND EMAIL ERROR - Full response:', JSON.stringify(result));
       return { 
         success: false, 
-        error: result.message
+        error: result.message || `HTTP ${response.status}: ${JSON.stringify(result)}`
       };
     }
     
   } catch (error) {
-    console.error('❌ RESEND EMAIL ERROR:', error.message);
+    console.error('❌ RESEND EMAIL ERROR - Exception:', error.message);
+    console.error('❌ RESEND EMAIL ERROR - Stack:', error.stack);
     return { 
       success: false, 
       error: error.message
@@ -4140,7 +4163,18 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
       });
     }
 
-    console.log('📧 Newsletter subscription request:', email);
+    console.log('📧 Newsletter subscription request received:', email);
+    
+    // Check if RESEND_API_KEY is configured
+    if (!RESEND_API_KEY || RESEND_API_KEY === 're_your_resend_api_key_here') {
+      console.error('❌ Newsletter: RESEND_API_KEY is not configured!');
+      console.error('❌ Newsletter: Cannot send email notifications.');
+      // Still return success to user, but log the error
+      return res.json({ 
+        success: true, 
+        message: 'Subscription received (email notifications are currently disabled)' 
+      });
+    }
 
     // Send email notification to admin emails
     const emailHtml = `
@@ -4160,8 +4194,14 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
     ];
 
     let emailSent = false;
+    const emailErrors = [];
+    
+    console.log('📧 Newsletter: Starting to send emails to admin addresses...');
+    console.log('📧 Newsletter: Admin emails:', adminEmails);
+    
     for (const adminEmail of adminEmails) {
       try {
+        console.log(`📧 Newsletter: Attempting to send to ${adminEmail}...`);
         const emailResult = await sendEmail(
           adminEmail,
           'New Newsletter Subscription - BioPing',
@@ -4170,14 +4210,29 @@ app.post('/api/newsletter/subscribe', async (req, res) => {
         );
         
         if (emailResult.success) {
-          console.log(`✅ Newsletter subscription email sent to ${adminEmail}`);
+          console.log(`✅ Newsletter subscription email sent successfully to ${adminEmail}`);
+          console.log(`✅ Email ID: ${emailResult.messageId}`);
           emailSent = true;
         } else {
-          console.log(`❌ Failed to send email to ${adminEmail}:`, emailResult.error);
+          const errorMsg = `Failed to send to ${adminEmail}: ${emailResult.error}`;
+          console.error(`❌ ${errorMsg}`);
+          emailErrors.push(errorMsg);
         }
       } catch (emailError) {
-        console.error(`❌ Error sending email to ${adminEmail}:`, emailError.message);
+        const errorMsg = `Exception sending to ${adminEmail}: ${emailError.message}`;
+        console.error(`❌ ${errorMsg}`);
+        console.error(`❌ Stack trace:`, emailError.stack);
+        emailErrors.push(errorMsg);
       }
+    }
+    
+    // Log summary
+    console.log('📧 Newsletter: Email sending summary:');
+    console.log(`📧 Newsletter: Success: ${emailSent ? 'YES' : 'NO'}`);
+    console.log(`📧 Newsletter: Total admin emails: ${adminEmails.length}`);
+    console.log(`📧 Newsletter: Errors: ${emailErrors.length}`);
+    if (emailErrors.length > 0) {
+      console.log('📧 Newsletter: Error details:', emailErrors);
     }
 
     if (emailSent) {

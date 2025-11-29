@@ -148,9 +148,10 @@ const Login = () => {
         navigate('/dashboard');
       } else {
         // Check if this is a trial expired error
-        if (data.trialExpired || (response.status === 403 && data.message && (data.message.includes('Trial Period') || data.message.includes('free credits') || data.message.includes('upgrade to a paid plan')))) {
-          // Show popup modal instead of redirecting
-          setError(''); // Clear any error - don't show in form
+        if (data.trialExpired || (response.status === 403 && data.message && (data.message.includes('Trial Period') || data.message.includes('free credits') || data.message.includes('upgrade to a paid plan') || data.message.includes('trial period has ended')))) {
+          // Show popup modal instead of redirecting or showing error alert
+          setError(''); // Clear any error - don't show in form alert box
+          setShowApprovalModal(false); // Make sure approval modal is closed
           setTrialExpiredMessage(data.message || data.expiryReason || 'Your free trial has expired. Please upgrade to a paid plan to continue accessing the platform.');
           setShowTrialExpiredModal(true);
           return;
@@ -431,7 +432,7 @@ const Login = () => {
                   onSubmit={handleSubmit}
                   className="bg-white/10 backdrop-blur-xl border border-black rounded-3xl p-8 shadow-2xl focus-within:border-purple-500 focus-within:shadow-purple-500/25 transition-all duration-300"
                 >
-                  {error && !showApprovalModal && (
+                  {error && !showApprovalModal && !showTrialExpiredModal && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -928,16 +929,12 @@ const Login = () => {
       {/* Trial Expired Modal */}
       {showTrialExpiredModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-          {/* Backdrop */}
+          {/* Backdrop - Prevent closing by clicking outside */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-black bg-opacity-70 backdrop-blur-md"
-            onClick={() => {
-              setShowTrialExpiredModal(false);
-              setError('');
-            }}
           />
           
           {/* Modal Card */}
