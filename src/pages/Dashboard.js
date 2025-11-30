@@ -8,6 +8,12 @@ import BDTrackerPage from './BDTrackerPage';
 import QuickGuide from './QuickGuide';
 import BDInsights from './BDInsights';
 import AIDealScraper from '../components/AIDealScraper';
+import Terms from './Terms';
+import Privacy from './Privacy';
+import DataSourcing from './DataSourcing';
+import LegalDisclaimerPage from './LegalDisclaimer';
+import CookiePolicy from './CookiePolicy';
+import OptOut from './OptOut';
 // StripePayment will be imported dynamically when needed
 import { 
   Grid, 
@@ -60,7 +66,8 @@ import {
   RefreshCw,
   CreditCard,
   Tag,
-  Mail
+  Mail,
+  Shield
 } from 'lucide-react';
 import { 
   Card, 
@@ -4144,86 +4151,131 @@ const FreeContent = ({ user, userPaymentStatus }) => {
 
 // Enhanced Terms and Legal Disclaimer Component
 const LegalDisclaimer = () => {
-  const legalSections = [
+  const [expandedPage, setExpandedPage] = useState(null);
+
+  const legalPages = [
     {
-      id: 1,
-      title: 'Terms of Use',
-      content: 'Last Updated: [Insert Date]. By accessing the BioPing website and Services, you agree to be bound by these Terms of Use. The Services are provided for business development, research, and investment diligence purposes.',
-      icon: '📋',
-      priority: 'high'
+      id: 'data-sourcing',
+      title: 'Data Sourcing',
+      path: '/data-sourcing',
+      icon: Database,
+      preview: 'BioPing collects and compiles professional business contact information from: Publicly available sources, Corporate websites and publications, Regulatory filings and conference materials, Licensed third-party data providers, Customer-contributed datasets, Direct verification and research. BioPing does not collect private or sensitive personal data. Purpose of processing: Enable B2B communication, Support biotechnology and pharmaceutical BD workflows, Provide accurate industry contact intelligence. Individuals may request: Access, Correction, Deletion, Restriction, Opt-out. Please contact us at: privacy@thebioping.com',
+      color: 'from-purple-500 to-indigo-500'
     },
     {
-      id: 2,
+      id: 'privacy',
       title: 'Privacy Policy',
-      content: 'We collect and process data as described in our Privacy Policy. For data requests, contact privacy@bioping.com. We comply with GDPR and CCPA requirements.',
-      icon: '🔒',
-      priority: 'high'
+      path: '/privacy',
+      icon: Lock,
+      preview: 'What Information We Collect: Information you provide directly (name, job title, company, work email, billing information), Information collected automatically (IP address, device identifiers, usage data, cookies), Professional publicly available information, Information from customers or partners. How We Use Information: To provide and improve our services, To communicate with you, To improve data quality, For security and compliance. How We Share Information: Customers and users, Service providers, Business transfers, Legal and regulatory. We do not sell personal data in the traditional sense but may be considered to "share" data under California law.',
+      color: 'from-blue-500 to-cyan-500'
     },
     {
-      id: 3,
-      title: 'Data Disclaimer',
-      content: 'Data is compiled from public and proprietary sources. BioPing does not warrant the accuracy, completeness, or timeliness of any data provided through our Services.',
-      icon: '⚠️',
-      priority: 'high'
+      id: 'terms',
+      title: 'Terms of Service',
+      path: '/terms',
+      icon: FileText,
+      preview: 'These Terms govern your access to and use of BioPing Services. Acceptance: By creating an account or accessing Services, you agree to these Terms. Account & Eligibility: Must be 18+, provide accurate information, maintain account security. Use Restrictions: No scraping, reselling, or redistribution of data. Intellectual Property: All content is protected by intellectual property rights. Privacy: Our processing is governed by our Privacy Policy. Termination: BioPing may suspend or terminate access at any time. Disclaimers: Services provided "AS IS" without warranties. Limitation of Liability: Limited to fees paid in the 3 months prior to claim. Indemnification: You agree to defend and hold harmless BioPing.',
+      color: 'from-green-500 to-emerald-500'
     },
     {
-      id: 4,
-      title: 'Permitted Use / License Restrictions',
-      content: 'You are granted a limited, non-exclusive, non-transferable license for internal business development, research, or investment diligence. Copying, scraping, reselling, or redistributing data without permission is prohibited.',
-      icon: '⚖️',
-      priority: 'high'
+      id: 'legal-disclaimer',
+      title: 'Legal Disclaimer',
+      path: '/legal-disclaimer',
+      icon: AlertCircle,
+      preview: 'BioPing provides access to business contact information and BD insights for professional use only. BioPing does not guarantee accuracy, completeness, or timeliness of any data. BioPing compiles business contact data from public, partner, licensed, and customer-contributed sources. Data is provided as-is, without warranties of any kind. Users are solely responsible for ensuring their outreach complies with privacy, marketing, and anti-spam laws, including CAN-SPAM, GDPR, CASL, and local regulations. BioPing does not endorse or validate any external websites or third-party data. BioPing is not liable for damages arising from the use of the platform or the inaccuracy of data.',
+      color: 'from-orange-500 to-red-500'
     },
     {
-      id: 5,
-      title: 'No Guarantees or Endorsements',
-      content: 'BioPing does not guarantee contact success or deal outcomes. Inclusion in our database does not constitute an endorsement or recommendation.',
-      icon: '📋',
-      priority: 'medium'
+      id: 'cookie-policy',
+      title: 'Cookie Policy',
+      path: '/cookie-policy',
+      icon: Info,
+      preview: 'This Cookie Policy explains how BioPing, Inc. uses cookies and similar technologies on https://thebioping.com. What Are Cookies: Cookies are small text files stored on your device when you visit a website. They help websites function, improve browsing experience, and provide analytics. Types of Cookies: Essential cookies (required for site functionality), Performance cookies (analytics and site improvement), Functionality cookies (remember preferences), Marketing cookies (targeted advertising). Cookie Management: You can manage or withdraw consent at any time through your browser settings or our cookie consent banner. Third-Party Cookies: We may use third-party services that set their own cookies. We comply with GDPR and CCPA requirements regarding cookies.',
+      color: 'from-amber-500 to-orange-500'
     },
     {
-      id: 6,
-      title: 'Limitation of Liability',
-      content: 'BioPing and its affiliates shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from use of our Services.',
-      icon: '🛡️',
-      priority: 'high'
-    },
-    {
-      id: 7,
-      title: 'Refund & Cancellation Policy',
-      content: 'Fees are non-refundable. Cancellations are effective at the end of the current billing period. No refunds for partial months.',
-      icon: '💰',
-      priority: 'medium'
-    },
-    {
-      id: 8,
-      title: 'Intellectual Property',
-      content: 'All content, including but not limited to text, graphics, logos, and software, is the exclusive property of BioPing and is protected by copyright laws.',
-      icon: '🔒',
-      priority: 'medium'
-    },
-    {
-      id: 9,
-      title: 'Jurisdiction & Governing Law',
-      content: 'These terms are governed by the laws of California, USA. Any disputes shall be resolved in the courts of San Francisco County, California.',
-      icon: '⚖️',
-      priority: 'medium'
+      id: 'opt-out',
+      title: 'Do Not Sell or Share Info. / Opt Out',
+      path: '/opt-out',
+      icon: Shield,
+      preview: 'Under the California Consumer Privacy Act (CCPA/CPRA), California residents have the right to opt out of the "sale" or "sharing" of their personal information. What "Selling or Sharing" Means: BioPing does not sell consumer data for money. However, because our service makes professional business contact information available to subscribers, California law may consider this a "sale" or "sharing." BioPing respects professional privacy choices. If your business contact information appears in our platform, you may request that it be: Removed, Corrected, Updated, Restricted. To Request Removal or Correction: Submit a request via the form below or email privacy@thebioping.com. Include: Your full name, Company (if applicable), Work email to remove, Any corrections or updates. BioPing will process your request within 15 business days.',
+      color: 'from-indigo-500 to-blue-500'
     }
   ];
 
-  const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'high': return 'border-red-200 bg-red-50';
-      case 'medium': return 'border-yellow-200 bg-yellow-50';
-      default: return 'border-gray-200 bg-gray-50';
-    }
+  const truncateText = (text, maxLength = 200) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
-  return (
+  const handleViewFullPage = (pageId) => {
+    setExpandedPage(pageId);
+  };
+
+  const handleCloseFullPage = () => {
+    setExpandedPage(null);
+  };
+
+  if (expandedPage) {
+    const selectedPage = legalPages.find(p => p.id === expandedPage);
+    const fullUrl = `${window.location.origin}${selectedPage.path}`;
+    
+    return (
       <div className="space-y-6">
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleCloseFullPage}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{selectedPage.title}</h2>
+                <p className="text-gray-600">Full content view</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Iframe container - hides top header portion */}
+          <div 
+            className="border border-gray-200 rounded-xl bg-white relative overflow-hidden" 
+            style={{ height: 'calc(100vh - 250px)' }}
+          >
+            <iframe
+              id={`legal-iframe-${expandedPage}`}
+              src={fullUrl}
+              className="absolute"
+              title={selectedPage.title}
+              frameBorder="0"
+              style={{ 
+                border: 'none',
+                display: 'block',
+                width: '100%',
+                height: 'calc(100% + 160px)',
+                top: '-160px',
+                left: 0
+              }}
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            />
+          </div>
+          
+          <div className="mt-2 text-xs text-gray-400 text-center">
+            Use the scrollbar to view all content
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
       <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Terms and Legal Disclaimer</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Legal Pages & Policies</h2>
             <p className="text-gray-600">Important legal information about our services and data usage</p>
           </div>
           <div className="flex items-center space-x-2">
@@ -4232,36 +4284,43 @@ const LegalDisclaimer = () => {
           </div>
         </div>
 
-        {/* Legal Sections */}
-        <div className="space-y-6">
-          {legalSections.map((section) => (
-            <motion.div
-              key={section.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`rounded-xl p-6 border-2 ${getPriorityColor(section.priority)}`}
-            >
-              <div className="flex items-start space-x-4">
-                <div className="text-2xl">{section.icon}</div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">{section.title}</h3>
-                  <p className="text-gray-700 leading-relaxed">{section.content}</p>
+        {/* Legal Pages Grid */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {legalPages.map((page, index) => {
+            const IconComponent = page.icon;
+            return (
+              <motion.div
+                key={page.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-12 h-12 bg-gradient-to-br ${page.color} rounded-xl flex items-center justify-center shadow-lg`}>
+                      <IconComponent className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">{page.title}</h3>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                
+                <div className="mb-4">
+                  <p className="text-gray-700 leading-relaxed text-sm line-clamp-4">
+                    {truncateText(page.preview, 250)}
+                  </p>
+                </div>
 
-        {/* Contact Information */}
-        <div className="mt-8 p-6 bg-blue-50 rounded-xl border border-blue-200">
-          <h3 className="font-bold text-gray-900 mb-2">Contact for Legal Inquiries</h3>
-          <p className="text-gray-700 mb-3">
-            For legal inquiries or questions about these terms, please contact our legal team.
-          </p>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Email: legal@bioping.com</span>
-            <span className="text-sm text-gray-600">Address: [Insert Business Address Here]</span>
-          </div>
+                <button
+                  onClick={() => handleViewFullPage(page.id)}
+                  className={`w-full py-3 px-4 bg-gradient-to-r ${page.color} text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2`}
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>View Full Page</span>
+                </button>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
     </div>
