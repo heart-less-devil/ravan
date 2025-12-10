@@ -87,6 +87,7 @@ import CustomerProfile from './CustomerProfile';
 import SuspensionNotice from '../components/SuspensionNotice';
 import SubscriptionManager from '../components/SubscriptionManager';
 import LoadingSpinner, { CompactSpinner } from '../components/LoadingSpinner';
+import * as XLSX from 'xlsx';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
@@ -2075,6 +2076,68 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
     setShowCompanyList(true);
   };
 
+  // Function to export companies to Excel
+  const handleDownloadCompaniesExcel = () => {
+    try {
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      
+      // Prepare search criteria data
+      const criteriaData = [];
+      criteriaData.push(['Query Criteria']);
+      criteriaData.push([]); // Empty row
+      
+      if (formData.drugName) {
+        criteriaData.push(['Drug:', formData.drugName]);
+      }
+      if (formData.diseaseArea) {
+        criteriaData.push(['Disease:', formData.diseaseArea]);
+      }
+      if (formData.lookingFor) {
+        criteriaData.push(['Partner:', formData.lookingFor]);
+      }
+      if (formData.stageOfDevelopment) {
+        criteriaData.push(['Stage:', formData.stageOfDevelopment]);
+      }
+      if (formData.modality) {
+        criteriaData.push(['Modality:', formData.modality]);
+      }
+      if (formData.region) {
+        criteriaData.push(['Region:', formData.region]);
+      }
+      if (formData.function) {
+        criteriaData.push(['Function:', formData.function]);
+      }
+      
+      criteriaData.push([]); // Empty row
+      criteriaData.push(['Company Names']); // Header for companies
+      
+      // Add company names
+      uniqueCompaniesList.forEach((company) => {
+        criteriaData.push([company]);
+      });
+      
+      // Create worksheet from data
+      const worksheet = XLSX.utils.aoa_to_sheet(criteriaData);
+      
+      // Set column width
+      worksheet['!cols'] = [{ wch: 50 }];
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Companies');
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `Companies_List_${timestamp}.xlsx`;
+      
+      // Write file
+      XLSX.writeFile(workbook, filename);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Error exporting to Excel. Please try again.');
+    }
+  };
+
   // Function to reset company filter
   const handleResetCompanyFilter = () => {
     setFilteredSearchResults(null); // Reset to original results
@@ -3137,10 +3200,20 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
               </button>
             </div>
             
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between">
               <p className="text-gray-600">
                 Showing {uniqueCompaniesList.length} unique companies from your search results
               </p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleDownloadCompaniesExcel}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
+                title="Download companies list as Excel"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Excel</span>
+              </motion.button>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
@@ -4239,31 +4312,122 @@ const LegalDisclaimer = () => {
             </div>
           </div>
           
-          {/* Iframe container - hides top header portion */}
+          {/* Full page iframe container - scrollable */}
           <div 
-            className="border border-gray-200 rounded-xl bg-white relative overflow-hidden" 
-            style={{ height: 'calc(100vh - 250px)' }}
+            className="border border-gray-200 rounded-xl bg-white" 
+            style={{ height: 'calc(100vh - 250px)', overflow: 'auto' }}
           >
             <iframe
               id={`legal-iframe-${expandedPage}`}
               src={fullUrl}
-              className="absolute"
+              className="w-full"
               title={selectedPage.title}
               frameBorder="0"
               style={{ 
                 border: 'none',
                 display: 'block',
                 width: '100%',
-                height: 'calc(100% + 160px)',
-                top: '-160px',
-                left: 0
+                minHeight: '100vh'
               }}
               sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+              onLoad={(e) => {
+                // Hide header section and "Back to Home" button from iframe content
+                setTimeout(() => {
+                  try {
+                    const iframe = e.target;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    
+                    if (iframeDoc) {
+                      // Hide header section
+                      const header = iframeDoc.querySelector('.bg-white\\/80, [class*="Enhanced Header"], header, nav');
+                      if (header) {
+                        header.style.display = 'none';
+                      }
+                      
+                      // Hide "Back to Home" link
+                      const backLinks = iframeDoc.querySelectorAll('a[href="/"], a[href*="back"], [class*="Back"]');
+                      backLinks.forEach(link => {
+                        link.style.display = 'none';
+                      });
+                      
+                      // Hide any navigation elements
+                      const navElements = iframeDoc.querySelectorAll('nav, [role="navigation"]');
+                      navElements.forEach(nav => {
+                        nav.style.display = 'none';
+                      });
+                      
+                      // Add CSS to hide header section and ensure full content visibility
+                      const style = iframeDoc.createElement('style');
+                      style.textContent = `
+                        .bg-white\\/80,
+                        [class*="Enhanced Header"],
+                        header,
+                        nav,
+                        a[href="/"],
+                        a[href*="back"],
+                        [class*="Back"] {
+                          display: none !important;
+                        }
+                        .container-custom {
+                          padding-top: 20px !important;
+                        }
+                        body {
+                          overflow: visible !important;
+                          min-height: auto !important;
+                        }
+                        .min-h-screen {
+                          min-height: auto !important;
+                        }
+                      `;
+                      iframeDoc.head.appendChild(style);
+                      
+                      // Function to adjust iframe height to match content
+                      const adjustIframeHeight = () => {
+                        try {
+                          const body = iframeDoc.body;
+                          const html = iframeDoc.documentElement;
+                          const height = Math.max(
+                            body.scrollHeight || 0,
+                            body.offsetHeight || 0,
+                            html.clientHeight || 0,
+                            html.scrollHeight || 0,
+                            html.offsetHeight || 0
+                          );
+                          if (height > 0) {
+                            iframe.style.height = height + 'px';
+                            iframe.style.minHeight = height + 'px';
+                          }
+                        } catch (e) {
+                          console.log('Height adjustment error:', e);
+                        }
+                      };
+                      
+                      // Adjust height immediately
+                      adjustIframeHeight();
+                      
+                      // Adjust height again after a delay (for dynamic content)
+                      setTimeout(adjustIframeHeight, 1000);
+                      setTimeout(adjustIframeHeight, 2000);
+                      
+                      // Listen for content changes
+                      if (iframeDoc.body) {
+                        const observer = new MutationObserver(() => {
+                          adjustIframeHeight();
+                        });
+                        observer.observe(iframeDoc.body, {
+                          childList: true,
+                          subtree: true,
+                          attributes: true
+                        });
+                      }
+                    }
+                  } catch (err) {
+                    // Cross-origin restrictions may prevent this
+                    console.log('Cannot access iframe content:', err.message);
+                  }
+                }, 800);
+              }}
             />
-          </div>
-          
-          <div className="mt-2 text-xs text-gray-400 text-center">
-            Use the scrollbar to view all content
           </div>
         </div>
       </div>
