@@ -92,7 +92,7 @@ const LegalDisclaimer = () => {
       </div>
 
       {/* Disclaimer Points */}
-      <div className="container-custom pb-12">
+      <div className="container-custom pb-20">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-6 mb-12">
             {disclaimerPoints.map((point, index) => {
@@ -102,7 +102,7 @@ const LegalDisclaimer = () => {
                   key={index}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 + index * 0.1 }}
+                  transition={{ duration: 0.4, delay: 0.5 + index * 0.05 }}
                   className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:border-orange-300"
                 >
                   <div className="flex items-start space-x-4">

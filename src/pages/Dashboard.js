@@ -4292,7 +4292,26 @@ const LegalDisclaimer = () => {
 
   if (expandedPage) {
     const selectedPage = legalPages.find(p => p.id === expandedPage);
-    const fullUrl = `${window.location.origin}${selectedPage.path}`;
+    
+    // Render component directly based on page ID
+    const renderPageContent = () => {
+      switch(expandedPage) {
+        case 'data-sourcing':
+          return <DataSourcing />;
+        case 'legal-disclaimer':
+          return <LegalDisclaimerPage />;
+        case 'opt-out':
+          return <OptOut />;
+        case 'privacy':
+          return <Privacy />;
+        case 'terms':
+          return <Terms />;
+        case 'cookie-policy':
+          return <CookiePolicy />;
+        default:
+          return null;
+      }
+    };
     
     return (
       <div className="space-y-6">
@@ -4312,122 +4331,67 @@ const LegalDisclaimer = () => {
             </div>
           </div>
           
-          {/* Full page iframe container - scrollable */}
+          {/* Direct component render - no iframe, much better! */}
           <div 
-            className="border border-gray-200 rounded-xl bg-white" 
-            style={{ height: 'calc(100vh - 250px)', overflow: 'auto' }}
+            className="border border-gray-200 rounded-xl bg-transparent overflow-hidden"
+            style={{ 
+              maxHeight: '95vh',
+              overflowY: 'auto',
+              overflowX: 'hidden'
+            }}
           >
-            <iframe
-              id={`legal-iframe-${expandedPage}`}
-              src={fullUrl}
-              className="w-full"
-              title={selectedPage.title}
-              frameBorder="0"
-              style={{ 
-                border: 'none',
-                display: 'block',
-                width: '100%',
-                minHeight: '100vh'
-              }}
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-              onLoad={(e) => {
-                // Hide header section and "Back to Home" button from iframe content
-                setTimeout(() => {
-                  try {
-                    const iframe = e.target;
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                    
-                    if (iframeDoc) {
-                      // Hide header section
-                      const header = iframeDoc.querySelector('.bg-white\\/80, [class*="Enhanced Header"], header, nav');
-                      if (header) {
-                        header.style.display = 'none';
-                      }
-                      
-                      // Hide "Back to Home" link
-                      const backLinks = iframeDoc.querySelectorAll('a[href="/"], a[href*="back"], [class*="Back"]');
-                      backLinks.forEach(link => {
-                        link.style.display = 'none';
-                      });
-                      
-                      // Hide any navigation elements
-                      const navElements = iframeDoc.querySelectorAll('nav, [role="navigation"]');
-                      navElements.forEach(nav => {
-                        nav.style.display = 'none';
-                      });
-                      
-                      // Add CSS to hide header section and ensure full content visibility
-                      const style = iframeDoc.createElement('style');
-                      style.textContent = `
-                        .bg-white\\/80,
-                        [class*="Enhanced Header"],
-                        header,
-                        nav,
-                        a[href="/"],
-                        a[href*="back"],
-                        [class*="Back"] {
-                          display: none !important;
-                        }
-                        .container-custom {
-                          padding-top: 20px !important;
-                        }
-                        body {
-                          overflow: visible !important;
-                          min-height: auto !important;
-                        }
-                        .min-h-screen {
-                          min-height: auto !important;
-                        }
-                      `;
-                      iframeDoc.head.appendChild(style);
-                      
-                      // Function to adjust iframe height to match content
-                      const adjustIframeHeight = () => {
-                        try {
-                          const body = iframeDoc.body;
-                          const html = iframeDoc.documentElement;
-                          const height = Math.max(
-                            body.scrollHeight || 0,
-                            body.offsetHeight || 0,
-                            html.clientHeight || 0,
-                            html.scrollHeight || 0,
-                            html.offsetHeight || 0
-                          );
-                          if (height > 0) {
-                            iframe.style.height = height + 'px';
-                            iframe.style.minHeight = height + 'px';
-                          }
-                        } catch (e) {
-                          console.log('Height adjustment error:', e);
-                        }
-                      };
-                      
-                      // Adjust height immediately
-                      adjustIframeHeight();
-                      
-                      // Adjust height again after a delay (for dynamic content)
-                      setTimeout(adjustIframeHeight, 1000);
-                      setTimeout(adjustIframeHeight, 2000);
-                      
-                      // Listen for content changes
-                      if (iframeDoc.body) {
-                        const observer = new MutationObserver(() => {
-                          adjustIframeHeight();
-                        });
-                        observer.observe(iframeDoc.body, {
-                          childList: true,
-                          subtree: true,
-                          attributes: true
-                        });
-                      }
-                    }
-                  } catch (err) {
-                    // Cross-origin restrictions may prevent this
-                    console.log('Cannot access iframe content:', err.message);
-                  }
-                }, 800);
-              }}
-            />
+            {/* Hide header from rendered component using CSS */}
+            <style>{`
+              /* Hide only the header section - very specific selector */
+              .legal-page-viewer .min-h-screen > div.bg-white\\/80.backdrop-blur-md.border-b.border-gray-200.sticky {
+                display: none !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+              }
+              /* Alternative selector for header */
+              .legal-page-viewer .min-h-screen > div:first-child.bg-white\\/80 {
+                display: none !important;
+              }
+              /* Hide Back to Home links */
+              .legal-page-viewer a[href="/"],
+              .legal-page-viewer a[href*="back"] {
+                display: none !important;
+                pointer-events: none !important;
+              }
+              /* Ensure all content is visible */
+              .legal-page-viewer {
+                display: block !important;
+                width: 100% !important;
+              }
+              .legal-page-viewer .min-h-screen {
+                min-height: auto !important;
+                padding-top: 0 !important;
+                display: block !important;
+                width: 100% !important;
+              }
+              .legal-page-viewer .container-custom {
+                padding-top: 20px !important;
+                display: block !important;
+                visibility: visible !important;
+                width: 100% !important;
+              }
+              /* Make sure all content sections are visible */
+              .legal-page-viewer [class*="Hero"],
+              .legal-page-viewer [class*="Section"],
+              .legal-page-viewer .grid,
+              .legal-page-viewer .space-y,
+              .legal-page-viewer .mb-12,
+              .legal-page-viewer .mb-8,
+              .legal-page-viewer .min-h-screen > div:not(.bg-white\\/80) {
+                display: block !important;
+                visibility: visible !important;
+              }
+            `}</style>
+            <div className="legal-page-viewer" style={{ width: '100%', minHeight: '500px' }}>
+              {renderPageContent()}
+            </div>
           </div>
         </div>
       </div>

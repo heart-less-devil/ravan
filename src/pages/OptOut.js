@@ -139,13 +139,13 @@ const OptOut = () => {
       </div>
 
       {/* Main Content */}
-      <div className="container-custom pb-12">
+      <div className="container-custom pb-20">
         <div className="max-w-5xl mx-auto">
           {/* CCPA Information */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
             className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100 mb-8"
           >
             <p className="text-lg text-gray-700 leading-relaxed mb-6">
@@ -158,7 +158,7 @@ const OptOut = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
             className="bg-blue-50 border-2 border-blue-200 rounded-3xl p-8 mb-8"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
@@ -186,7 +186,7 @@ const OptOut = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
+            transition={{ duration: 0.4, delay: 0.7 }}
             className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100 mb-8"
           >
             <div className="text-center mb-8">

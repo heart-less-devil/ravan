@@ -167,21 +167,22 @@ const DataSourcing = () => {
       </div>
 
       {/* Data Sources Section */}
-      <div className="container-custom pb-12">
+      <div className="container-custom pb-20">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
             className="mb-12"
           >
+            <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Data Sources</h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {dataSources.map((source, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.9 + index * 0.1 }}
+                  transition={{ duration: 0.3, delay: 0.7 + index * 0.05 }}
                   className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 hover:border-purple-300"
                 >
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center mb-4">
@@ -197,7 +198,7 @@ const DataSourcing = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.2 }}
+            transition={{ duration: 0.4, delay: 1.0 }}
             className="mb-12"
           >
             <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Purpose of processing:</h2>
@@ -208,7 +209,7 @@ const DataSourcing = () => {
                     key={index}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 1.3 + index * 0.1 }}
+                    transition={{ duration: 0.3, delay: 1.1 + index * 0.05 }}
                     className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20"
                   >
                     <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
@@ -225,7 +226,7 @@ const DataSourcing = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.5 }}
+            transition={{ duration: 0.4, delay: 1.3 }}
             className="mb-12"
           >
             <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">Individuals may request:</h2>
@@ -235,7 +236,7 @@ const DataSourcing = () => {
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 1.6 + index * 0.1 }}
+                  transition={{ duration: 0.3, delay: 1.4 + index * 0.03 }}
                   className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-gray-100 text-center hover:shadow-xl transition-all duration-300 hover:border-purple-300"
                 >
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center mx-auto mb-3">
@@ -251,7 +252,7 @@ const DataSourcing = () => {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 2.0 }}
+            transition={{ duration: 0.4, delay: 1.6 }}
             className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-gray-100 text-center"
           >
             <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
