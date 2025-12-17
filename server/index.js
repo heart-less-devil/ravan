@@ -3173,8 +3173,13 @@ app.post('/api/auth/create-account', [
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Master email: brittany.filips@thebioping.com - auto-approved, unlimited credits
+    const masterEmails = ['brittany.filips@thebioping.com'];
+    const isMasterEmail = masterEmails.includes(email.toLowerCase());
+    
     // Create new user object
     // IMPORTANT: Free users get exactly 5 credits once, never regenerated
+    // Master email gets auto-approved and unlimited credits
     const newUserData = {
       firstName,
       lastName,
@@ -3185,12 +3190,12 @@ app.post('/api/auth/create-account', [
       // Email already OTP-verified at this point
       isVerified: true,
       otpVerifiedAt: new Date(),
-      // Admin approval flow
-      isApproved: false,
-      status: 'pending',
-      paymentCompleted: false,
-      currentPlan: 'free',
-      currentCredits: 5  // One-time allocation, consumed permanently
+      // Admin approval flow - master email auto-approved
+      isApproved: isMasterEmail,
+      status: isMasterEmail ? 'active' : 'pending',
+      paymentCompleted: isMasterEmail, // Master email treated as paid
+      currentPlan: isMasterEmail ? 'premium' : 'free',
+      currentCredits: isMasterEmail ? 999999 : 5  // Master email gets unlimited credits
     };
 
     let newUser = null;
@@ -3219,20 +3224,24 @@ app.post('/api/auth/create-account', [
       console.log(`✅ New user saved to file: ${email} (ID: ${userId})`);
     }
 
-    console.log(`🎉 Account created successfully (awaiting admin approval): ${email}`);
+    if (isMasterEmail) {
+      console.log(`🎉 Master account created successfully (auto-approved): ${email}`);
+    } else {
+      console.log(`🎉 Account created successfully (awaiting admin approval): ${email}`);
+    }
 
-    // Do NOT auto-login; require admin approval first
+    // Master email is auto-approved, others require admin approval
     res.status(201).json({
       success: true,
-      message: 'Account created. Awaiting admin approval.',
-      awaitingApproval: true,
+      message: isMasterEmail ? 'Master account created successfully. You can login now.' : 'Account created. Awaiting admin approval.',
+      awaitingApproval: !isMasterEmail,
       user: {
         id: userId,
         email: newUser.email,
         name: newUser.name || `${firstName} ${lastName}`,
         role: newUser.role,
-        status: 'pending',
-        isApproved: false
+        status: isMasterEmail ? 'active' : 'pending',
+        isApproved: isMasterEmail
       }
     });
 
@@ -3342,7 +3351,11 @@ app.post('/api/auth/login', [
       
       // Check if free trial has expired (only for free users who haven't paid)
       // This check should come AFTER approval check so free users see trial expired popup, not approval popup
-      if (!registeredUser.paymentCompleted && registeredUser.currentPlan === 'free') {
+      // Master email: brittany.filips@thebioping.com - never expires
+      const masterEmails = ['brittany.filips@thebioping.com'];
+      const isMasterEmail = masterEmails.includes(email.toLowerCase());
+      
+      if (!registeredUser.paymentCompleted && registeredUser.currentPlan === 'free' && !isMasterEmail) {
         const now = new Date();
         const registrationDate = new Date(registeredUser.createdAt || registeredUser.registrationDate || now);
         const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -3495,8 +3508,9 @@ app.get('/api/dashboard/resources/free-content', authenticateToken, (req, res) =
 });
 
 app.get('/api/dashboard/resources/bd-insights', authenticateToken, (req, res) => {
-  // Only allow universal user to access BD Insights
-  if (req.user.email !== 'universalx0242@gmail.com') {
+  // Only allow universal user and master email to access BD Insights
+  const allowedEmails = ['universalx0242@gmail.com', 'brittany.filips@thebioping.com'];
+  if (!allowedEmails.includes(req.user.email.toLowerCase())) {
     return res.status(403).json({ 
       message: 'Access denied. Only universal users can access BD Insights.' 
     });
@@ -11324,24 +11338,29 @@ app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Master email: brittany.filips@thebioping.com - unlimited credits, never expires
+    const masterEmails = ['brittany.filips@thebioping.com'];
+    const isMasterEmail = masterEmails.includes(user.email.toLowerCase());
+    
     // CRITICAL FIX: DO NOT auto-renew credits here - only read from database
     // Credits should ONLY be added/renewed through payment webhooks
     const now = new Date();
     const registrationDate = new Date(user.createdAt || user.registrationDate || now);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
     const trialDays = 5;
-    const trialExpired = daysSinceRegistration >= trialDays;
-    const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
+    const trialExpired = isMasterEmail ? false : daysSinceRegistration >= trialDays; // Master email never expires
+    const trialDaysRemaining = isMasterEmail ? 999999 : Math.max(0, trialDays - daysSinceRegistration);
     
     console.log('💳 Reading credits from database (NO AUTO-RENEWAL):', {
       email: user.email,
       currentCredits: user.currentCredits,
       plan: user.currentPlan,
-      trialExpired: trialExpired
+      trialExpired: trialExpired,
+      isMasterEmail: isMasterEmail
     });
 
-    // For expired free trial users, enforce 0 credits
-    if (!user.paymentCompleted && user.currentPlan === 'free' && trialExpired) {
+    // For expired free trial users, enforce 0 credits (skip for master email)
+    if (!user.paymentCompleted && user.currentPlan === 'free' && trialExpired && !isMasterEmail) {
       if (user.currentCredits > 0) {
         console.log('⚠️ Free trial expired, setting credits to 0');
         // Update in MongoDB
@@ -11365,9 +11384,10 @@ app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
     }
 
     // Return current credits from database (NO MODIFICATION)
-    let currentCredits = user.currentCredits || 0;
+    // Master email gets unlimited credits
+    let currentCredits = isMasterEmail ? 999999 : (user.currentCredits || 0);
     
-    console.log('✅ Returning credits from database:', currentCredits);
+    console.log('✅ Returning credits from database:', currentCredits, isMasterEmail ? '(master account - unlimited)' : '');
 
     // Calculate next billing date for subscription plans
     let nextBillingDate = null;
@@ -11434,24 +11454,29 @@ app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => 
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Master email: brittany.filips@thebioping.com - unlimited credits, never expires
+    const masterEmails = ['brittany.filips@thebioping.com'];
+    const isMasterEmail = masterEmails.includes(user.email.toLowerCase());
+    
     // CRITICAL FIX: DO NOT auto-renew credits here - only read from database
     // Credits should ONLY be added/renewed through payment webhooks
     const now = new Date();
     const registrationDate = new Date(user.createdAt || user.registrationDate || now);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
     const trialDays = 5;
-    const trialExpired = daysSinceRegistration >= trialDays;
-    const trialDaysRemaining = Math.max(0, trialDays - daysSinceRegistration);
+    const trialExpired = isMasterEmail ? false : daysSinceRegistration >= trialDays; // Master email never expires
+    const trialDaysRemaining = isMasterEmail ? 999999 : Math.max(0, trialDays - daysSinceRegistration);
     
     console.log('💳 Reading subscription status (NO AUTO-RENEWAL):', {
       email: user.email,
       currentCredits: user.currentCredits,
       plan: user.currentPlan,
-      trialExpired: trialExpired
+      trialExpired: trialExpired,
+      isMasterEmail: isMasterEmail
     });
 
-    // For expired free trial users, enforce 0 credits
-    if (!user.paymentCompleted && user.currentPlan === 'free' && trialExpired) {
+    // For expired free trial users, enforce 0 credits (skip for master email)
+    if (!user.paymentCompleted && user.currentPlan === 'free' && trialExpired && !isMasterEmail) {
       if (user.currentCredits > 0) {
         console.log('⚠️ Free trial expired, setting credits to 0');
         // Update in MongoDB
@@ -11477,9 +11502,10 @@ app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => 
     }
 
     // Return current credits from database (NO MODIFICATION)
-    let currentCredits = user.currentCredits || 0;
+    // Master email gets unlimited credits
+    let currentCredits = isMasterEmail ? 999999 : (user.currentCredits || 0);
     
-    console.log('✅ Returning subscription status with credits:', currentCredits);
+    console.log('✅ Returning subscription status with credits:', currentCredits, isMasterEmail ? '(master account - unlimited)' : '');
 
     res.json({
       paymentCompleted: user.paymentCompleted || false,
@@ -11641,6 +11667,20 @@ app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
     }
     
     console.log('💳 User current credits before:', user.currentCredits);
+    
+    // Master email: brittany.filips@thebioping.com - unlimited credits, never expires
+    const masterEmails = ['brittany.filips@thebioping.com'];
+    const isMasterEmail = masterEmails.includes(user.email.toLowerCase());
+    
+    // For master email, always allow credit usage without deduction
+    if (isMasterEmail) {
+      console.log('👑 Master email detected - unlimited credits, no deduction');
+      return res.json({
+        success: true,
+        remainingCredits: 999999, // Unlimited credits
+        message: 'Credit usage allowed (master account)'
+      });
+    }
     
     // Enforce free trial expiry before allowing credit usage
     if (!user.paymentCompleted || user.currentPlan === 'free') {

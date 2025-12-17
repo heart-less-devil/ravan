@@ -29,7 +29,8 @@ export const isUniversalUser = (email) => {
     'universalx0242@gmail.com',
     'admin@bioping.com',
     'demo@bioping.com',
-    'test@bioping.com'
+    'test@bioping.com',
+    'brittany.filips@thebioping.com'
   ];
   return universalEmails.includes(email);
 }; 

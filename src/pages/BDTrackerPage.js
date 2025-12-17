@@ -499,7 +499,8 @@ const BDTrackerPage = ({ user, userPaymentStatus }) => {
   // Permanent access list for specific users
   const permanentAccessEmails = [
     'gauravvij1980@gmail.com',
-    'universalx0242@gmail.com'
+    'universalx0242@gmail.com',
+    'brittany.filips@thebioping.com'
   ];
   
   // Check for permanent access first
@@ -547,7 +548,7 @@ const BDTrackerPage = ({ user, userPaymentStatus }) => {
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.email === 'gauravvij1980@gmail.com' || payload.email === 'universalx0242@gmail.com') {
+        if (payload.email === 'gauravvij1980@gmail.com' || payload.email === 'universalx0242@gmail.com' || payload.email === 'brittany.filips@thebioping.com') {
           console.log('✅ Production admin access granted to:', payload.email);
           hasAccess = true;
         }

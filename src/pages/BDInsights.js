@@ -117,7 +117,8 @@ const BDInsights = ({ user, userPaymentStatus }) => {
   // Permanent access list for specific users
   const permanentAccessEmails = [
     'gauravvij1980@gmail.com',
-    'universalx0242@gmail.com'
+    'universalx0242@gmail.com',
+    'brittany.filips@thebioping.com'
   ];
   
   // Check for permanent access first

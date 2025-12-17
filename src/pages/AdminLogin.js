@@ -52,6 +52,7 @@ const AdminLogin = () => {
         const adminEmails = [
           'universalx0242@gmail.com',
           'admin@bioping.com',
+          'brittany.filips@thebioping.com',
           'your-email@gmail.com' // Add your email here
         ];
         
