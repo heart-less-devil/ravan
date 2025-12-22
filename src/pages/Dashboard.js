@@ -575,6 +575,10 @@ const Dashboard = () => {
       console.log('Using user email:', user.email);
       console.log('API URL:', `${API_BASE_URL}/search-biotech`);
       
+      // Clear previous search results and reset pagination when starting new search
+      setGlobalSearchResults(null);
+      setSearchResults([]);
+      
       const response = await fetch(`${API_BASE_URL}/api/search-biotech`, {
         method: 'POST',
         headers: {
@@ -1681,6 +1685,17 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
     setError(null);
     setIsGlobalSearch(true);
     
+    // Clear previous search results and reset pagination when starting new search
+    setSearchResults([]);
+    setCurrentPage(1);
+    setContactDetails([]);
+    setAllContactsData([]);
+    setShowAllContacts(false);
+    setExpandedContactDetails(new Set());
+    setExpandedRows(new Set());
+    setRevealedEmails(new Set());
+    setGroupedResults({});
+    
     try {
       if (!user || !user.email) {
         setError('User not found. Please login again.');
@@ -1703,9 +1718,20 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
+          // Clear previous company's contact details before setting new results
+          setContactDetails([]);
+          setAllContactsData([]);
+          setShowAllContacts(false);
+          setExpandedContactDetails(new Set());
+          setExpandedRows(new Set());
+          setRevealedEmails(new Set());
+          setGroupedResults({});
+          
           setSearchResults(result.data?.results || []);
           setCurrentSearchType(searchType);
           setCurrentSearchQuery(searchQuery);
+          setCurrentPage(1); // Reset to page 1 for new search
+          setAllContactsCurrentPage(1); // Reset all contacts pagination
           setError(null);
         } else {
           setError(result.message || 'Search failed');
@@ -1752,11 +1778,22 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
         console.log('SearchPage: Setting global search results:', globalSearchResults);
         console.log('SearchPage: Results count:', globalSearchResults.results?.length);
         console.log('SearchPage: First result:', globalSearchResults.results[0]);
+        
+        // Clear previous company's contact details before setting new results
+        setContactDetails([]);
+        setAllContactsData([]);
+        setShowAllContacts(false);
+        setExpandedContactDetails(new Set());
+        setExpandedRows(new Set());
+        setRevealedEmails(new Set());
+        setGroupedResults({});
+        
         setSearchResults(globalSearchResults.results);
         setCurrentSearchType(globalSearchResults.searchType || 'Company Name');
         setCurrentSearchQuery(globalSearchResults.searchQuery || '');
         setIsGlobalSearch(globalSearchResults.isGlobalSearch);
         setCurrentPage(1); // Reset to first page
+        setAllContactsCurrentPage(1); // Reset all contacts pagination
         setError(null); // Clear any existing error
         console.log('SearchPage: Results set successfully');
         return;
@@ -1822,8 +1859,22 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
   }, [searchResults]);
 
   useEffect(() => {
+    // Reset to page 1 when search results change (new search performed)
     setCurrentPage(1);
-  }, [searchResults, filteredSearchResults]);
+    setAllContactsCurrentPage(1);
+  }, [searchResults, filteredSearchResults, currentSearchQuery]);
+
+  // Clear contact details when search query or search type changes (new company search)
+  useEffect(() => {
+    // Clear previous company's contact details when a new search is performed
+    setContactDetails([]);
+    setAllContactsData([]);
+    setShowAllContacts(false);
+    setExpandedContactDetails(new Set());
+    setExpandedRows(new Set());
+    setRevealedEmails(new Set());
+    setHasAutoPopulated(false);
+  }, [currentSearchQuery, currentSearchType]);
 
   // Process search results to group by company
   useEffect(() => {
@@ -5748,10 +5799,7 @@ const PricingAnalyticsPage = ({ user }) => {
   //     
   //     if (result.success) {
   //       // Refresh data after updating plan
-  //       await fetchPricingAnalytics();
-  //       return result;
-  //     } else {
-  //       throw new Error(result.message || 'Failed to update plan');
+  //       awaitlt.message || 'Failed to update plan');
   //     }
   //   } catch (error) {
   //     console.error('Error updating plan:', error);
