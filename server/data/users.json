@@ -59,7 +59,7 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 43,
+    "currentCredits": 44,
     "lastCreditRenewal": "2025-11-26T11:27:54.581Z",
     "nextCreditRenewal": "2025-10-28T12:37:31.816Z",
     "company": "Company",
@@ -459,12 +459,52 @@
       },
       {
         "action": "search",
-        "timestamp": "2025-11-18T09:41:08.987Z",
+        "timestamp": "2025-11-18T09:41:08.988Z",
         "creditsUsed": 1,
-        "remainingCredits": 41
+        "remainingCredits": 41,
+        "_id": "691c3f34231f60837cb614c9"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-11-26T11:27:54.238Z",
+        "creditsUsed": 1,
+        "_id": "6926e43adfd23528c7bb6f34"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-11-26T17:33:29.010Z",
+        "creditsUsed": 1,
+        "_id": "692739e9bb3b7622e3910c7c"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-12-18T09:53:54.361Z",
+        "creditsUsed": 1,
+        "remainingCredits": 47,
+        "_id": "6943cf3243cc0996c49396c9"
+      },
+      {
+        "action": "search",
+        "timestamp": "2025-12-30T10:43:05.713Z",
+        "creditsUsed": 1,
+        "remainingCredits": 46,
+        "_id": "6953acb969511dd837ed4ae8"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-18T18:30:58.023Z",
+        "creditsUsed": 1,
+        "remainingCredits": 45,
+        "_id": "696d26e2314938dcba54a3fb"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-18T18:46:12.583Z",
+        "creditsUsed": 1,
+        "remainingCredits": 44
       }
     ],
-    "lastCreditUsage": "2025-11-18T09:41:08.988Z",
+    "lastCreditUsage": "2026-01-18T18:46:12.583Z",
     "isApproved": true,
     "approvedAt": "2025-10-31T07:22:18.555Z",
     "approvedBy": "universalx0242@gmail.com"

@@ -5437,6 +5437,22 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
         ta17_urology: row[headers.indexOf('T17 - Urology')] || '0',
         // Add BD Person TA Focus
         bdPersonTAFocus: row[headers.indexOf('BD Person TA Focus (Only for Business Development)')] || '',
+        // Add LinkedIn URL from Column AD (index 29 - Column AD is the 30th column, 0-indexed = 29)
+        // Try to get from header first if "LinkedIn URL" header exists, otherwise use column index 29 (Column AD)
+        linkedInUrl: (() => {
+          const linkedInUrlHeaderIndex = headers.indexOf('LinkedIn URL');
+          if (linkedInUrlHeaderIndex !== -1 && row[linkedInUrlHeaderIndex]) {
+            const url = String(row[linkedInUrlHeaderIndex]).trim();
+            return url && url !== '' && url !== 'NA' ? url : 'NA';
+          }
+          // If no header, use Column AD (index 29)
+          const columnADValue = row[29];
+          if (columnADValue) {
+            const url = String(columnADValue).trim();
+            return url && url !== '' && url !== 'NA' ? url : 'NA';
+          }
+          return 'NA';
+        })(),
         createdAt: new Date().toISOString().split('T')[0]
       };
 
@@ -6664,7 +6680,8 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       ta15_womens_health: item.ta15_womens_health,
       ta16_pain: item.ta16_pain,
       ta17_urology: item.ta17_urology,
-      bdPersonTAFocus: item.bdPersonTAFocus
+      bdPersonTAFocus: item.bdPersonTAFocus,
+      linkedInUrl: item.linkedInUrl || 'NA'
     }));
 
     // Deduplicate results ONLY for Contact Name searches

@@ -2959,6 +2959,21 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
                                         <span className="text-sm text-gray-500">HQ:</span>
                                         <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
                                       </div>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-500">LinkedIn URL:</span>
+                                        {result.linkedInUrl && result.linkedInUrl !== 'NA' && result.linkedInUrl.trim() !== '' ? (
+                                          <a 
+                                            href={result.linkedInUrl} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                          >
+                                            LinkedIn URL
+                                          </a>
+                                        ) : (
+                                          <span className="text-sm text-gray-900">NA</span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -3214,6 +3229,21 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-500">HQ:</span>
                                     <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-500">LinkedIn URL:</span>
+                                    {result.linkedInUrl && result.linkedInUrl !== 'NA' && result.linkedInUrl.trim() !== '' ? (
+                                      <a 
+                                        href={result.linkedInUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 hover:text-blue-800 underline"
+                                      >
+                                        LinkedIn URL
+                                      </a>
+                                    ) : (
+                                      <span className="text-sm text-gray-900">NA</span>
+                                    )}
                                   </div>
                                 </div>
                               </div>
