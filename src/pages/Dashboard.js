@@ -1878,13 +1878,19 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
 
   // Process search results to group by company
   useEffect(() => {
+    // Use a ref to prevent infinite loops
+    if (!sortedSearchResults || sortedSearchResults.length === 0) {
+      setGroupedResults({});
+      return;
+    }
+    
     console.log('Processing search results:', { searchResults: sortedSearchResults.length, isGlobalSearch, currentSearchType });
     
     // For Contact Name searches, don't group - show individual contacts
-    if (sortedSearchResults.length > 0 && isGlobalSearch && currentSearchType === 'Contact Name') {
+    if (isGlobalSearch && currentSearchType === 'Contact Name') {
       console.log('Contact Name search - showing individual contacts');
       setGroupedResults({}); // Don't group for contact searches
-    } else if (sortedSearchResults.length > 0 && isGlobalSearch) {
+    } else if (isGlobalSearch) {
       // Group ONLY for Company Name searches
       const grouped = sortedSearchResults.reduce((acc, item) => {
         if (!acc[item.companyName]) {
@@ -1903,23 +1909,25 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
       }, {});
       console.log('Grouped results:', grouped);
       setGroupedResults(grouped);
-      
-      // Auto-populate Contact Name field with first contact when searching by company
-      if (currentSearchType === 'Company Name' && sortedSearchResults.length > 0 && !hasAutoPopulated) {
-        const firstContact = sortedSearchResults[0];
-        if (firstContact.contactPerson && formData.contactPerson !== firstContact.contactPerson) {
-          console.log('Auto-populated Contact Name field with:', firstContact.contactPerson);
-          setFormData(prev => ({
-            ...prev,
-            contactPerson: firstContact.contactPerson
-          }));
-          setHasAutoPopulated(true);
-        }
-      }
     } else {
       setGroupedResults({});
     }
-  }, [sortedSearchResults, currentSearchType, isGlobalSearch]);
+  }, [sortedSearchResults.length, currentSearchType, isGlobalSearch]); // Use length instead of full array
+
+  // Separate useEffect for auto-population to prevent infinite loop
+  useEffect(() => {
+    if (currentSearchType === 'Company Name' && sortedSearchResults.length > 0 && !hasAutoPopulated && isGlobalSearch) {
+      const firstContact = sortedSearchResults[0];
+      if (firstContact && firstContact.contactPerson && formData.contactPerson !== firstContact.contactPerson) {
+        console.log('Auto-populated Contact Name field with:', firstContact.contactPerson);
+        setFormData(prev => ({
+          ...prev,
+          contactPerson: firstContact.contactPerson
+        }));
+        setHasAutoPopulated(true);
+      }
+    }
+  }, [sortedSearchResults.length, currentSearchType, hasAutoPopulated, isGlobalSearch]); // Use length and specific deps
 
   const handleChange = (e) => {
     setFormData({
@@ -2959,21 +2967,23 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
                                         <span className="text-sm text-gray-500">HQ:</span>
                                         <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
                                       </div>
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-sm text-gray-500">LinkedIn URL:</span>
-                                        {result.linkedInUrl && result.linkedInUrl !== 'NA' && result.linkedInUrl.trim() !== '' ? (
+                                      {result.linkedInUrl && result.linkedInUrl !== 'NA' && result.linkedInUrl.trim() !== '' ? (
+                                        <div className="flex items-center space-x-2">
                                           <a 
                                             href={result.linkedInUrl} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
                                             className="text-sm text-blue-600 hover:text-blue-800 underline"
                                           >
-                                            LinkedIn URL
+                                            LinkedIn
                                           </a>
-                                        ) : (
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-sm text-gray-500">LinkedIn URL:</span>
                                           <span className="text-sm text-gray-900">NA</span>
-                                        )}
-                                      </div>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -3230,21 +3240,23 @@ const SearchPage = ({ user, searchType = 'Company Name', useCredit: consumeCredi
                                     <span className="text-sm text-gray-500">HQ:</span>
                                     <span className="text-sm text-gray-900">{result.region || 'United States'}</span>
                                   </div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-500">LinkedIn URL:</span>
-                                    {result.linkedInUrl && result.linkedInUrl !== 'NA' && result.linkedInUrl.trim() !== '' ? (
+                                  {result.linkedInUrl && result.linkedInUrl !== 'NA' && result.linkedInUrl.trim() !== '' ? (
+                                    <div className="flex items-center space-x-2">
                                       <a 
                                         href={result.linkedInUrl} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="text-sm text-blue-600 hover:text-blue-800 underline"
                                       >
-                                        LinkedIn URL
+                                        LinkedIn
                                       </a>
-                                    ) : (
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-sm text-gray-500">LinkedIn URL:</span>
                                       <span className="text-sm text-gray-900">NA</span>
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>

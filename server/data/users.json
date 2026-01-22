@@ -59,7 +59,7 @@
     "createdAt": "2025-07-24T00:38:54.024Z",
     "paymentCompleted": true,
     "currentPlan": "daily-12",
-    "currentCredits": 44,
+    "currentCredits": 37,
     "lastCreditRenewal": "2025-11-26T11:27:54.581Z",
     "nextCreditRenewal": "2025-10-28T12:37:31.816Z",
     "company": "Company",
@@ -501,10 +501,59 @@
         "action": "search",
         "timestamp": "2026-01-18T18:46:12.583Z",
         "creditsUsed": 1,
-        "remainingCredits": 44
+        "remainingCredits": 44,
+        "_id": "696d2a74028cc36b050db1ce"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-21T15:56:03.528Z",
+        "creditsUsed": 1,
+        "remainingCredits": 43,
+        "_id": "6970f7132d8001eb0f66a1fa"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-21T15:56:06.874Z",
+        "creditsUsed": 1,
+        "remainingCredits": 42,
+        "_id": "6970f7162d8001eb0f66a273"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-21T15:56:18.685Z",
+        "creditsUsed": 1,
+        "remainingCredits": 41,
+        "_id": "6970f7222d8001eb0f66a392"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-21T15:56:20.314Z",
+        "creditsUsed": 1,
+        "remainingCredits": 40,
+        "_id": "6970f7242d8001eb0f66a40f"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-22T05:40:02.900Z",
+        "creditsUsed": 1,
+        "remainingCredits": 39,
+        "_id": "6971b8321faae748810e9b30"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-22T05:40:04.844Z",
+        "creditsUsed": 1,
+        "remainingCredits": 38,
+        "_id": "6971b8341faae748810e9bb1"
+      },
+      {
+        "action": "search",
+        "timestamp": "2026-01-22T05:49:59.252Z",
+        "creditsUsed": 1,
+        "remainingCredits": 37
       }
     ],
-    "lastCreditUsage": "2026-01-18T18:46:12.583Z",
+    "lastCreditUsage": "2026-01-22T05:49:59.252Z",
     "isApproved": true,
     "approvedAt": "2025-10-31T07:22:18.555Z",
     "approvedBy": "universalx0242@gmail.com"

@@ -5370,8 +5370,34 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     
+    // Extract hyperlinks from worksheet cells
+    // Excel hyperlinks are stored in cell.l (link) property
+    const hyperlinkMap = new Map();
+    const cellRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    
+    // Iterate through all cells to find hyperlinks
+    for (let rowNum = cellRange.s.r; rowNum <= cellRange.e.r; rowNum++) {
+      for (let colNum = cellRange.s.c; colNum <= cellRange.e.c; colNum++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+        const cell = worksheet[cellAddress];
+        if (cell && cell.l) {
+          // Cell has a hyperlink
+          const hyperlink = cell.l;
+          const url = hyperlink.Target || hyperlink.target || hyperlink;
+          if (url && typeof url === 'string' && url.includes('linkedin.com')) {
+            const key = `${rowNum}_${colNum}`;
+            hyperlinkMap.set(key, url);
+          }
+        }
+      }
+    }
+    
+    if (hyperlinkMap.size > 0) {
+      console.log(`📎 Found ${hyperlinkMap.size} LinkedIn hyperlinks in Excel file`);
+    }
+    
     // Convert to JSON
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
     
     if (jsonData.length < 2) {
       return res.status(400).json({
@@ -5385,11 +5411,15 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
     
     // Log all headers for debugging
     console.log('Excel headers found:', headers);
+    console.log('Total columns:', headers.length);
     console.log('Looking for specific columns:');
     console.log('Company:', headers.indexOf('Company'));
     console.log('Contact Name:', headers.indexOf('Contact Name'));
     console.log('TA1 - Oncology:', headers.indexOf('TA1 - Oncology'));
     console.log('Tier:', headers.indexOf('Tier'));
+    console.log('LinkedIn URL header:', headers.indexOf('LinkedIn URL'));
+    console.log('Column AD (index 29):', headers[29] || 'empty');
+    console.log('Column AC (index 28):', headers[28] || 'empty');
     console.log('All TA columns:');
     for (let i = 1; i <= 17; i++) {
       const taHeader = i <= 10 ? `TA${i}` : `T${i}`;
@@ -5438,19 +5468,90 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
         // Add BD Person TA Focus
         bdPersonTAFocus: row[headers.indexOf('BD Person TA Focus (Only for Business Development)')] || '',
         // Add LinkedIn URL from Column AD (index 29 - Column AD is the 30th column, 0-indexed = 29)
-        // Try to get from header first if "LinkedIn URL" header exists, otherwise use column index 29 (Column AD)
+        // Try multiple methods to get LinkedIn URL including hyperlink extraction
         linkedInUrl: (() => {
-          const linkedInUrlHeaderIndex = headers.indexOf('LinkedIn URL');
-          if (linkedInUrlHeaderIndex !== -1 && row[linkedInUrlHeaderIndex]) {
-            const url = String(row[linkedInUrlHeaderIndex]).trim();
-            return url && url !== '' && url !== 'NA' ? url : 'NA';
+          const rowIndex = i; // Current row index (0-based, excluding header)
+          const actualRowNum = rowIndex + 2; // Excel row number (1-based header + 1-based data)
+          
+          // Method 1: Try to extract hyperlink from Column AD (index 29, Excel column AD)
+          // Column AD = Column 30 in 0-indexed = index 29
+          const columnADIndex = 29;
+          const cellRef = XLSX.utils.encode_cell({ r: actualRowNum, c: columnADIndex });
+          const hyperlinkKey = `${rowIndex}_${columnADIndex}`;
+          
+          if (hyperlinkMap.has(hyperlinkKey)) {
+            const hyperlinkUrl = hyperlinkMap.get(hyperlinkKey);
+            if (hyperlinkUrl && typeof hyperlinkUrl === 'string' && hyperlinkUrl.includes('linkedin.com')) {
+              console.log(`✅ Found LinkedIn URL from hyperlink at Column AD (row ${actualRowNum}): ${hyperlinkUrl.substring(0, 50)}...`);
+              return hyperlinkUrl;
+            }
           }
-          // If no header, use Column AD (index 29)
-          const columnADValue = row[29];
-          if (columnADValue) {
-            const url = String(columnADValue).trim();
-            return url && url !== '' && url !== 'NA' ? url : 'NA';
+          
+          // Method 2: Try to find by header name (case insensitive, various formats)
+          const possibleHeaderNames = ['LinkedIn URL', 'LinkedIn', 'LinkedInUrl', 'Linked In URL', 'linkedin url', 'LINKEDIN URL'];
+          for (const headerName of possibleHeaderNames) {
+            const headerIndex = headers.findIndex(h => h && h.toString().toLowerCase().trim() === headerName.toLowerCase().trim());
+            if (headerIndex !== -1) {
+              // Check hyperlink first
+              const headerCellRef = XLSX.utils.encode_cell({ r: actualRowNum, c: headerIndex });
+              const headerHyperlinkKey = `${rowIndex}_${headerIndex}`;
+              if (hyperlinkMap.has(headerHyperlinkKey)) {
+                const hyperlinkUrl = hyperlinkMap.get(headerHyperlinkKey);
+                if (hyperlinkUrl && typeof hyperlinkUrl === 'string' && hyperlinkUrl.includes('linkedin.com')) {
+                  console.log(`✅ Found LinkedIn URL from hyperlink at header "${headerName}": ${hyperlinkUrl.substring(0, 50)}...`);
+                  return hyperlinkUrl;
+                }
+              }
+              
+              // Then check cell value
+              if (row[headerIndex]) {
+                const url = String(row[headerIndex]).trim();
+                if (url && url !== '' && url !== 'NA' && url.toLowerCase() !== 'na') {
+                  // Validate it's a URL
+                  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('www.') || url.includes('linkedin.com')) {
+                    console.log(`✅ Found LinkedIn URL from header "${headerName}" at index ${headerIndex}: ${url.substring(0, 50)}...`);
+                    return url;
+                  }
+                }
+              }
+            }
           }
+          
+          // Method 3: Try Column AD (index 29) cell value directly
+          if (row.length > 29 && row[29]) {
+            const columnADValue = String(row[29]).trim();
+            if (columnADValue && columnADValue !== '' && columnADValue !== 'NA' && columnADValue.toLowerCase() !== 'na') {
+              // Check if it looks like a URL
+              if (columnADValue.startsWith('http://') || columnADValue.startsWith('https://') || columnADValue.startsWith('www.') || columnADValue.includes('linkedin.com')) {
+                console.log(`✅ Found LinkedIn URL from Column AD (index 29) cell value: ${columnADValue.substring(0, 50)}...`);
+                return columnADValue;
+              }
+            }
+          }
+          
+          // Method 4: Try to find any column that contains "linkedin" in the value (check hyperlinks first)
+          for (let colIndex = 25; colIndex < row.length && colIndex < headers.length; colIndex++) {
+            // Check hyperlink
+            const cellHyperlinkKey = `${rowIndex}_${colIndex}`;
+            if (hyperlinkMap.has(cellHyperlinkKey)) {
+              const hyperlinkUrl = hyperlinkMap.get(cellHyperlinkKey);
+              if (hyperlinkUrl && typeof hyperlinkUrl === 'string' && hyperlinkUrl.includes('linkedin.com')) {
+                console.log(`✅ Found LinkedIn URL from hyperlink at column index ${colIndex}: ${hyperlinkUrl.substring(0, 50)}...`);
+                return hyperlinkUrl;
+              }
+            }
+            
+            // Check cell value
+            if (row[colIndex]) {
+              const cellValue = String(row[colIndex]).trim();
+              if (cellValue && (cellValue.includes('linkedin.com') || cellValue.startsWith('http') || cellValue.startsWith('www.'))) {
+                console.log(`✅ Found LinkedIn URL at column index ${colIndex}: ${cellValue.substring(0, 50)}...`);
+                return cellValue;
+              }
+            }
+          }
+          
+          console.log(`⚠️ No LinkedIn URL found for row ${actualRowNum}, contact: ${row[headers.indexOf('Contact Name')] || 'unknown'}`);
           return 'NA';
         })(),
         createdAt: new Date().toISOString().split('T')[0]
@@ -5467,15 +5568,63 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
       });
     }
 
-    // Add to existing data
-    biotechData = [...biotechData, ...newData];
+    // Check for duplicates and update existing records or add new ones
+    let duplicatesFound = 0;
+    let recordsUpdated = 0;
+    let recordsAdded = 0;
+    
+    // Create a map of existing records for quick lookup
+    // Key: companyName_contactPerson_email (lowercase)
+    const existingRecordsMap = new Map();
+    biotechData.forEach((record, index) => {
+      const key = `${(record.companyName || '').toLowerCase().trim()}_${(record.contactPerson || '').toLowerCase().trim()}_${(record.email || '').toLowerCase().trim()}`;
+      if (!existingRecordsMap.has(key)) {
+        existingRecordsMap.set(key, index);
+      }
+    });
+
+    // Process new data - check for duplicates
+    const uniqueNewData = [];
+    newData.forEach(newRecord => {
+      const key = `${(newRecord.companyName || '').toLowerCase().trim()}_${(newRecord.contactPerson || '').toLowerCase().trim()}_${(newRecord.email || '').toLowerCase().trim()}`;
+      
+      if (existingRecordsMap.has(key)) {
+        // Duplicate found - update existing record (especially LinkedIn URL if new one has it)
+        const existingIndex = existingRecordsMap.get(key);
+        const existingRecord = biotechData[existingIndex];
+        
+        // Update LinkedIn URL if new record has a valid one and existing doesn't
+        if (newRecord.linkedInUrl && newRecord.linkedInUrl !== 'NA' && newRecord.linkedInUrl.trim() !== '') {
+          if (!existingRecord.linkedInUrl || existingRecord.linkedInUrl === 'NA' || existingRecord.linkedInUrl.trim() === '') {
+            biotechData[existingIndex].linkedInUrl = newRecord.linkedInUrl;
+            recordsUpdated++;
+            console.log(`✅ Updated LinkedIn URL for: ${newRecord.contactPerson} at ${newRecord.companyName}`);
+          } else {
+            duplicatesFound++;
+            console.log(`⚠️ Duplicate found (already has LinkedIn URL): ${newRecord.contactPerson} at ${newRecord.companyName}`);
+          }
+        } else {
+          duplicatesFound++;
+          console.log(`⚠️ Duplicate found: ${newRecord.contactPerson} at ${newRecord.companyName}`);
+        }
+      } else {
+        // New unique record - add it
+        uniqueNewData.push(newRecord);
+        recordsAdded++;
+      }
+    });
+
+    // Add only unique new records to existing data
+    biotechData = [...biotechData, ...uniqueNewData];
 
     // Store file info in mockDB
     const fileInfo = {
       id: Date.now(),
       filename: req.file.originalname,
       uploadDate: new Date(),
-      recordsAdded: newData.length,
+      recordsAdded: recordsAdded,
+      recordsUpdated: recordsUpdated,
+      duplicatesSkipped: duplicatesFound,
       totalRecords: biotechData.length
     };
     mockDB.uploadedFiles.push(fileInfo);
@@ -5483,12 +5632,29 @@ app.post('/api/admin/upload-excel', authenticateAdmin, upload.single('file'), (r
     // Save data to files
     saveDataToFiles('user_created');
 
+    // Create response message
+    let message = '';
+    if (recordsAdded > 0 && recordsUpdated > 0) {
+      message = `${recordsAdded} new records added, ${recordsUpdated} existing records updated with LinkedIn URLs`;
+    } else if (recordsAdded > 0) {
+      message = `${recordsAdded} new records added successfully`;
+    } else if (recordsUpdated > 0) {
+      message = `${recordsUpdated} existing records updated with LinkedIn URLs`;
+    } else {
+      message = 'No new records added (all were duplicates)';
+    }
+    if (duplicatesFound > 0) {
+      message += `, ${duplicatesFound} duplicates skipped`;
+    }
+
     res.status(201).json({
       success: true,
-      message: `${newData.length} records uploaded successfully`,
+      message: message,
       data: {
         totalRecords: biotechData.length,
-        newRecords: newData.length,
+        newRecords: recordsAdded,
+        recordsUpdated: recordsUpdated,
+        duplicatesSkipped: duplicatesFound,
         processedRows: jsonData.length - 1,
         validRecords: newData.length,
         fileInfo
@@ -6684,24 +6850,41 @@ app.post('/api/search-biotech', authenticateToken, checkUserSuspension, [
       linkedInUrl: item.linkedInUrl || 'NA'
     }));
 
-    // Deduplicate results ONLY for Contact Name searches
-    if (searchType === 'Contact Name') {
-      console.log('Deduplicating contact results...');
-      const seenContacts = new Set();
-      limitedData = limitedData.filter(item => {
-        // Create a unique key based on contact person, company, and email
-        const contactKey = `${item.contactPerson?.toLowerCase() || ''}_${item.companyName?.toLowerCase() || ''}_${item.email?.toLowerCase() || ''}`;
-        if (seenContacts.has(contactKey)) {
-          console.log('Removing duplicate contact:', item.contactPerson, 'at', item.companyName);
-          return false;
+    // Deduplicate results for ALL search types to prevent duplicate entries
+    // IMPORTANT: Prefer records with LinkedIn URLs over those without
+    console.log('Deduplicating search results...');
+    const contactMap = new Map(); // Map to store best record for each contact
+    const beforeDedupCount = limitedData.length;
+    
+    limitedData.forEach(item => {
+      // Create a unique key based on contact person, company, and email
+      const contactKey = `${(item.contactPerson || '').toLowerCase().trim()}_${(item.companyName || '').toLowerCase().trim()}_${(item.email || '').toLowerCase().trim()}`;
+      
+      const hasLinkedInUrl = item.linkedInUrl && item.linkedInUrl !== 'NA' && item.linkedInUrl.trim() !== '';
+      
+      if (contactMap.has(contactKey)) {
+        const existingItem = contactMap.get(contactKey);
+        const existingHasLinkedInUrl = existingItem.linkedInUrl && existingItem.linkedInUrl !== 'NA' && existingItem.linkedInUrl.trim() !== '';
+        
+        // If new item has LinkedIn URL and existing doesn't, replace it
+        if (hasLinkedInUrl && !existingHasLinkedInUrl) {
+          console.log(`✅ Replacing duplicate (keeping one with LinkedIn URL): ${item.contactPerson} at ${item.companyName}`);
+          contactMap.set(contactKey, item);
+        } else {
+          console.log(`⚠️ Removing duplicate contact (keeping existing): ${item.contactPerson} at ${item.companyName}`);
         }
-        seenContacts.add(contactKey);
-        return true;
-      });
-      console.log('After deduplication, contacts found:', limitedData.length);
-    } else {
-      // For all other search types, don't deduplicate - show all results
-      console.log('No deduplication for search type:', searchType);
+      } else {
+        // First occurrence - add it
+        contactMap.set(contactKey, item);
+      }
+    });
+    
+    // Convert map back to array
+    limitedData = Array.from(contactMap.values());
+    
+    const afterDedupCount = limitedData.length;
+    if (beforeDedupCount !== afterDedupCount) {
+      console.log(`✅ Deduplication: ${beforeDedupCount} → ${afterDedupCount} (removed ${beforeDedupCount - afterDedupCount} duplicates)`);
     }
 
     res.json({
@@ -7407,6 +7590,189 @@ app.post('/api/get-contacts', authenticateToken, [
     res.status(500).json({ 
       success: false, 
       message: 'Error getting contacts' 
+    });
+  }
+});
+
+// Update existing records with LinkedIn URLs from Excel (admin only)
+app.post('/api/admin/update-linkedin-urls', authenticateAdmin, upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    console.log('🔄 Updating LinkedIn URLs from Excel file...');
+    
+    // Parse Excel file (same logic as upload)
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Extract hyperlinks
+    const hyperlinkMap = new Map();
+    const cellRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let rowNum = cellRange.s.r; rowNum <= cellRange.e.r; rowNum++) {
+      for (let colNum = cellRange.s.c; colNum <= cellRange.e.c; colNum++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+        const cell = worksheet[cellAddress];
+        if (cell && cell.l) {
+          const hyperlink = cell.l;
+          const url = hyperlink.Target || hyperlink.target || hyperlink;
+          if (url && typeof url === 'string' && url.includes('linkedin.com')) {
+            const key = `${rowNum}_${colNum}`;
+            hyperlinkMap.set(key, url);
+          }
+        }
+      }
+    }
+    
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+    const headers = jsonData[0].map(header => header ? header.toString().trim() : '');
+    
+    let updatedCount = 0;
+    let notFoundCount = 0;
+    
+    // Process each row and update matching records
+    for (let i = 1; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (row.length === 0 || row.every(cell => !cell)) continue;
+      
+      const companyName = (row[headers.indexOf('Company')] || '').toString().trim();
+      const contactPerson = (row[headers.indexOf('Contact Name')] || '').toString().trim();
+      const email = (row[headers.indexOf('Contact Email')] || '').toString().trim();
+      
+      if (!companyName || !contactPerson) continue;
+      
+      // Extract LinkedIn URL (same logic as upload)
+      const rowIndex = i;
+      const actualRowNum = rowIndex + 2;
+      const columnADIndex = 29;
+      const hyperlinkKey = `${rowIndex}_${columnADIndex}`;
+      
+      let linkedInUrl = 'NA';
+      if (hyperlinkMap.has(hyperlinkKey)) {
+        linkedInUrl = hyperlinkMap.get(hyperlinkKey);
+      } else if (row.length > 29 && row[29]) {
+        const columnADValue = String(row[29]).trim();
+        if (columnADValue && columnADValue !== '' && columnADValue !== 'NA' && 
+            (columnADValue.includes('linkedin.com') || columnADValue.startsWith('http'))) {
+          linkedInUrl = columnADValue;
+        }
+      }
+      
+      if (linkedInUrl === 'NA') continue;
+      
+      // Find matching record in biotechData
+      const matchingIndex = biotechData.findIndex(record => 
+        (record.companyName || '').toLowerCase().trim() === companyName.toLowerCase().trim() &&
+        (record.contactPerson || '').toLowerCase().trim() === contactPerson.toLowerCase().trim() &&
+        (!email || (record.email || '').toLowerCase().trim() === email.toLowerCase().trim())
+      );
+      
+      if (matchingIndex !== -1) {
+        biotechData[matchingIndex].linkedInUrl = linkedInUrl;
+        updatedCount++;
+        console.log(`✅ Updated LinkedIn URL for: ${contactPerson} at ${companyName}`);
+      } else {
+        notFoundCount++;
+      }
+    }
+    
+    // Save updated data
+    saveDataToFiles('linkedin_url_update');
+    
+    res.json({
+      success: true,
+      message: `Updated ${updatedCount} records with LinkedIn URLs`,
+      data: {
+        updated: updatedCount,
+        notFound: notFoundCount
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error updating LinkedIn URLs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating LinkedIn URLs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Clean duplicate records from database (admin only)
+app.post('/api/admin/clean-duplicates', authenticateAdmin, (req, res) => {
+  try {
+    console.log('🧹 Starting duplicate cleanup...');
+    const initialCount = biotechData.length;
+    
+    // Create a map to track unique records
+    // Key: companyName_contactPerson_email (lowercase)
+    const uniqueRecordsMap = new Map();
+    const duplicatesToRemove = [];
+    
+    biotechData.forEach((record, index) => {
+      const key = `${(record.companyName || '').toLowerCase().trim()}_${(record.contactPerson || '').toLowerCase().trim()}_${(record.email || '').toLowerCase().trim()}`;
+      
+      if (uniqueRecordsMap.has(key)) {
+        // Duplicate found
+        const existingIndex = uniqueRecordsMap.get(key);
+        const existingRecord = biotechData[existingIndex];
+        
+        // Keep the record with LinkedIn URL if one has it and other doesn't
+        if (record.linkedInUrl && record.linkedInUrl !== 'NA' && record.linkedInUrl.trim() !== '') {
+          if (!existingRecord.linkedInUrl || existingRecord.linkedInUrl === 'NA' || existingRecord.linkedInUrl.trim() === '') {
+            // New record has LinkedIn URL, existing doesn't - update existing and remove new
+            biotechData[existingIndex].linkedInUrl = record.linkedInUrl;
+            duplicatesToRemove.push(index);
+            console.log(`✅ Updated LinkedIn URL for: ${record.contactPerson} at ${record.companyName}`);
+          } else {
+            // Both have LinkedIn URL - keep first one, remove duplicate
+            duplicatesToRemove.push(index);
+            console.log(`⚠️ Duplicate found (both have LinkedIn URL): ${record.contactPerson} at ${record.companyName}`);
+          }
+        } else {
+          // New record doesn't have LinkedIn URL - remove it, keep existing
+          duplicatesToRemove.push(index);
+          console.log(`⚠️ Duplicate found: ${record.contactPerson} at ${record.companyName}`);
+        }
+      } else {
+        // First occurrence - keep it
+        uniqueRecordsMap.set(key, index);
+      }
+    });
+    
+    // Remove duplicates (in reverse order to maintain indices)
+    duplicatesToRemove.sort((a, b) => b - a);
+    duplicatesToRemove.forEach(index => {
+      biotechData.splice(index, 1);
+    });
+    
+    const finalCount = biotechData.length;
+    const removedCount = initialCount - finalCount;
+    
+    // Save cleaned data
+    saveDataToFiles('duplicate_cleanup');
+    
+    console.log(`✅ Duplicate cleanup complete: ${initialCount} → ${finalCount} (removed ${removedCount} duplicates)`);
+    
+    res.json({
+      success: true,
+      message: `Cleaned ${removedCount} duplicate records`,
+      data: {
+        initialCount: initialCount,
+        finalCount: finalCount,
+        duplicatesRemoved: removedCount
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error cleaning duplicates:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error cleaning duplicates',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
