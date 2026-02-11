@@ -8,8 +8,10 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const USER_EMAIL = 'auralie@yissum.co.il';
-const TRIAL_START = new Date('2025-02-10');
+// Use UTC midnight to avoid timezone shifts
+const TRIAL_START = new Date('2025-02-09T00:00:00.000Z');
 const CREDITS = 5;
+const TRIAL_END = new Date(TRIAL_START.getTime() + (5 * 24 * 60 * 60 * 1000));
 
 async function resetTrial() {
   try {
@@ -34,7 +36,7 @@ async function resetTrial() {
           fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
           console.log(`✅ Trial reset in file storage for ${USER_EMAIL}`);
           console.log(`   Trial start: ${TRIAL_START.toISOString().split('T')[0]}`);
-          console.log(`   Trial end: Feb 14, 2025`);
+          console.log(`   Trial end: ${TRIAL_END.toISOString().split('T')[0]}`);
           console.log(`   Credits: ${CREDITS}`);
           process.exit(0);
         }
@@ -49,7 +51,7 @@ async function resetTrial() {
     
     console.log(`✅ Trial reset for ${USER_EMAIL}`);
     console.log(`   Trial start: ${TRIAL_START.toISOString().split('T')[0]}`);
-    console.log(`   Trial end: Feb 15, 2025`);
+    console.log(`   Trial end: ${TRIAL_END.toISOString().split('T')[0]}`);
     console.log(`   Credits: ${CREDITS}`);
     
   } catch (error) {

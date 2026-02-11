@@ -10324,10 +10324,11 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
       }),
       trialData: trialUsers.map(user => {
         let trialInfo;
+        const effectiveTrialStart = user.freeTrialStartDate || user.approvedAt || user.createdAt;
         if (user.currentPlan === 'test') {
           trialInfo = { status: 'Test Account', daysRemaining: 'N/A', trialEnd: null };
         } else if (user.currentPlan === 'free' && !user.paymentCompleted) {
-          const trialStart = new Date(user.createdAt);
+          const trialStart = new Date(effectiveTrialStart);
           const trialEnd = new Date(trialStart.getTime() + (5 * 24 * 60 * 60 * 1000));
           const now = new Date();
           const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
@@ -10343,7 +10344,7 @@ app.get('/api/admin/comprehensive-data', authenticateAdmin, async (req, res) => 
         return {
           userName: `${user.firstName} ${user.lastName}`,
           email: user.email,
-          trialStart: user.createdAt,
+          trialStart: effectiveTrialStart,
           trialEnd: trialInfo.trialEnd,
           status: trialInfo.status,
           daysRemaining: trialInfo.daysRemaining,

@@ -48,18 +48,20 @@ const getUserStatus = (user) => {
 
 // Calculate trial status and days remaining
 const getTrialData = (user) => {
+  const effectiveTrialStart = user.freeTrialStartDate || user.approvedAt || user.createdAt;
+
   if (user.currentPlan === 'test') {
     return {
       status: 'Test Account',
       daysRemaining: 'N/A',
-      trialStart: user.createdAt,
+      trialStart: effectiveTrialStart,
       trialEnd: null
     };
   }
   
   if (user.currentPlan === 'free' && !user.paymentCompleted) {
     // Free trial: 5 days from registration
-    const trialStart = new Date(user.createdAt);
+    const trialStart = new Date(effectiveTrialStart);
     const trialEnd = new Date(trialStart.getTime() + (5 * 24 * 60 * 60 * 1000));
     const now = new Date();
     const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
@@ -76,7 +78,7 @@ const getTrialData = (user) => {
     return {
       status: 'Paid Customer',
       daysRemaining: 'N/A',
-      trialStart: user.createdAt,
+      trialStart: effectiveTrialStart,
       trialEnd: null
     };
   }
@@ -84,7 +86,7 @@ const getTrialData = (user) => {
   return {
     status: 'Inactive',
     daysRemaining: 0,
-    trialStart: user.createdAt,
+    trialStart: effectiveTrialStart,
     trialEnd: null
   };
 };
