@@ -3357,7 +3357,10 @@ app.post('/api/auth/login', [
       
       if (!registeredUser.paymentCompleted && registeredUser.currentPlan === 'free' && !isMasterEmail) {
         const now = new Date();
-        const registrationDate = new Date(registeredUser.createdAt || registeredUser.registrationDate || now);
+        // Trial starts from: freeTrialStartDate (manual override) > approvedAt (when approved) > createdAt
+        // Demo request users: trial should start from approval, not signup
+        const trialStartDate = registeredUser.freeTrialStartDate || registeredUser.approvedAt || registeredUser.createdAt || registeredUser.registrationDate || now;
+        const registrationDate = new Date(trialStartDate);
         const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
         const trialDays = 5;
         const daysExpired = daysSinceRegistration >= trialDays;
@@ -8251,8 +8254,9 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
             // Paid users - keep their actual credits (like universalx0242 with 34 credits)
             actualCredits = user.currentCredits || 0;
           } else {
-            // Free users - check if 5-day trial has expired
-            const registrationDate = new Date(user.createdAt);
+            // Free users - check if 5-day trial has expired (trial starts from freeTrialStartDate > approvedAt > createdAt)
+            const trialStartDate = user.freeTrialStartDate || user.approvedAt || user.createdAt;
+            const registrationDate = new Date(trialStartDate);
             const currentDate = new Date();
             const daysSinceRegistration = Math.floor((currentDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
             
@@ -8299,8 +8303,9 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
           // Paid users - keep their actual credits (like universalx0242 with 34 credits)
           actualCredits = user.currentCredits || 0;
         } else {
-          // Free users - check if 5-day trial has expired
-          const registrationDate = new Date(user.createdAt);
+          // Free users - check if 5-day trial has expired (trial starts from freeTrialStartDate > approvedAt > createdAt)
+          const trialStartDate = user.freeTrialStartDate || user.approvedAt || user.createdAt;
+          const registrationDate = new Date(trialStartDate);
           const currentDate = new Date();
           const daysSinceRegistration = Math.floor((currentDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
           
@@ -8358,8 +8363,12 @@ app.post('/api/admin/approve-user/:userId', authenticateAdmin, async (req, res) 
       user.status = 'active';
       user.isActive = true;
       user.isVerified = user.isVerified || true;
-      user.approvedAt = new Date();
+      const approvedAt = new Date();
+      user.approvedAt = approvedAt;
       user.approvedBy = adminEmail;
+      // Trial starts from approval - set freeTrialStartDate so 5-day clock starts when approved
+      user.freeTrialStartDate = approvedAt;
+      user.currentCredits = 5; // Reset credits for new trial
       await user.save();
       
       // Also update file storage if user exists there (for sync)
@@ -8368,8 +8377,10 @@ app.post('/api/admin/approve-user/:userId', authenticateAdmin, async (req, res) 
         mockDB.users[fileStorageUserIndex].isApproved = true;
         mockDB.users[fileStorageUserIndex].status = 'active';
         mockDB.users[fileStorageUserIndex].isActive = true;
-        mockDB.users[fileStorageUserIndex].approvedAt = new Date().toISOString();
+        mockDB.users[fileStorageUserIndex].approvedAt = approvedAt.toISOString();
         mockDB.users[fileStorageUserIndex].approvedBy = adminEmail;
+        mockDB.users[fileStorageUserIndex].freeTrialStartDate = approvedAt.toISOString();
+        mockDB.users[fileStorageUserIndex].currentCredits = 5;
         saveDataToFiles('user_approval_sync');
         console.log(`✅ Also updated file storage for user: ${user.email}`);
       }
@@ -8418,11 +8429,14 @@ app.post('/api/admin/approve-user/:userId', authenticateAdmin, async (req, res) 
         });
       }
       
+      const approvedAt = new Date();
       mockDB.users[userIndex].isApproved = true;
       mockDB.users[userIndex].status = 'active';
       mockDB.users[userIndex].isActive = true;
-      mockDB.users[userIndex].approvedAt = new Date().toISOString();
+      mockDB.users[userIndex].approvedAt = approvedAt.toISOString();
       mockDB.users[userIndex].approvedBy = adminEmail;
+      mockDB.users[userIndex].freeTrialStartDate = approvedAt.toISOString();
+      mockDB.users[userIndex].currentCredits = 5;
       // Best-effort notify (file storage case)
       try {
         const subject = 'Your BioPing account has been approved';
@@ -8633,6 +8647,80 @@ app.post('/api/admin/approve-existing-users', authenticateAdmin, async (req, res
       success: false, 
       message: 'Error approving existing users' 
     });
+  }
+});
+
+// Admin: Reset user's free trial (e.g. for demo request users who got wrong trial start)
+app.post('/api/admin/reset-user-trial', authenticateAdmin, async (req, res) => {
+  try {
+    const { email, trialStartDate } = req.body;
+    
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    
+    const userEmail = email.trim().toLowerCase();
+    // trialStartDate in YYYY-MM-DD format, defaults to today if not provided
+    const startDate = trialStartDate ? new Date(trialStartDate) : new Date();
+    const trialEndDate = new Date(startDate.getTime() + (5 * 24 * 60 * 60 * 1000));
+    
+    console.log(`🔄 Admin resetting trial for ${userEmail}, start: ${startDate.toISOString()}, end: ${trialEndDate.toISOString()}`);
+    
+    // Try MongoDB first
+    try {
+      const user = await User.findOne({ email: new RegExp(`^${userEmail}$`, 'i') });
+      if (user) {
+        user.freeTrialStartDate = startDate;
+        user.currentCredits = 5;
+        await user.save();
+        
+        // Also update file storage if exists
+        const fileIndex = mockDB.users.findIndex(u => u.email.toLowerCase() === userEmail);
+        if (fileIndex !== -1) {
+          mockDB.users[fileIndex].freeTrialStartDate = startDate.toISOString();
+          mockDB.users[fileIndex].currentCredits = 5;
+          saveDataToFiles('admin_trial_reset');
+        }
+        
+        console.log(`✅ Trial reset for ${userEmail} - 5 days from ${startDate.toISOString().split('T')[0]}`);
+        return res.json({
+          success: true,
+          message: `Trial reset successfully for ${userEmail}. 5-day trial until ${trialEndDate.toISOString().split('T')[0]}`,
+          data: {
+            email: user.email,
+            trialStartDate: startDate.toISOString().split('T')[0],
+            trialEndDate: trialEndDate.toISOString().split('T')[0],
+            credits: 5
+          }
+        });
+      }
+    } catch (dbError) {
+      console.log('❌ MongoDB error, trying file storage:', dbError.message);
+    }
+    
+    // Fallback to file storage
+    const fileIndex = mockDB.users.findIndex(u => u.email && u.email.toLowerCase() === userEmail);
+    if (fileIndex !== -1) {
+      mockDB.users[fileIndex].freeTrialStartDate = startDate.toISOString();
+      mockDB.users[fileIndex].currentCredits = 5;
+      saveDataToFiles('admin_trial_reset');
+      console.log(`✅ Trial reset for ${userEmail} (file storage) - 5 days from ${startDate.toISOString().split('T')[0]}`);
+      return res.json({
+        success: true,
+        message: `Trial reset successfully for ${userEmail}. 5-day trial until ${trialEndDate.toISOString().split('T')[0]}`,
+        data: {
+          email: mockDB.users[fileIndex].email,
+          trialStartDate: startDate.toISOString().split('T')[0],
+          trialEndDate: trialEndDate.toISOString().split('T')[0],
+          credits: 5
+        }
+      });
+    }
+    
+    return res.status(404).json({ success: false, message: `User not found: ${email}` });
+  } catch (error) {
+    console.error('Error resetting user trial:', error);
+    res.status(500).json({ success: false, message: 'Error resetting trial' });
   }
 });
 
@@ -9494,8 +9582,9 @@ app.get('/api/auth/profile', authenticateToken, checkUserSuspension, async (req,
     // If currentCredits is undefined or null, set based on plan and trial status
     if (creditsToSend === undefined || creditsToSend === null) {
       if (isFreeUser) {
-        // Check trial status for free users
-        const registrationDate = new Date(user.createdAt || user.registrationDate || new Date());
+        // Check trial status for free users - trial starts from freeTrialStartDate > approvedAt > createdAt
+        const trialStartDate = user.freeTrialStartDate || user.approvedAt || user.createdAt || user.registrationDate || new Date();
+        const registrationDate = new Date(trialStartDate);
         const now = new Date();
         const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
         const trialExpired = daysSinceRegistration >= 5;
@@ -9963,8 +10052,8 @@ app.get('/api/admin/trial-data', authenticateAdmin, async (req, res) => {
           trialEnd: null
         };
       } else if (user.currentPlan === 'free' && !user.paymentCompleted) {
-        // Free trial: 5 days from registration
-        const trialStart = new Date(user.createdAt);
+        // Free trial: 5 days from trial start (freeTrialStartDate > approvedAt > createdAt)
+        const trialStart = new Date(user.freeTrialStartDate || user.approvedAt || user.createdAt);
         const trialEnd = new Date(trialStart.getTime() + (5 * 24 * 60 * 60 * 1000));
         const now = new Date();
         const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
@@ -11727,8 +11816,10 @@ app.get('/api/auth/subscription', authenticateToken, async (req, res) => {
     
     // CRITICAL FIX: DO NOT auto-renew credits here - only read from database
     // Credits should ONLY be added/renewed through payment webhooks
+    // Trial starts from: freeTrialStartDate (manual override) > approvedAt > createdAt
     const now = new Date();
-    const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+    const trialStartDate = user.freeTrialStartDate || user.approvedAt || user.createdAt || user.registrationDate || now;
+    const registrationDate = new Date(trialStartDate);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
     const trialDays = 5;
     const trialExpired = isMasterEmail ? false : daysSinceRegistration >= trialDays; // Master email never expires
@@ -11843,8 +11934,10 @@ app.get('/api/auth/subscription-status', authenticateToken, async (req, res) => 
     
     // CRITICAL FIX: DO NOT auto-renew credits here - only read from database
     // Credits should ONLY be added/renewed through payment webhooks
+    // Trial starts from: freeTrialStartDate (manual override) > approvedAt > createdAt
     const now = new Date();
-    const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+    const trialStartDate = user.freeTrialStartDate || user.approvedAt || user.createdAt || user.registrationDate || now;
+    const registrationDate = new Date(trialStartDate);
     const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
     const trialDays = 5;
     const trialExpired = isMasterEmail ? false : daysSinceRegistration >= trialDays; // Master email never expires
@@ -12068,7 +12161,8 @@ app.post('/api/auth/use-credit', authenticateToken, async (req, res) => {
     // Enforce free trial expiry before allowing credit usage
     if (!user.paymentCompleted || user.currentPlan === 'free') {
       const now = new Date();
-      const registrationDate = new Date(user.createdAt || user.registrationDate || now);
+      const trialStartDate = user.freeTrialStartDate || user.approvedAt || user.createdAt || user.registrationDate || now;
+      const registrationDate = new Date(trialStartDate);
       const daysSinceRegistration = Math.floor((now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
       if (daysSinceRegistration >= 5) {
         if (user.currentCredits !== 0) {

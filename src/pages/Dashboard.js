@@ -310,7 +310,8 @@ const Dashboard = () => {
         
         // Handle credits
         const currentDate = new Date();
-        const registrationDate = profileData.user.createdAt || profileData.user.registrationDate;
+        // Trial start: freeTrialStartDate (admin override) > approvedAt > createdAt
+        const registrationDate = profileData.user.freeTrialStartDate || profileData.user.approvedAt || profileData.user.createdAt || profileData.user.registrationDate;
         
         // Check if user is free or paid
         const isFreeUser = !profileData.user.paymentCompleted && profileData.user.currentPlan === 'free';
@@ -366,10 +367,17 @@ const Dashboard = () => {
           console.log('💳 Subscription payment status update:', { hasPaid, currentPlan });
           setUserPaymentStatus({ hasPaid, currentPlan });
           
-          // CRITICAL FIX: Set daysRemaining to 0 for paid users
           if (hasPaid) {
             console.log('💳 Paid user detected in subscription - setting daysRemaining to 0');
             setDaysRemaining(0);
+          } else {
+            // For free users, use backend-calculated daysRemaining (uses freeTrialStartDate/approvedAt/createdAt)
+            if (typeof subscriptionData.daysRemaining === 'number') {
+              setDaysRemaining(Math.max(0, subscriptionData.daysRemaining));
+            }
+            if (typeof subscriptionData.currentCredits === 'number') {
+              setUserCredits(subscriptionData.currentCredits);
+            }
           }
           
           // For paid users, update credits from subscription data
