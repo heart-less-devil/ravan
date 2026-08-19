@@ -65,11 +65,17 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // Trial start date override - when set, 5-day trial is calculated from this date
+  // Trial start date override - when set, trial is calculated from this date
   // Used when trial should start from approval (not signup) or for manual admin reset
   freeTrialStartDate: {
     type: Date,
     default: null
+  },
+  // Trial length in days (default 5). Admin can extend this per user.
+  freeTrialDays: {
+    type: Number,
+    default: 5,
+    min: 1
   },
   lastLogin: {
     type: Date,

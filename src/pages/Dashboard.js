@@ -323,7 +323,8 @@ const Dashboard = () => {
           const currentUTC = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
           const regUTC = new Date(regDate.getFullYear(), regDate.getMonth(), regDate.getDate());
           const daysSinceRegistration = Math.floor((currentUTC.getTime() - regUTC.getTime()) / (1000 * 60 * 60 * 24));
-          const trialExpired = daysSinceRegistration >= 5;
+          const trialDays = profileData.user.freeTrialDays || 5;
+          const trialExpired = daysSinceRegistration >= trialDays;
           
           console.log('📅 Trial calculation:', {
             registrationDate: regDate.toISOString(),
@@ -340,7 +341,7 @@ const Dashboard = () => {
             const credits = profileData.user.currentCredits ?? 0;
             console.log('✅ Trial active - credits set to:', credits);
             setUserCredits(credits);
-            const remainingDays = Math.max(0, 5 - daysSinceRegistration);
+            const remainingDays = Math.max(0, trialDays - daysSinceRegistration);
             setDaysRemaining(remainingDays);
           }
         } else {

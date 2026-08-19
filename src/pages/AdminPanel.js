@@ -71,6 +71,12 @@ const AdminPanel = () => {
   });
   const [isAddingCredits, setIsAddingCredits] = useState(false);
 
+  // Trial extension
+  const [trialModal, setTrialModal] = useState(false);
+  const [selectedUserForTrial, setSelectedUserForTrial] = useState(null);
+  const [trialForm, setTrialForm] = useState({ extraDays: '5', reason: '' });
+  const [isExtendingTrial, setIsExtendingTrial] = useState(false);
+
   useEffect(() => {
     // Load data from backend
     fetchBiotechData();
@@ -798,6 +804,63 @@ Created: ${user.createdAt ? new Date(user.createdAt).toLocaleString() : 'Unknown
       setError('Error adding credits. Please try again.');
     } finally {
       setIsAddingCredits(false);
+    }
+  };
+
+  const openTrialModal = (userOrTrial) => {
+    setSelectedUserForTrial(userOrTrial);
+    setTrialForm({ extraDays: '5', reason: '' });
+    setError(null);
+    setTrialModal(true);
+  };
+
+  const closeTrialModal = () => {
+    setTrialModal(false);
+    setSelectedUserForTrial(null);
+    setTrialForm({ extraDays: '5', reason: '' });
+  };
+
+  const handleExtendTrial = async () => {
+    const extraDays = parseInt(trialForm.extraDays, 10);
+    if (!extraDays || extraDays < 1 || extraDays > 365) {
+      setError('Please enter extra days between 1 and 365');
+      return;
+    }
+
+    setIsExtendingTrial(true);
+    setError(null);
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`${ADMIN_API_BASE_URL || API_BASE_URL}/api/admin/extend-trial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: selectedUserForTrial.email,
+          extraDays,
+          reason: trialForm.reason || 'Admin trial extension'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const endDate = data.data?.trialEndDate ? new Date(data.data.trialEndDate).toLocaleDateString() : '';
+        alert(`Trial extended by ${extraDays} day(s) for ${selectedUserForTrial.email}\n\nNew trial length: ${data.data?.trialDays} days\nAccess until: ${endDate}\nDays remaining: ${data.data?.daysRemaining}`);
+        closeTrialModal();
+        fetchUsers();
+        fetchComprehensiveData();
+      } else {
+        setError(data.message || 'Failed to extend trial');
+      }
+    } catch (err) {
+      console.error('Error extending trial:', err);
+      setError('Error extending trial. Please try again.');
+    } finally {
+      setIsExtendingTrial(false);
     }
   };
 
@@ -1942,6 +2005,7 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trial End</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days Remaining</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -1959,14 +2023,27 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                trial.status === 'active' ? 'bg-green-100 text-green-800' : 
-                                trial.status === 'expired' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                String(trial.status).toLowerCase() === 'active' ? 'bg-green-100 text-green-800' : 
+                                String(trial.status).toLowerCase() === 'expired' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                               }`}>
                                 {trial.status}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {trial.daysRemaining} days
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              {(!trial.currentPlan || trial.currentPlan === 'free') && trial.paymentStatus !== 'Completed' && String(trial.status).toLowerCase() !== 'paid customer' ? (
+                                <button
+                                  onClick={() => openTrialModal(trial)}
+                                  className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
+                                >
+                                  <Clock className="w-3 h-3" />
+                                  <span>Extend Trial</span>
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-400">N/A</span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -2323,6 +2400,15 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                                             <Plus className="w-3 h-3" />
                                             <span>Add Credits</span>
                                           </button>
+                                          {(!user.paymentCompleted && (user.currentPlan === 'free' || !user.currentPlan)) && (
+                                            <button
+                                              onClick={() => openTrialModal(user)}
+                                              className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center space-x-1"
+                                            >
+                                              <Clock className="w-3 h-3" />
+                                              <span>Extend Trial</span>
+                                            </button>
+                                          )}
                                           {suspensionStatus && suspensionStatus.status === 'suspended' ? (
                                             <button
                                               onClick={() => handleUnsuspendUser(user.id || user._id)}
@@ -2691,6 +2777,105 @@ Created: ${new Date(subscription.createdAt).toLocaleString()}
                       <>
                         <Plus className="w-4 h-4" />
                         <span>Add Credits</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {trialModal && selectedUserForTrial && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Extend Free Trial</h3>
+                <button
+                  onClick={closeTrialModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    User Email
+                  </label>
+                  <input
+                    type="email"
+                    value={selectedUserForTrial.email}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Extra days to add <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={trialForm.extraDays}
+                    onChange={(e) => setTrialForm({ ...trialForm, extraDays: e.target.value })}
+                    placeholder="e.g. 5"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    If the trial already expired, access starts today for this many days. If it is still active, these days are added to the current trial.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason (optional)
+                  </label>
+                  <textarea
+                    value={trialForm.reason}
+                    onChange={(e) => setTrialForm({ ...trialForm, reason: e.target.value })}
+                    placeholder="e.g. Demo follow-up, customer request"
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={closeTrialModal}
+                    disabled={isExtendingTrial}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleExtendTrial}
+                    disabled={isExtendingTrial || !trialForm.extraDays}
+                    className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  >
+                    {isExtendingTrial ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Extending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-4 h-4" />
+                        <span>Extend Trial</span>
                       </>
                     )}
                   </button>
